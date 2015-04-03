@@ -316,7 +316,9 @@ sub writefragdef($$$$$$$$$){
 				push( @fragment_1st_name ,"echo_reply$PKT_size" . "_1st_$data_size_1st");
 				
 				select(OUT);
-				
+			
+                print "#define IS_ROUTER_LINK0\n";
+
 				print "FEM_hdr_ipv6_exth(\n";
 				print "    echo_reply$PKT_size" . "_1st_$data_size_1st,\n"; #change this
 				print "    $header_ether ,\n"; #change this _HETHER_nut2tn
