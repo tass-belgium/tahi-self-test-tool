@@ -949,6 +949,8 @@ sub writefragdef($$$$$$$$$){
 				push( @fragment_1st_name ,"echo_reply$PKT_size" . "_1st_$data_size_1st");
 				
 				select(OUT);
+                print "#define FRAG_ID_SEND 0x00000100\n";
+                print "#define MAX_MTU 1400\n";
 				
 				print "FEM_hdr_ipv6_exth(\n";
 				print "    echo_reply$PKT_size" . "_1st_$data_size_1st,\n"; #change this
