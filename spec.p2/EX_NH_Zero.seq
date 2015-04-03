@@ -1,0 +1,363 @@
+#!/usr/bin/perl
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: EX_NH_Zero.seq,v 1.7 2008/07/31 02:40:32 hide Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+use CommonSPEC;
+
+$pktdesc{'echo_request'}	= 'Send Echo Request (Hop-by-Hop Options Header after Hop-by-Hop Options Header)';
+$pktdesc{'icmperr'}		= 'Recv ICMP Error (Parameter Problem, unrecognized Next Header type encountered)';
+$pktdesc{'echo_reply'}		= 'Recv Echo Reply';
+
+$endStatus = $V6evalTool::exitPass;
+$IF = 'Link0';
+
+vCapture($IF);
+
+#----- test
+vSend($IF, 'echo_request');
+%ret = nd_vRecv_EN($IF, $CommonSPEC::wait_reply, 0, 0, 'icmperr', 'echo_reply');
+
+if ($ret{'status'} == 0) {
+	if ($ret{'recvFrame'} eq 'icmperr') {
+		vLogHTML('OK<BR>');
+	} else {
+		vLogHTML('Received invalid Echo Reply<BR>');
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+		$endStatus = $V6evalTool::exitFail;
+	}
+} else {
+	vLogHTML('Cannot receive ICMP Error message<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+#----- end test
+
+$ret = cleanup($IF);
+vStop($IF);
+if ($ret == $CommonSPEC::Success) {
+	exit($endStatus);
+} else {
+	exit($V6evalTool::exitFatal);
+}
+
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  EX_NH_Zero - Next Header Zero
+
+=head1 TARGET
+
+  Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./EX_NH_Zero.seq">EX_NH_Zero.seq</A> [-tooloption ...] -pkt <A HREF="./EX_NH_Zero.def">EX_NH_Zero.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  None
+
+=head1 TEST PROCEDURE
+
+Verify that a node discards a packet that has a Next Header field of zero in a header other than an IPv6 header and generates an ICMPv6 Parameter Problem message to the source of the packet.
+
+   TN                          NUT
+    |                           |
+    |-------------------------->|
+    |   Echo Request            |
+    |                           |
+    |                           |
+    |                           |
+    |<--------------------------|
+    |   ICMP Error              |
+    |                           |
+    v                           v
+
+  1. TN transmits Test Packet to the NUT, 
+     which has a Hop-by-Hop Options header with a Next Header field of zero.
+  2. Observe th packets transmitted yb the NUT.
+
+  Test Packet to Target Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 32
+            NextHeader         = 0 (Hop-by-Hop Options Header)
+            SourceAddress      = TN Address
+            DestinationAddress = NUT Address
+
+        Hop-by-Hop Options Header
+            NextHeader      = 0 (Hop-by-Hop Options Header)
+            HeaderExtLength = 0
+            OptionType      = 1 (PadN)
+            OptDataLength   = 4
+            pad             = {0, 0, 0, 0}
+
+        Hop-by-Hop Options Header
+            NextHeader      = 58 (ICMPv6)
+            HeaderExtLength = 0
+            OptionType      = 1 (PadN)
+            OptDataLength   = 4
+            pad             = {0, 0, 0, 0}
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = {1, 2, 3, 4, 5, 6, 7, 8}
+
+=head1 JUDGEMENT
+
+  PASS: The NUT should send an ICMPv6 Parameter Problem message to TN.
+        The ICMPv6 Code field should be 1(unrecognized Next Header type encountered).
+        The ICMPv6 Pointer field should be 0x28(offset of the Next Header field of the Hop-by-Hop Options header).
+        The NUT should discard the Echo Request and not send an Echo Reply to TN.
+
+  ICMP Error message is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 80
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = NUT Address
+            DestinationAddress = TN Address
+
+        ICMP Error
+            Type           = 4 (Parameter Problem)
+            Code           = 1 (unrecognized Next Header type encountered)
+            Checksum       = (auto)
+            Pointer        = 40 (Offset to Next Header type)
+            PayloadData    = (Sent Packet)
+
+=head1 CLEANUP
+
+Common Test Cleanup
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+# 
+# 4.  IPv6 Extension Headers
+# 
+#    In IPv6, optional internet-layer information is encoded in separate
+#    headers that may be placed between the IPv6 header and the upper-
+#    layer header in a packet.  There are a small number of such extension
+#    headers, each identified by a distinct Next Header value.  As
+#    illustrated in these examples, an IPv6 packet may carry zero, one, or
+#    more extension headers, each identified by the Next Header field of
+#    the preceding header:
+# 
+#    +---------------+------------------------
+#    |  IPv6 header  | TCP header + data
+#    |               |
+#    | Next Header = |
+#    |      TCP      |
+#    +---------------+------------------------
+# 
+# 
+#    +---------------+----------------+------------------------
+#    |  IPv6 header  | Routing header | TCP header + data
+#    |               |                |
+#    | Next Header = |  Next Header = |
+#    |    Routing    |      TCP       |
+#    +---------------+----------------+------------------------
+# 
+# 
+#    +---------------+----------------+-----------------+-----------------
+#    |  IPv6 header  | Routing header | Fragment header | fragment of TCP
+#    |               |                |                 |  header + data
+#    | Next Header = |  Next Header = |  Next Header =  |
+#    |    Routing    |    Fragment    |       TCP       |
+#    +---------------+----------------+-----------------+-----------------
+# 
+#    With one exception, extension headers are not examined or processed
+#    by any node along a packet's delivery path, until the packet reaches
+#    the node (or each of the set of nodes, in the case of multicast)
+#    identified in the Destination Address field of the IPv6 header.
+#    There, normal demultiplexing on the Next Header field of the IPv6
+#    header invokes the module to process the first extension header, or
+#    the upper-layer header if no extension header is present.  The
+#    contents and semantics of each extension header determine whether or
+#    not to proceed to the next header.  Therefore, extension headers must
+#    be processed strictly in the order they appear in the packet; a
+#    receiver must not, for example, scan through a packet looking for a
+#    particular kind of extension header and process that header prior to
+#    processing all preceding ones.
+# 
+#    The exception referred to in the preceding paragraph is the Hop-by-
+#    Hop Options header, which carries information that must be examined
+#    and processed by every node along a packet's delivery path, including
+#    the source and destination nodes.  The Hop-by-Hop Options header,
+#    when present, must immediately follow the IPv6 header.  Its presence
+#    is indicated by the value zero in the Next Header field of the IPv6
+#    header.
+# 
+#    If, as a result of processing a header, a node is required to proceed
+#    to the next header but the Next Header value in the current header is
+#    unrecognized by the node, it should discard the packet and send an
+#    ICMP Parameter Problem message to the source of the packet, with an
+#    ICMP Code value of 1 ("unrecognized Next Header type encountered")
+#    and the ICMP Pointer field containing the offset of the unrecognized
+#    value within the original packet.  The same action should be taken if
+#    a node encounters a Next Header value of zero in any header other
+#    than an IPv6 header.
+# 
+#    Each extension header is an integer multiple of 8 octets long, in
+#    order to retain 8-octet alignment for subsequent headers.  Multi-
+#    octet fields within each extension header are aligned on their
+#    natural boundaries, i.e., fields of width n octets are placed at an
+#    integer multiple of n octets from the start of the header, for n = 1,
+#    2, 4, or 8.
+# 
+#    A full implementation of IPv6 includes implementation of the
+#    following extension headers:
+# 
+#            Hop-by-Hop Options
+#            Routing (Type 0)
+#            Fragment
+#            Destination Options
+#            Authentication
+#            Encapsulating Security Payload
+# 
+#    The first four are specified in this document; the last two are
+#    specified in [RFC-2402] and [RFC-2406], respectively.
+# 
+# 4.1  Extension Header Order
+# 
+#    When more than one extension header is used in the same packet, it is
+#    recommended that those headers appear in the following order:
+# 
+#            IPv6 header
+#            Hop-by-Hop Options header
+#            Destination Options header (note 1)
+#            Routing header
+#            Fragment header
+#            Authentication header (note 2)
+#            Encapsulating Security Payload header (note 2)
+#            Destination Options header (note 3)
+#            upper-layer header
+# 
+#            note 1: for options to be processed by the first destination
+#                    that appears in the IPv6 Destination Address field
+#                    plus subsequent destinations listed in the Routing
+#                    header.
+# 
+#            note 2: additional recommendations regarding the relative
+#                    order of the Authentication and Encapsulating
+#                    Security Payload headers are given in [RFC-2406].
+# 
+#            note 3: for options to be processed only by the final
+#                    destination of the packet.
+# 
+#    Each extension header should occur at most once, except for the
+#    Destination Options header which should occur at most twice (once
+#    before a Routing header and once before the upper-layer header).
+# 
+#    If the upper-layer header is another IPv6 header (in the case of IPv6
+#    being tunneled over or encapsulated in IPv6), it may be followed by
+#    its own extension headers, which are separately subject to the same
+#    ordering recommendations.
+# 
+#    If and when other extension headers are defined, their ordering
+#    constraints relative to the above listed headers must be specified.
+# 
+# =begin html
+# <PRE>
+#    <B>IPv6 nodes must accept and attempt to process extension headers in
+#    any order and occurring any number of times in the same packet,
+#    except for the Hop-by-Hop Options header which is restricted to
+#    appear immediately after an IPv6 header only.</B>  Nonetheless, it is
+#    strongly advised that sources of IPv6 packets adhere to the above
+#    recommended order until and unless subsequent specifications revise
+#    that recommendation.
+# </PRE>
+# 
+# =end html
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

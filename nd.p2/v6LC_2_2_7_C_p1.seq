@@ -1,0 +1,393 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/nd.p2/v6LC_2_2_7_C_p1.seq,v 1.3 2009/12/28 05:55:17 akisada Exp $
+#
+########################################################################
+
+use rdisc;
+
+BEGIN {}
+END   {}
+
+if($V6evalTool::NutDef{'Type'} ne 'router') {
+	exitRouterOnly($Link0);
+	#NOTREACHED
+}
+
+$pktdesc{'ra_local'}
+	= '    Recv RA w/o SLL w/o MTU: '.
+		'NUT (link-local) -&gt; all-nodes multicast address';
+
+$pktdesc{'ra_sll_local'}
+	= '    Recv RA w/ SLL w/o MTU: '.
+		'NUT (link-local) -&gt; all-nodes multicast address';
+
+$pktdesc{'ra_mtu_local'}
+	= '    Recv RA w/o SLL w/ MTU: '.
+		'NUT (link-local) -&gt; all-nodes multicast address';
+
+$pktdesc{'ra_mtu_sll_local'}
+	= '    Recv RA w/ SLL w/ MTU: '.
+		'NUT (link-local) -&gt; all-nodes multicast address';
+
+vCapture($Link0);
+
+unless(v6LC_2_2_7_C_p1($Link0)) {
+        exitFail($Link0);
+        #NOTREACHED
+}
+
+exitPass($Link0);
+#NOTREACHED
+
+
+
+#
+# perldoc
+#
+########################################################################
+__END__
+
+=head1 NAME
+
+=begin html
+<BLOCKQUOTE><TT>
+  v6LC_2_2_7_C - Sending Unsolicited RA (Min Values)
+
+=end html
+
+=begin html
+</TT></BLOCKQUOTE>
+
+=end html
+
+=head1 TARGET
+
+=begin html
+<BLOCKQUOTE>
+<TT>Router</TT>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 TOPOLOGY
+
+=begin html
+<BLOCKQUOTE>
+<BLOCKQUOTE>
+<PRE>
+    |
+   RUT
+    |
+----+--- Link0
+</PRE>
+</BLOCKQUOTE>
+<P>
+<TABLE BORDER>
+<TR>
+<TD ROWSPAN="2"><TT>Link0</TT></TD>
+<TD><TT>global</TT></TD>
+<TD><TT>3ffe:501:ffff:100::/64</TT></TD>
+</TR>
+<TR>
+<TD><TT>link-local</TT></TD>
+<TD><TT>fe80::/64</TT></TD>
+</TR>
+<TR>
+<TD ROWSPAN="3"><TT>RUT</TT></TD>
+<TD><TT>global</TT></TD>
+<TD><TT>3ffe:501:ffff:100::&lt;NutDef.Link0_addr&gt;</TT></TD>
+</TR>
+<TR>
+<TD><TT>link-local</TT></TD>
+<TD><TT>fe80::&lt;NutDef.Link0_addr&gt;</TT></TD>
+</TR>
+<TR>
+<TD><TT>ether</TT></TD>
+<TD><TT>&lt;NutDef.Link0_addr&gt;</TT></TD>
+</TR>
+</TABLE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SETUP
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+none
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 TEST PROCEDURE
+
+=begin html
+<BLOCKQUOTE>
+<TT><B>Verify that a router sends the first few advertisements (up to MAX_INITIAL_RTR_ADVERTISEMENTS) from an interface when it becomes an advertising interface at an maximum interval value of MAX_INITIAL_RTR_ADVERT_INTERVAL (16) seconds.</B></TT><BR>
+<BLOCKQUOTE>
+<PRE>
+   TN1     RUT
+    |       |
+    |       * Configure Interface A on the RUT to be an advertising interface
+    |       |
+    |   <-- | RA (multicast) <A NAME="PRC1">[<A HREF="#JDG1">Judgment #1</A>]
+    |       |
+    V       V
+</PRE>
+</BLOCKQUOTE>
+<P>
+<PRE>
+1. Configure Interface A on the RUT to be an advertising interface with the following values:
+</PRE>
+<BLOCKQUOTE>
+<TABLE BORDER>
+<TR><TD>MaxRtrAdvInterval</TD><TD>4</TD></TR>
+<TR><TD>MinRtrAdvInterval</TD><TD>3</TD></TR>
+<TR><TD>AdvCurHopLimit</TD><TD>0</TD></TR>
+<TR><TD>AdvManagedFlag&AdvOtherConfigFlag</TD><TD>False</TD></TR>
+<TR><TD>AdvDefaultLifetime</TD><TD>0 (min value)</TD></TR>
+<TR><TD>AdvReachableTime</TD><TD>0 (min value)</TD></TR>
+<TR><TD>AdvRetransTimer</TD><TD>0 (min value)</TD></TR>
+<TR><TD>AdvOnlinkFlag&Amp;dvAutonomousFlag</TD><TD>False</TD></TR>
+<TR><TD>AdvValidLifetime</TD><TD>0</TD></TR>
+<TR><TD>AdvPerferredLifetime</TD><TD>0</TD></TR>
+<TR><TD>AdvLinkMTU</TD><TD>0</TD></TR>
+</TABLE>
+</BLOCKQUOTE>
+<PRE>
+2. Observe the packets transmitted by the RUT on Interface A.
+</PRE>
+<PRE>
+        RA message format #1
+            IPv6 header
+                hop limit          = 255
+                source             = RUT (link-local)
+                destination        = all-nodes multicast address
+            RA
+                cur hop limit      = 0
+                M                  = 0
+                O                  = 0
+                router lifetime    = 0
+                reachable time     = 0
+                retrans timer      = 0
+            SLL option
+            Prefix Information option
+                prefix length      = 64
+                L                  = 0
+                A                  = 0
+                valid Lifetime     = 0 
+                preferred lifetime = 0
+                prefix             = 3ffe:501:ffff:100::
+</PRE>
+<PRE>
+        RA message format #2
+            IPv6 header
+                hop limit          = 255
+                source             = RUT (link-local)
+                destination        = all-nodes multicast address
+            RA
+                cur hop limit      = 0
+                M                  = 0
+                O                  = 0
+                router lifetime    = 0
+                reachable time     = 0
+                retrans timer      = 0
+            Prefix Information option
+                prefix length      = 64
+                L                  = 0
+                A                  = 0
+                valid Lifetime     = 0
+                preferred lifetime = 0
+                prefix             = 3ffe:501:ffff:100::
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 JUDGEMENT
+
+=begin html
+<BLOCKQUOTE>
+<TT><A NAME="JDG1">[<A HREF="#PRC1">Judgment #1</A>] The RUT should transmit the Router Advertisements with the same values as configured.</TT><BR>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 CLEANUP
+
+=begin html
+<BLOCKQUOTE>
+<TT><B>The Cleanup procedure should cause the NUT to transition Neighbor Cache entries created in this test to state INCOMPLETE and remove any entries from its Default Router and Prefix Lists.</B></TT>
+<BLOCKQUOTE>
+<PRE>
+   TN1     RUT
+    |       |
+    |       * Ceasing to be an advertising interface
+    |       |
+    |   <-- | RA (multicast)
+    |   <-- | RA (multicast)
+    |   <-- | RA (multicast)
+    |       |
+    V       V
+</PRE>
+</BLOCKQUOTE>
+<P>
+<PRE>
+1. Ceasing to be an advertising interface
+</PRE>
+<PRE>
+2. Observe RA
+</PRE>
+<PRE>
+        RA message format #1
+            IPv6 header
+                hop limit          = 255
+                source             = RUT (link-local)
+                destination        = all-nodes multicast address
+            RA
+                cur hop limit      = 0
+                M                  = 0
+                O                  = 0
+                router lifetime    = 0
+                reachable time     = 0
+                retrans timer      = 0
+            SLL option
+            Prefix Information option
+                prefix length      = 64
+                L                  = 0
+                A                  = 0
+                valid Lifetime     = 0
+                preferred lifetime = 0
+                prefix             = 3ffe:501:ffff:100::
+</PRE>
+<PRE>
+        RA message format #2
+            IPv6 header
+                hop limit          = 255
+                source             = RUT (link-local)
+                destination        = all-nodes multicast address
+            RA
+                cur hop limit      = 0
+                M                  = 0
+                O                  = 0
+                router lifetime    = 0
+                reachable time     = 0
+                retrans timer      = 0
+            Prefix Information option
+                prefix length      = 64
+                L                  = 0
+                A                  = 0
+                valid Lifetime     = 0
+                preferred lifetime = 0
+                prefix             = 3ffe:501:ffff:100::
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=cut
+
+# =head1 REFERENCE
+# 
+# =begin html
+# <BLOCKQUOTE>
+# <PRE>
+# 6.2.4.  Sending Unsolicited Router Advertisements
+# </PRE>
+# <PRE>
+#    A host <FONT COLOR="#FF0000">MUST NOT</FONT> send Router Advertisement messages at any time.
+# </PRE>
+# <PRE>
+#    Unsolicited Router Advertisements are not strictly periodic: the
+#    interval between subsequent transmissions is randomized to reduce the
+#    probability of synchronization with the advertisements from other
+#    routers on the same link [SYNC].  Each advertising interface has its
+#    own timer.  <U><B>Whenever a multicast advertisement is sent from an</B></U>
+#    <U><B>interface, the timer is reset to a uniformly-distributed random value</B></U>
+#    <U><B>between the interface's configured MinRtrAdvInterval and</B></U>
+#    <U><B>MaxRtrAdvInterval;</B></U> expiration of the timer causes the next
+#    advertisement to be sent and a new random value to be chosen.
+# </PRE>
+# <PRE>
+#    <U><B>For the first few advertisements (up to</B></U>
+#    <U><B>MAX_INITIAL_RTR_ADVERTISEMENTS) sent from an interface when it</B></U>
+#    <U><B>becomes an advertising interface, if the randomly chosen interval is</B></U>
+#    <U><B>greater than MAX_INITIAL_RTR_ADVERT_INTERVAL, the timer <FONT COLOR="#FF0000">SHOULD</FONT> be set</B></U>
+#    <U><B>to MAX_INITIAL_RTR_ADVERT_INTERVAL instead.</B></U>  Using a smaller interval
+#    for the initial advertisements increases the likelihood of a router
+#    being discovered quickly when it first becomes available, in the
+#    presence of possible packet loss.
+# </PRE>
+# <PRE>
+#    The information contained in Router Advertisements may change through
+#    actions of system management.  For instance, the lifetime of
+#    advertised prefixes may change, new prefixes could be added, a router
+#    could cease to be a router (i.e., switch from being a router to being
+#    a host), etc.  In such cases, the router <FONT COLOR="#FF0000">MAY</FONT> transmit up to
+#    MAX_INITIAL_RTR_ADVERTISEMENTS unsolicited advertisements, using the
+#    same rules as when an interface becomes an advertising interface.
+# </PRE>
+# </BLOCKQUOTE>
+# 
+# =end html
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 4861 - Neighbor Discovery for IPv6
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=cut

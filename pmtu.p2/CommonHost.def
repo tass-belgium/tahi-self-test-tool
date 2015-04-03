@@ -1,0 +1,585 @@
+//
+// $Name: V6LC_5_0_0 $
+//
+// Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+// Yokogawa Electric Corporation.
+// All rights reserved.
+// 
+// Redistribution and use of this software in source and binary
+// forms, with or without modification, are permitted provided that
+// the following conditions and disclaimer are agreed and accepted
+// by the user:
+// 
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in
+//    the documentation and/or other materials provided with
+//    the distribution.
+// 
+// 3. Neither the names of the copyrighters, the name of the project
+//    which is related to this software (hereinafter referred to as
+//    "project") nor the names of the contributors may be used to
+//    endorse or promote products derived from this software without
+//    specific prior written permission.
+// 
+// 4. No merchantable use may be permitted without prior written
+//    notification to the copyrighters.
+// 
+// 5. The copyrighters, the project and the contributors may prohibit
+//    the use of this software at any time.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+// CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+// BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+// FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+// COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+// IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+//
+// $Id: CommonHost.def,v 1.5 2006/01/18 13:33:24 akisada Exp $
+//
+
+#define TR1_GL0_ADDR tn2v6(_GLOBAL0_UCAST_PRFX,_GLOBAL0_UCAST_PRFXLEN,"Link0")
+#define NUT_GL0_ADDR nut2v6(_GLOBAL0_UCAST_PRFX,_GLOBAL0_UCAST_PRFXLEN,"Link0")
+
+#define	TR2_GL0_ADDR v6(_GLOBAL0A2N_UCAST_ADDR)
+#define	TN1_GL0_ADDR v6(_GLOBAL0A1N_UCAST_ADDR)
+#define	TN1_GL1_ADDR v6(_GLOBAL1A1N_UCAST_ADDR)
+#define	TN2_GL2_ADDR v6(_GLOBAL2A2N_UCAST_ADDR)
+#define	TN3_GL3_ADDR v6(_GLOBAL3A3N_UCAST_ADDR)
+
+_HETHER_define(_hether_onlinkTR2_to_nut, ether(A2N_MAC_ADDR), nutether())
+_HETHER_define(_hether_onlinkTN1_to_nut, ether(A1N_MAC_ADDR), nutether())
+_HETHER_define(_hether_nut_to_onlinkTN1, nutether(), ether(A1N_MAC_ADDR))
+_HETHER_define(_hether_nut_to_onlinkTN1solnode, nutether(), _ETHER_SOLNODE_MCAST(v6(_GLOBAL0A1N_UCAST_ADDR)))
+_HETHER_define(_hether_onlinkTN1_to_allnodes, ether(A1N_MAC_ADDR), v62ethermulti(v6(_ALLNODES_MCAST_ADDR)))
+
+_TLLOPT_define(_TLLOPT_onlink_tn1, ether(A1N_MAC_ADDR))
+
+#define	CLEANUP_ETHER_LINK0	"00:11:33:77:55:11"
+
+
+#ifndef	IS_ROUTER_LINK0
+#define	IS_ROUTER_LINK0		0
+#endif
+
+/* 1500(default mtu) - 1280(minumum) */
+#ifndef	MTU_DIFF_MIN
+#define	MTU_DIFF_MIN	220
+#endif
+
+#define	PING_ID	0xffff
+#define	PING_SN	0x0001
+
+#ifndef FRAG_ID
+#define FRAG_ID 0x00000100
+#endif
+#ifndef REQ_ID
+#define REQ_ID  0x0100
+#endif
+#ifndef SEQ_NO
+#define SEQ_NO  0x00
+#endif
+
+//================ for ND ================//
+
+// ===== Neighbor Solicitation
+
+// NS; Link-Local to Link-Local
+FEM_icmp6_ns(
+	ns_l2l,
+	_HETHER_nut2tnsolnode,
+	{
+		_SRC(nutv6());
+		_DST(_IPV6_SOLNODE_MCAST(tnv6()));
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = tnv6();
+		option = _SLLOPT_nut;
+	}
+)
+
+FEM_icmp6_ns(
+	u_ns_l2l,
+	_HETHER_nut2tn,
+	{
+		_SRC(nutv6());
+		_DST(tnv6());
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = tnv6();
+		option = _SLLOPT_nut;
+	}
+)
+
+FEM_icmp6_ns(
+	u_ns_l2l_wo,
+	_HETHER_nut2tn,
+	{
+		_SRC(nutv6());
+		_DST(tnv6());
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = tnv6();
+	}
+)
+
+// NS; Global to Link-Local
+FEM_icmp6_ns(
+	ns_g2l,
+	_HETHER_nut2tnsolnode,
+	{
+		_SRC(NUT_GL0_ADDR);
+		_DST(_IPV6_SOLNODE_MCAST(tnv6()));
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = tnv6();
+		option = _SLLOPT_nut;
+	}
+)
+
+FEM_icmp6_ns(
+	u_ns_g2l,
+	_HETHER_nut2tn,
+	{
+		_SRC(NUT_GL0_ADDR);
+		_DST(tnv6());
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = tnv6();
+		option = _SLLOPT_nut;
+	}
+)
+
+FEM_icmp6_ns(
+	u_ns_g2l_wo,
+	_HETHER_nut2tn,
+	{
+		_SRC(NUT_GL0_ADDR);
+		_DST(tnv6());
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = tnv6();
+	}
+)
+
+// NS; Link-Local to Global
+FEM_icmp6_ns(
+	ns_l2g,
+	_HETHER_nut2tnsolnode,
+	{
+		_SRC(nutv6());
+		_DST(_IPV6_SOLNODE_MCAST(TR1_GL0_ADDR));
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = TR1_GL0_ADDR;
+		option = _SLLOPT_nut;
+	}
+)
+
+FEM_icmp6_ns(
+	u_ns_l2g,
+	_HETHER_nut2tn,
+	{
+		_SRC(nutv6());
+		_DST(TR1_GL0_ADDR);
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = TR1_GL0_ADDR;
+		option = _SLLOPT_nut;
+	}
+)
+
+FEM_icmp6_ns(
+	u_ns_l2g_wo,
+	_HETHER_nut2tn,
+	{
+		_SRC(nutv6());
+		_DST(TR1_GL0_ADDR);
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = TR1_GL0_ADDR;
+	}
+)
+
+// NS; Global to Global
+FEM_icmp6_ns(
+	ns_g2g,
+	_HETHER_nut2tnsolnode,
+	{
+		_SRC(NUT_GL0_ADDR);
+		_DST(_IPV6_SOLNODE_MCAST(TR1_GL0_ADDR));
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = TR1_GL0_ADDR;
+		option = _SLLOPT_nut;
+	}
+)
+
+// Unicast NS; Global to Global
+FEM_icmp6_ns(
+	u_ns_g2g,
+	_HETHER_nut2tn,
+	{
+		_SRC(NUT_GL0_ADDR);
+		_DST(TR1_GL0_ADDR);
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = TR1_GL0_ADDR;
+		option = _SLLOPT_nut;
+	}
+)
+
+FEM_icmp6_ns(
+	u_ns_g2g_wo,
+	_HETHER_nut2tn,
+	{
+		_SRC(NUT_GL0_ADDR);
+		_DST(TR1_GL0_ADDR);
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = TR1_GL0_ADDR;
+	}
+)
+
+
+//===== Neighbor Advertisement
+
+// NA; Link-Local to Link-Local
+FEM_icmp6_na(
+	na_l2l,
+	_HETHER_tn2nut,
+	{
+		_SRC(tnv6());
+		_DST(nutv6());
+		HopLimit = 255;
+	},
+	{
+		RFlag = IS_ROUTER_LINK0;
+		SFlag = 1;
+		OFlag = 1;
+		TargetAddress = tnv6();
+		option = _TLLOPT_tn;
+	}
+)
+
+// NA; Link-Local to Global
+FEM_icmp6_na(
+	na_l2g,
+	_HETHER_tn2nut,
+	{
+		_SRC(tnv6());
+		_DST(NUT_GL0_ADDR);
+		HopLimit = 255;
+	},
+	{
+		RFlag = IS_ROUTER_LINK0;
+		SFlag = 1;
+		OFlag = 1;
+		TargetAddress = tnv6();
+		option = _TLLOPT_tn;
+	}
+)
+
+// NA; Global to Link-Local
+FEM_icmp6_na(
+	na_g2l,
+	_HETHER_tn2nut,
+	{
+		_SRC(TR1_GL0_ADDR);
+		_DST(nutv6());
+		HopLimit = 255;
+	},
+	{
+		RFlag = IS_ROUTER_LINK0;
+		SFlag = 1;
+		OFlag = 1;
+		TargetAddress = TR1_GL0_ADDR;
+		option = _TLLOPT_tn;
+	}
+)
+
+// NA; Global to Global
+FEM_icmp6_na(
+	na_g2g,
+	_HETHER_tn2nut,
+	{
+		_SRC(TR1_GL0_ADDR);
+		_DST(NUT_GL0_ADDR);
+		HopLimit = 255;
+	},
+	{
+		RFlag = IS_ROUTER_LINK0;
+		SFlag = 1;
+		OFlag = 1;
+		TargetAddress = TR1_GL0_ADDR;
+		option = _TLLOPT_tn;
+	}
+)
+
+
+//================ for Common Setup ================//
+//======================================================================
+//
+// RA / DADNS
+//
+
+FEM_icmp6_ra(
+	setup_ra,
+	_HETHER_tn2allnodes,
+	{
+		_SRC(tnv6());
+		_DST(v6(_ALLNODES_MCAST_ADDR));
+		HopLimit = 255;
+	},
+	{
+//		CurHopLimit = 64;
+		LifeTime = 120; //default is 20,but too short
+		ReachableTime = 30000;
+		RetransTimer = 1000;
+		option = _SLLOPT_src;
+		option = setup_mtuopt;
+		option = setup_prefixopt;
+	}
+)
+
+FEM_icmp6_ra(
+	setup_ra_rltime_1800,
+	_HETHER_tn2allnodes,
+	{
+		_SRC(tnv6());
+		_DST(v6(_ALLNODES_MCAST_ADDR));
+		HopLimit = 255;
+	},
+	{
+//		CurHopLimit = 64;
+		LifeTime = 1800; //default is 20,but too short
+		ReachableTime = 30000;
+		RetransTimer = 1000;
+		option = _SLLOPT_src;
+		option = setup_mtuopt;
+		option = setup_prefixopt;
+	}
+)
+
+Opt_ICMPv6_MTU setup_mtuopt {
+	MTU = 1500;
+}
+
+Opt_ICMPv6_Prefix setup_prefixopt {
+	PrefixLength = 64;
+	LFlag = 1;
+	AFlag = 1;
+//	ValidLifetime = 20000;
+//	PreferredLifetime = 20000;
+	ValidLifetime = _Default_AdvValidLifetime;
+	PreferredLifetime = _Default_AdvPreferredLifetime;
+	Prefix = v6(_GLOBAL0_UCAST_PRFX);
+}
+
+FEM_icmp6_ns (
+	setup_dadns,
+	_HETHER_nut2nutsolnode,
+	{
+		_SRC(v6(_UNSPEC_ADDR));
+		_DST(_IPV6_SOLNODE_MCAST(NUT_GL0_ADDR));
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = NUT_GL0_ADDR;
+	}
+)
+
+
+//======================================================================
+//
+// Echo Request
+//
+
+FEM_icmp6_echo_request(
+	setup_echo_request_g,
+	_HETHER_tn2nut,
+	{
+		_SRC(TR1_GL0_ADDR);
+		_DST(NUT_GL0_ADDR);
+		HopLimit = 255;
+	},
+	{
+		payload = setup_echo_data8;
+	}
+)
+
+FEM_icmp6_echo_request(
+	setup_echo_request,
+	_HETHER_tn2nut,
+	{
+		_SRC(tnv6());
+		_DST(nutv6());
+		HopLimit = 255;
+	},
+	{
+		payload = setup_echo_data8;
+	}
+)
+
+
+//======================================================================
+//
+// Echo Reply 
+//
+
+FEM_icmp6_echo_reply(
+	setup_echo_reply_g,
+	_HETHER_nut2tn,
+	{
+		_SRC(NUT_GL0_ADDR);
+		_DST(TR1_GL0_ADDR);
+	},
+	{
+		payload = setup_echo_data8;
+	}
+)
+
+FEM_icmp6_echo_reply(
+	setup_echo_reply,
+	_HETHER_nut2tn,
+	{
+		_SRC(nutv6());
+		_DST(tnv6());
+	},
+	{
+		payload = setup_echo_data8;
+	}
+)
+
+
+//======================================================================
+//
+// Payload Data
+//
+
+Payload setup_echo_data8 {
+	data = {1, 2, 3, 4, 5, 6, 7, 8};
+}
+
+
+//================ for Common Cleanup ================//
+
+//===== Router Advertisement
+
+FEM_icmp6_ra(
+	cleanup_ra,
+	_HETHER_tn2allnodes,
+	{
+		_SRC(tnv6());
+		_DST(v6(_ALLNODES_MCAST_ADDR));
+		HopLimit = 255;
+	},
+	{
+		CurHopLimit = 64;
+		LifeTime = 0;
+		ReachableTime = 30000;
+		RetransTimer = 1000;
+//		option = _SLLOPT_src;
+		option = setup_mtuopt;
+		option = cleanup_prefixopt;
+	}
+)
+
+Opt_ICMPv6_Prefix cleanup_prefixopt {
+	PrefixLength = 64;
+	LFlag = 1;
+	AFlag = 1;
+	ValidLifetime = 0;
+	PreferredLifetime = 0;
+	Prefix = v6(_GLOBAL0_UCAST_PRFX);
+}
+
+//===== Neighbor Advertisement
+
+// NA; Link-Local
+FEM_icmp6_na(
+	cleanup_na,
+	_HETHER_tn2allnodes,
+	{
+		_SRC(tnv6());
+		_DST(v6(_ALLNODES_MCAST_ADDR));
+		HopLimit = 255;
+	},
+	{
+		RFlag = IS_ROUTER_LINK0;
+		SFlag = 0;
+		OFlag = 1;
+		TargetAddress = tnv6();
+		option = DifferentLLA;
+	}
+)
+
+// NA; Global
+FEM_icmp6_na(
+	cleanup_na_g,
+	_HETHER_tn2allnodes,
+	{
+		_SRC(TR1_GL0_ADDR);
+		_DST(v6(_ALLNODES_MCAST_ADDR));
+		HopLimit = 255;
+	},
+	{
+		RFlag = IS_ROUTER_LINK0;
+		SFlag = 0;
+		OFlag = 1;
+		TargetAddress = TR1_GL0_ADDR;
+		option = DifferentLLA;
+	}
+)
+
+Opt_ICMPv6_TLL DifferentLLA {
+	LinkLayerAddress = ether(CLEANUP_ETHER_LINK0);
+}
+
+//===== Echo Request
+
+FEM_icmp6_echo_request(
+	cleanup_echo_request,
+	_HETHER_tn2nut,
+	{
+		_SRC(tnv6());
+		_DST(nutv6());
+		HopLimit = 255;
+	},
+	{
+		payload = setup_echo_data8;
+	}
+)
+
+FEM_icmp6_echo_request(
+	cleanup_echo_request_g,
+	_HETHER_tn2nut,
+	{
+		_SRC(TR1_GL0_ADDR);
+		_DST(NUT_GL0_ADDR);
+		HopLimit = 255;
+	},
+	{
+		payload = setup_echo_data8;
+	}
+)

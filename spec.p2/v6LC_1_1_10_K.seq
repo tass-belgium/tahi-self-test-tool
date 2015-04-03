@@ -1,0 +1,498 @@
+#!/usr/bin/perl
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: v6LC_1_1_10_K.seq,v 1.6 2010/03/24 09:03:10 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+use CommonSPEC;
+use lib '../';
+use AdvancedFunctionality;
+
+sub cleanup_tunnel($);
+
+if ($V6evalTool::NutDef{'Type'} ne 'router') {
+	vLogHTML("This test is for the router only<BR>");
+	exit($V6evalTool::exitRouterOnly);
+}
+
+if (!$AdvancedFunctionality::MULTICAST_ROUTING) {
+	exit($V6evalTool::exitSkip);
+}
+
+unless($AdvancedFunctionality::HAS_MULTIPLE_INTERFACES) {
+	my $srcaddr   =  vMAC2LLAddr($V6evalTool::NutDef{'Link0_addr'});
+	   $srcaddr   =~ s/fe80::/3ffe:501:ffff:100:/;
+
+	my $dstaddr   =  vMAC2LLAddr($V6evalTool::TnDef{'Link0_addr'});
+	   $dstaddr   =~ s/fe80::/3ffe:501:ffff:110:/;
+
+	my $insrcaddr =  vMAC2LLAddr($V6evalTool::TnDef{'Link0_addr'});
+	   $insrcaddr =~ s/fe80::/3ffe:501:ffff:100:/;
+
+	my $indstaddr =  vMAC2LLAddr($V6evalTool::TnDef{'Link0_addr'});
+	   $indstaddr =~ s/fe80::/3ffe:501:ffff:101:/;
+
+	my $gateway   =  vMAC2LLAddr($V6evalTool::TnDef{'Link0_addr'});
+
+	my $Link0_device = $V6evalTool::NutDef{'Link0_device'};
+
+	if(vRemote('route.rmt', 'cmd=add',
+		"prefix=3ffe:501:ffff:110::", 'prefixlen=64',
+		"gateway=$gateway", "if=$Link0_device")) {
+
+		vLogHTML('<FONT COLOR="#FF0000">route.rmt: '.
+			'Can\'t configure the route.</FONT><BR>');
+
+		exit($V6evalTool::exitFatal);
+	}
+
+	if(vRemote('tunnel.rmt',
+		'if=0 '.
+		'prefixlen=64 '.
+		'routeprefixlen=64 '.
+		'addrfamily=inet6 '.
+		"prefix=3ffe:501:ffff:101:: ".
+		"srcaddr=$srcaddr ".
+		"dstaddr=$dstaddr ".
+		"insrcaddr=$insrcaddr ".
+		"indstaddr=$indstaddr ")) {
+
+		vLogHTML('<FONT COLOR="#FF0000">tunnel.rmt: '.
+			'Can\'t configure the tunnel.</FONT><BR>');
+
+		exit($V6evalTool::exitFatal);
+	}
+}
+
+$pktdesc{'echo_request_ex_to_link0'}	= 'Send Echo Request to link0';
+$pktdesc{'echo_request_ex_from_link1'}	= 'Recv Echo Request to link1';
+
+$endStatus = $V6evalTool::exitPass;
+
+######################################################################
+
+$IF0 = 'Link0';
+$IF1 = 'Link1';
+
+vCapture($IF0);
+
+if($AdvancedFunctionality::HAS_MULTIPLE_INTERFACES) {
+	vCapture($IF1);
+}
+
+if(setup11($IF0) != $CommonSPEC::Success) {
+	$ret = cleanup($IF0);
+	if ($ret == $CommonSPEC::Success) {
+		exit($V6evalTool::exitFail);
+	} else {
+		exit($V6evalTool::exitFatal);
+	}
+}
+
+if(vRemote('pim6dd.rmt', 'usePim6dd=start', '')) {
+	vLogHTML('<FONT COLOR="#FF0000">pim6dd.rmt: '.
+		'Couldn\'t enable multicast routing function.</FONT><BR>');
+
+	exit($V6evalTool::exitFatal);
+}
+
+vSend($AdvancedFunctionality::HAS_MULTIPLE_INTERFACES? $IF1: $IF0,
+	'mld_report_to_link1');
+vSleep(3);
+vClear($IF0);
+if($AdvancedFunctionality::HAS_MULTIPLE_INTERFACES) {
+	vClear($IF1);
+}
+
+#----- test
+vSend($IF0, 'echo_request_ex_to_link0');
+%ret = nd_vRecv_IN($AdvancedFunctionality::HAS_MULTIPLE_INTERFACES?
+	$IF1: $IF0, $CommonSPEC::wait_reply, 0, 0,
+	'echo_request_ex_from_link1');
+if ($ret{'status'}) {
+	vLogHTML('Can not receive forwarded Echo Request<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+} else {
+	vLogHTML('OK<BR>');
+}
+#----- end test
+
+if($AdvancedFunctionality::HAS_MULTIPLE_INTERFACES) {
+	$ret = cleanup($IF0, $IF1);
+} else {
+	$ret = cleanup_tunnel($IF0);
+}
+
+if(vRemote('pim6dd.rmt', 'usePim6dd=stop', '')) {
+	vLogHTML('<FONT COLOR="#FF0000">pim6dd.rmt: '.
+		'Couldn\'t disable multicast routing function.</FONT><BR>');
+
+	exit($V6evalTool::exitFatal);
+}
+
+vStop($IF0);
+
+if($AdvancedFunctionality::HAS_MULTIPLE_INTERFACES) {
+	vStop($IF1);
+}
+
+if ($ret == $CommonSPEC::Success) {
+	exit($endStatus);
+} else {
+	exit($V6evalTool::exitFatal);
+}
+
+
+
+#----------------------------------------------------------------------#
+sub
+cleanup_tunnel($)
+{
+	my ($link) = @_;
+ 
+	my $ret = cleanup($IF0);
+ 
+	my $srcaddr   =  vMAC2LLAddr($V6evalTool::NutDef{'Link0_addr'});
+	   $srcaddr   =~ s/fe80::/3ffe:501:ffff:100:/;
+
+	my $dstaddr   =  vMAC2LLAddr($V6evalTool::NutDef{'Link0_addr'});
+	   $dstaddr   =~ s/fe80::/3ffe:501:ffff:110:/;
+
+	my $insrcaddr =  vMAC2LLAddr($V6evalTool::TnDef{'Link0_addr'});
+	   $insrcaddr =~ s/fe80::/3ffe:501:ffff:100:/;
+        
+	my $indstaddr =  vMAC2LLAddr($V6evalTool::TnDef{'Link0_addr'});
+	   $indstaddr =~ s/fe80::/3ffe:501:ffff:101:/;
+
+	my $gateway   =  vMAC2LLAddr($V6evalTool::TnDef{'Link0_addr'});
+        
+	my $Link0_device = $V6evalTool::NutDef{'Link0_device'};
+ 
+	if(vRemote('route.rmt', 'cmd=delete',
+		"prefix=3ffe:501:ffff:110::", 'prefixlen=64',
+		"gateway=$gateway", "if=$Link0_device")) {
+
+		vLogHTML('<FONT COLOR="#FF0000">route.rmt: '.
+			'Can\'t configure the route.</FONT><BR>');
+
+		exit($V6evalTool::exitFatal);
+	}
+         
+	if(vRemote('tunnel.rmt',
+		'if=0 '.
+		'deletetunnel '.
+		'prefixlen=64 '.
+		'routeprefixlen=64 '.
+		'addrfamily=inet6 '.
+		"prefix=3ffe:501:ffff:101:: ".
+		"srcaddr=$srcaddr ".
+		"dstaddr=$dstaddr ".
+		"insrcaddr=$insrcaddr ".
+		"indstaddr=$indstaddr ")) {
+ 
+		vLogHTML('<FONT COLOR="#FF0000">tunnel.rmt: '.
+			'Can\'t configure the tunnel.</FONT><BR>');
+
+		exit($V6evalTool::exitFatal);
+	}
+
+	return($ret);
+}
+
+
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  v6LC_1_1_10_K - IP Forwarding - Source and Destination Address - Intermediate Node
+                  (Request sent to Multicast address (Reserved Value = F)) (Router Only)
+
+=head1 TARGET
+
+  Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./v6LC_1_1_10_K.seq">v6LC_1_1_10_K.seq</A> [-tooloption ...] -pkt <A HREF="./v6LC_1_1_10_K.def">v6LC_1_1_10_K.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  None
+
+=head1 TEST PROCEDURE
+
+Verify that a node properly forwards the ICMPv6 Echo Requests.
+
+   TN1                         RUT                         TN2
+              (Link0)                     (Link1)
+    |                           |                           |
+    |-------------------------->|                           |
+    |   Echo Request            |                           |
+    |                           |                           |
+    |                           |                           |
+    |                           |-------------------------->|
+    |                           |   Echo Request            |
+    |                           |                           |
+    |                           |                           |
+    v                           v                           v
+
+
+  1. Configure multicast routing on the RUT.
+  2. TN2 is a Listener for the multicast group FF0F::1:2.
+  3. TN1 transmits an Echo Request to TN2's multicast address with reserved field 
+     set to zero (FF0F::1:2) with a first hop through the RUT.
+     The source address is TN1's Global address. 
+  4. Observe the packets transmitted by the RUT on Link1.
+
+  Echo Request Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 16
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = TN1 Global Address (Link0)
+            DestinationAddress = TN2's Multicast address (FF0F::1:2)(Link1)
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = {1, 2, 3, 4, 5, 6, 7, 8}
+
+
+=head1 JUDGEMENT
+
+  PASS: The NUT must forward the Echo Reequest from TN1 to TN2 with a first hop through the RUT.
+
+  Echo Request Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 16
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = TN1 Global Address (Link0)
+            DestinationAddress = TN2's Multicast address (FF0F::1:2)(Link1)
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff (same as Echo Request)
+            SequenceNumber = 1 (same as Echo Request)
+            PayloadData    = {1, 2, 3, 4, 5, 6, 7, 8} (same as Echo Request)
+
+
+=head1 CLEANUP
+
+Common Test Cleanup
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+# 
+# 4.2  Options
+# 
+#    Two of the currently-defined extension headers -- the Hop-by-Hop
+#    Options header and the Destination Options header -- carry a variable
+#    number of type-length-value (TLV) encoded "options", of the following
+#    format:
+# 
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- - - - - - - - -
+#       |  Option Type  |  Opt Data Len |  Option Data
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- - - - - - - - -
+# 
+#       Option Type          8-bit identifier of the type of option.
+# 
+#       Opt Data Len         8-bit unsigned integer.  Length of the Option
+#                            Data field of this option, in octets.
+# 
+#       Option Data          Variable-length field.  Option-Type-specific
+#                            data.
+# 
+#    The sequence of options within a header must be processed strictly in
+#    the order they appear in the header; a receiver must not, for
+#    example, scan through the header looking for a particular kind of
+#    option and process that option prior to processing all preceding
+#    ones.
+# 
+#    The Option Type identifiers are internally encoded such that their
+#    highest-order two bits specify the action that must be taken if the
+#    processing IPv6 node does not recognize the Option Type:
+# 
+#       00 - skip over this option and continue processing the header.
+# 
+#       01 - discard the packet.
+# 
+# =begin html
+# <PRE>
+#       <B>10 - discard the packet and, regardless of whether or not the
+#            packet's Destination Address was a multicast address, send an
+#            ICMP Parameter Problem, Code 2, message to the packet's
+#            Source Address, pointing to the unrecognized Option Type.</B>
+# </PRE>
+# 
+# =end html
+# 
+#       11 - discard the packet and, only if the packet's Destination
+#            Address was not a multicast address, send an ICMP Parameter
+#            Problem, Code 2, message to the packet's Source Address,
+#            pointing to the unrecognized Option Type.
+# 
+#    The third-highest-order bit of the Option Type specifies whether or
+#    not the Option Data of that option can change en-route to the
+#    packet's final destination.  When an Authentication header is present
+#    in the packet, for any option whose data may change en-route, its
+#    entire Option Data field must be treated as zero-valued octets when
+#    computing or verifying the packet's authenticating value.
+# 
+#       0 - Option Data does not change en-route
+# 
+#       1 - Option Data may change en-route
+# 
+#    The three high-order bits described above are to be treated as part
+#    of the Option Type, not independent of the Option Type.  That is, a
+#    particular option is identified by a full 8-bit Option Type, not just
+#    the low-order 5 bits of an Option Type.
+# 
+#    The same Option Type numbering space is used for both the Hop-by-Hop
+#    Options header and the Destination Options header.  However, the
+#    specification of a particular option may restrict its use to only one
+#    of those two headers.
+# 
+#    Individual options may have specific alignment requirements, to
+#    ensure that multi-octet values within Option Data fields fall on
+#    natural boundaries.  The alignment requirement of an option is
+#    specified using the notation xn+y, meaning the Option Type must
+#    appear at an integer multiple of x octets from the start of the
+#    header, plus y octets.  For example:
+# 
+#       2n    means any 2-octet offset from the start of the header.
+#       8n+2  means any 8-octet offset from the start of the header,
+#             plus 2 octets.
+# 
+# 
+# 4.3  Hop-by-Hop Options Header
+# 
+#    The Hop-by-Hop Options header is used to carry optional information
+#    that must be examined by every node along a packet's delivery path.
+#    The Hop-by-Hop Options header is identified by a Next Header value of
+#    0 in the IPv6 header, and has the following format:
+# 
+#     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#     |  Next Header  |  Hdr Ext Len  |                               |
+#     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               +
+#     |                                                               |
+#     .                                                               .
+#     .                            Options                            .
+#     .                                                               .
+#     |                                                               |
+#     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# 
+#    Next Header          8-bit selector.  Identifies the type of header
+#                         immediately following the Hop-by-Hop Options
+#                         header.  Uses the same values as the IPv4
+#                         Protocol field [RFC-1700 et seq.].
+# 
+#    Hdr Ext Len          8-bit unsigned integer.  Length of the Hop-by-
+#                         Hop Options header in 8-octet units, not
+#                         including the first 8 octets.
+# 
+#    Options              Variable-length field, of length such that the
+#                         complete Hop-by-Hop Options header is an integer
+#                         multiple of 8 octets long.  Contains one or more
+#                         TLV-encoded options, as described in section
+#                         4.2.
+# 
+# =begin html
+# <PRE>
+#    <B>The only hop-by-hop options defined in this document are the Pad1 and
+#    PadN options specified in section 4.2.</B>
+# </PRE>
+# 
+# =end html
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

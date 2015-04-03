@@ -1,0 +1,65 @@
+				README of
+		IPv6 Conformance Test for Path MTU Discovery
+
+			      TAHI Project
+
+		     $Date: 2004/08/13 04:19:34 $
+
+* First of all
+
+	This is a set of conformance tests for IPv6 Path MTU discovery
+	that is based upon RFC1981.
+
+* Test coverage
+
+	The test coverage is the followings:
+
+					
+	            |     the NUT type      |
+	Category    | host      | router    | comments
+	------------+-----------+-----------+-------------------
+	Path MTU    | done      |almost done|
+	------------+-----------+-----------+-------------------
+
+
+* How to run the tests
+
+	# vi /usr/local/v6eval/etc/tn.def
+	# vi /usr/local/v6eval/etc/nut.def
+	% cp -Rp /usr/local/v6eval/ct $SOMEWHERE
+	% cd $SOMEWHERE
+	% make test
+		* NOTE:see lower compatibility
+	% netscape index.html
+
+	If you know more about it,
+	please see /usr/local/v6eval/doc/INSTALL.ct.
+
+
+* Lower Compatibility
+	In ct-2.1.1 pmtu discovery tests are swapped by newer test.
+	If you want to run newer tests, please type following command line.
+		% make test
+		or
+		% make tahi
+
+	If you want to run older tests, please type following command line.
+		% make legacy-test
+		or
+		% make legacy-tahi
+
+	From ct-2.1.1 the older tests(for legacy-test or legacy-tahi)
+	are out of support.
+	So we recommend using newer tests.
+	Please use following command.
+		% make test
+		or
+		% make tahi
+
+	If you want tu run test for node which does not support PMTU 
+	type following command line.
+		% make tiny
+
+
+
+						[end of README]

@@ -1,0 +1,586 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+# $TINY: checkPMTUincrease.seq,v 1.9 2002/03/05 02:59:11 masaxmasa Exp $
+# 
+
+########################################################################
+BEGIN { $V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $ '; }
+use V6evalTool;
+use PMTU;
+
+$IF=Link0;
+$WAIT_TIME=5;
+$WAIT_TO_FIN_DAD=5;
+$WAIT_DONOT_INCREASE_TIME=290;
+$WAIT_DETECT_INCREASE_TIME=630;
+$WAIT_TO_SET_NA=1;
+
+%pktdesc = (
+echo_request_1500_someone                => 'TN(Someone) --ICMP Echo Request(1500)-------> NUT',	
+echo_reply_1500_someone                  => 'TN(Someone) <-ICMP Echo Reply(1500)---------- NUT',	
+icmp6_TooBigMesg_1280_for_1500_someone   => 'TN(Some-rt) --TooBigMesg(MTU1280)-----------> NUT',
+frag_echo_reply_1500_1st_mtu1280_someone => 'TN(Someone) <-ICMP Echo Reply (1st MTU 1280)- NUT',
+frag_echo_reply_1500_2nd_mtu1280_someone => 'TN(Someone) <-ICMP Echo Reply (2nd MTU 1280)- NUT'
+);
+
+# Initialize
+
+flushtables($V6evalTool::NutDef{System});
+
+vCapture($IF);
+vClear($IF);
+
+# Initialize
+
+if ($V6evalTool::NutDef{Type} eq "router"){
+	initNUT();
+}else{
+	vSend($IF,ra);
+	vLogHTML("Ignoring DAD packets");
+	vSleep($WAIT_TO_FIN_DAD);
+#	vSend($IF,na);
+}
+
+#
+# check that detection of increases is done less than 5 minutes
+# 
+
+vClear($IF);
+vSend($IF,echo_request_1500_someone);
+
+%ret=vRecv($IF,5,0,1,
+	echo_reply_1500_someone,
+	ns_srcGlobal,
+	ns);
+
+if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive Echo Reply from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+if($ret{recvFrame} eq 'ns' || $ret{recvFrame} eq 'ns_srcGlobal') {
+    if( $ret{recvFrame} eq 'ns') {
+        PMTU::sendNA();
+    }elsif( $ret{recvFrame} eq 'ns_srcGlobal') {
+        PMTU::sendNA_srcGlobal();
+    }
+
+    vSleep($WAIT_TO_SET_NA);
+    vClear($IF);
+    vSend($IF,echo_request_1500_someone);
+
+    %ret=vRecv($IF, 5,0,0,
+            echo_reply_1500_someone,
+            frag_echo_reply_1500_1st_mtu1280_someone,
+            frag_echo_reply_1500_2nd_mtu1280_someone
+            );
+
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive Echo Reply from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1280_someone') {
+        vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1280) from NUT");
+        %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1280_someone);
+        if( $ret{status} != 0) {
+            vLogHTML("TN COULD NOT receive Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+            vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+            vClear($IF);
+            exit $V6evalTool::exitFail;
+        }else{
+            vLogHTML("TN received Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+            vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+            vClear($IF);
+            exit $V6evalTool::exitFail;
+        }
+    }elsif($ret{recvFrame} eq 'frag_echo_reply_1500_2nd_mtu1280_someone') {
+        vLogHTML("TN COULD NOT receive Fragmented Echo Reply (1/2 MTU1280) from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }elsif($ret{recvFrame} eq 'frag_echo_reply_1500_someone') {
+# Correct Case
+        vLogHTML("TN received NOT Fragmented Echo Reply from NUT<BR>");
+        vLogHTML('OK');
+    }
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1280_someone') {
+    vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1280) from NUT");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1280_someone);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }else{
+        vLogHTML("TN received Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }
+}elsif($ret{recvFrame} eq 'frag_echo_reply_1500_2nd_mtu1280_someone') {
+    vLogHTML("TN COULD NOT receive Fragmented Echo Reply (1/2 MTU1280) from NUT<BR>");
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}elsif($ret{recvFrame} eq 'frag_echo_reply_1500_someone') {
+# Correct Case
+    vLogHTML("TN received NOT Fragmented Echo Reply from NUT<BR>");
+    vLogHTML('OK');
+}
+
+####################
+# Send Packet Too BIG Message
+# And wait for 5 Min
+####################
+
+vSend($IF,"icmp6_TooBigMesg_1280_for_1500_someone");
+
+vSleep(1);
+
+####################
+# Confirm that NUT change the path mtu for someone to 1280
+####################
+
+vClear($IF);
+vSend($IF,echo_request_1500_someone);
+
+%ret=vRecv($IF, 5,0,0,
+            echo_reply_1500_someone,
+            frag_echo_reply_1500_1st_mtu1280_someone,
+            frag_echo_reply_1500_2nd_mtu1280_someone
+            );
+
+if( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1280_someone') {
+    vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1280) from NUT");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1280_someone);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }else{
+# Correct Case
+        vLogHTML("TN received Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+        vLogHTML('OK');
+        vClear($IF);
+    }
+}elsif($ret{recvFrame} eq 'frag_echo_reply_1500_2nd_mtu1280_someone') {
+    vLogHTML("TN COULD NOT receive Fragmented Echo Reply (1/2 MTU1280) from NUT<BR>");
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}elsif($ret{recvFrame} eq 'echo_reply_1500_someone') {
+    vLogHTML("WARN:TN received not Fragmented Echo Reply from NUT<BR>");
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}
+
+####################
+# Confirm that NUT don't increase PMTU for Someone in 5 Min
+####################
+
+vSleep($WAIT_DONOT_INCREASE_TIME);
+
+# Re-Initialize
+
+vSend($IF,ra);
+vLogHTML("Ignoring DAD packets");
+vSleep($WAIT_TO_FIN_DAD);
+vSend($IF,na);
+
+vClear($IF);
+vSend($IF,echo_request_1500_someone);
+
+%ret=vRecv($IF,5,0,1,
+	echo_reply_1500_someone,
+        frag_echo_reply_1500_1st_mtu1280_someone,
+        frag_echo_reply_1500_2nd_mtu1280_someone,
+	ns_srcGlobal,
+	ns);
+
+if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive Echo Reply from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+if($ret{recvFrame} eq 'ns' || $ret{recvFrame} eq 'ns_srcGlobal') {
+    if( $ret{recvFrame} eq 'ns') {
+        PMTU::sendNA();
+    }elsif( $ret{recvFrame} eq 'ns_srcGlobal') {
+        PMTU::sendNA_srcGlobal();
+    }
+
+    vSleep($WAIT_TO_SET_NA);
+    vClear($IF);
+    vSend($IF,echo_request_1500_someone);
+
+    %ret=vRecv($IF, 5,0,0,
+            echo_reply_1500_someone,
+            frag_echo_reply_1500_1st_mtu1280_someone,
+            frag_echo_reply_1500_2nd_mtu1280_someone
+            );
+
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive Echo Reply from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1280_someone') {
+        vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1280) from NUT");
+        %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1280_someone);
+        if( $ret{status} != 0) {
+            vLogHTML("TN COULD NOT receive Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+            vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+            vClear($IF);
+            exit $V6evalTool::exitFail;
+        }else{
+# Correct Case
+            vLogHTML("TN received Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+            vLogHTML("OK");
+            vClear($IF);
+        }
+    }elsif($ret{recvFrame} eq 'frag_echo_reply_1500_2nd_mtu1280_someone') {
+        vLogHTML("TN COULD NOT receive Fragmented Echo Reply (1/2 MTU1280) from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }elsif($ret{recvFrame} eq 'echo_reply_1500_someone') {
+        vLogHTML("WARN:TN received not Fragmented Echo Reply from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1280_someone') {
+    vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1280) from NUT");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1280_someone);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }else{
+# Correct Case
+        vLogHTML("TN received Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+        vLogHTML("OK");
+        vClear($IF);
+    }
+}elsif($ret{recvFrame} eq 'frag_echo_reply_1500_2nd_mtu1280_someone') {
+    vLogHTML("TN COULD NOT receive Fragmented Echo Reply (1/2 MTU1280) from NUT<BR>");
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}elsif($ret{recvFrame} eq 'echo_reply_1500_someone') {
+    vLogHTML("WARN:TN received not Fragmented Echo Reply from NUT<BR>");
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}
+
+####################
+# Wait for more 5 Min, It means to wait for 10 Min since last Packet Too BIG Message
+####################
+
+vSleep($WAIT_DETECT_INCREASE_TIME - $WAIT_DONOT_INCREASE_TIME);
+
+
+####################
+# Confirm that NUT increase PMTU for Someone after 10 Min (recommended time)
+####################
+# Re-Initialize
+
+vSend($IF,ra);
+vLogHTML("Ignoring DAD packets");
+vSleep($WAIT_TO_FIN_DAD);
+vSend($IF,na);
+
+# Send trigger packet
+vClear($IF);
+vSend($IF,echo_request_1500_someone);
+
+%ret=vRecv($IF,5,0,1,
+	echo_reply_1500_someone,
+	ns_srcGlobal,
+	ns);
+
+if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive Echo Reply from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+if($ret{recvFrame} eq 'ns' || $ret{recvFrame} eq 'ns_srcGlobal') {
+    if( $ret{recvFrame} eq 'ns') {
+        PMTU::sendNA();
+    }elsif( $ret{recvFrame} eq 'ns_srcGlobal') {
+        PMTU::sendNA_srcGlobal();
+    }
+
+    vSleep($WAIT_TO_SET_NA);
+    vClear($IF);
+    vSend($IF,echo_request_1500_someone);
+
+    %ret=vRecv($IF, 5,0,0,
+            echo_reply_1500_someone,
+            frag_echo_reply_1500_1st_mtu1280_someone,
+            frag_echo_reply_1500_2nd_mtu1280_someone
+            );
+
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive Echo Reply from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1280_someone') {
+        vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1280) from NUT");
+        %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1280_someone);
+        if( $ret{status} != 0) {
+            vLogHTML("TN COULD NOT receive Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+        }else{
+            vLogHTML("TN received Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+        }
+        vLogHTML("NUT have NOT increased PMTU after 10 Min<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }elsif($ret{recvFrame} eq 'frag_echo_reply_1500_2nd_mtu1280_someone') {
+        vLogHTML("TN COULD NOT receive Fragmented Echo Reply (1/2 MTU1280) from NUT<BR>");
+        vLogHTML("NUT have NOT increased PMTU after 10 Min<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }elsif($ret{recvFrame} eq 'frag_echo_reply_1500_someone') {
+# Correct Case
+        vLogHTML("TN received not Fragmented Echo Reply from NUT<BR>");
+        vLogHTML("NUT have increased PMTU after 10 Min<BR>");
+        vLogHTML("OK");
+    }
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1280_someone') {
+    vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1280) from NUT");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1280_someone);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+    }else{
+        vLogHTML("TN received Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+    }
+    vLogHTML("NUT have NOT increased PMTU after 10 Min");
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}elsif($ret{recvFrame} eq 'frag_echo_reply_1500_2nd_mtu1280_someone') {
+    vLogHTML("TN COULD NOT receive Fragmented Echo Reply (1/2 MTU1280) from NUT");
+    vLogHTML("NUT have NOT increased PMTU after 10 Min<BR>");
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}elsif($ret{recvFrame} eq 'frag_echo_reply_1500_someone') {
+# Correct Case
+    vLogHTML("TN received not Fragmented Echo Reply from NUT<BR>");
+    vLogHTML("NUT have increased PMTU after 10 Min<BR>");
+    vLogHTML("OK<BR>");
+}
+
+vLogHTML("TN detects increase of Path MTU<BR>");
+vLogHTML("OK");
+exit $V6evalTool::exitPass;
+
+########################################################################
+__END__
+
+=head1 NAME
+
+	checkPMTUincrease - Verify increasing Path MTU
+
+=head1 TARGET
+
+	Host
+
+=head1 SYNOPSIS
+
+	PMTU_reset.seq [-tooloption ...] -p PMTU_reset.def
+
+=head1 NETWORK CONFIGURATION
+
+        This test evaluate the behavior of NUT when 5 min and 10 min has past
+	since last Packet Too Big Message.
+        In this test, NUT is a host and TN plays a Roll of Router and
+        other host.
+
+	Physical Network configuration
+	
+	--------+---------------+--------------
+		|		|
+		NUT		TN
+
+
+
+	Logical Network Configuration
+
+				NUT
+				|
+	----------------+-------+---------
+			|
+			Router
+			|
+	--------+-------+-----------------
+		| 
+	      HOST
+
+	NUT < --- Router --- > HOST
+
+        In this test, NUT receives Packet Too Big Message and 
+	wait for a while. 
+        - Decrease PMTU for HOST from 1500 to 1280
+        - Confirm PMTU for HOST is changed to 1280
+	- Wait for 295 sec
+        - Confirm PMTU for HOST is still 1280
+	- Wait for 305 sec
+        - Confirm PMTU for HOST is reset to 1500
+
+=head1 INITIALIZATION
+
+        The TN send a RA to assign global address prefix.
+
+        TN              NUT
+
+        -------------------
+
+        ===multicast RA===>
+        src=TN's link-local
+        dst=LinkLocal-all-node                                                  
+        M=0, O=0,
+        Lifetime=3600, ReachableTime=60000, RetransTImer=1005
+        Prefix:
+           L=1, A=1,                       
+           ValidLifetime=3600005, PreferredLifetime=3600005
+           Prefix=3ffe:501:ffff:100::, PrefixLength=64                      
+   
+          Wait (5 sec.)
+                 Ignoring DAD packets for global address.                 
+
+
+=head1 TEST PROCEDURE
+
+	"checkPMTUincrease" verifies NUT's resetting of Path MTU. 
+
+	- NUT must not attempt to detect an increase less than 5 
+	  minutes after a Too Big Mesg.
+
+           TN                  NUT
+            |			|
+          --+-------------------+----
+
+        1.
+        TN send Echo Request. 
+        TN === echo request(1500) ===> NUT
+
+        2.
+        NUT send Echo Reply.
+        TN <=== echo reply(1500) === NUT
+
+        3.
+        TN send ICMPv6 Too Big Mesg include MTU (1280).
+        
+        TN  === ICMPv6 Too Big Mesg(1280) ===> NUT
+
+        4.
+        TN send Echo Request. 
+        TN  === echo request(1500) ===> NUT
+
+	5.
+        NUT send Echo Reply
+        << JUDGEMENT 1 >>
+        TN <=== echo reply(1280 1/2) === NUT
+        TN <=== echo reply( 276 2/2) === NUT
+            
+	6. 
+	TN sleep 295 seconds in perl script.
+
+        7.
+        TN send Echo Request. 
+        TN  === echo request(1500) ===> NUT
+
+	8.
+        NUT send Echo Reply
+        << JUDGEMENT 2 >>
+        TN <=== echo reply(1280 1/2) === NUT
+        TN <=== echo reply( 276 2/2) === NUT
+
+	9. 
+	TN sleep 305 seconds in perl script.
+
+        10.
+        TN send Echo Request. 
+        TN  === echo request(1500) ===> NUT
+
+	11.
+        NUT send Echo Reply
+        << JUDGEMENT 3 >>
+        TN <=== echo reply(1500) === NUT
+
+
+=head1 JUDGEMENT
+
+        << JUDGEMENT 1 -PASS- >>
+ 		NUT sends fragmented Echo Reply.
+		NUT accept ICMP Packet Too Big Message and register the 
+		MTU according to the ICMP message.
+
+        << JUDGEMENT 2 -PASS- >>
+ 		NUT sends fragmented Echo Reply.
+		NUT does not reset MTU value in 5 min.
+
+        << JUDGEMENT 2 -PASS- >>
+ 		NUT sends fragmented Echo Reply.
+		NUT reset MTU value after 10 min.
+		Note: The value 10 min is just recommended value, 
+		      so implementation can use other value to reset the PMTU.
+
+=head1 SEE ALSO
+
+	perldoc V6evalTool
+	perldoc V6evalRemote
+
+=cut

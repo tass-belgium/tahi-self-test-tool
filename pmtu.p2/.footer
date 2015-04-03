@@ -1,0 +1,24 @@
+<BR>
+<BR>
+Terminology
+<UL>
+  DAD: Duplicate Address Detection<BR>
+  MTU: Maximum Transmission Unit<BR>
+  NA: Neighbor Advertisement<BR>
+  NCE: Neighbor Cache Entry<BR>
+  NS: Neighbor Solicitation<BR>
+  NUT: Node Under Test<BR>
+  RA: Router Advertisement<BR>
+  RUT: Router Under Test<BR>
+  TN: Testing Node<BR>
+  TR: Testing Router<BR>
+</UL>
+<HR>	
+Index
+<UL>
+  <LI><A HREF="../spec.p2/index.html">Section 1: RFC 2460 - IPv6 Specification</A>
+  <LI><A HREF="../nd.p2/index.html">Section 2: RFC 4861 - Neighbor Discovery for IPv6</A>
+  <LI><A HREF="../addr.p2/index.html">Section 3: RFC 4862 - IPv6 Stateless Address Autoconfiguration</A>
+  <LI>Section 4: RFC 1981 - Path MTU Discovery for IPv6
+  <LI><A HREF="../icmp.p2/index.html">Section 5: RFC 4443 - ICMPv6</A>
+</UL>

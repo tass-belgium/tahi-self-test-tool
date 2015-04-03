@@ -1,0 +1,184 @@
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Name: V6LC_5_0_0 $
+#
+# $TAHI: ct/nd.p2/INDEX_RD_p1_special,v 1.5 2007/11/08 10:40:18 akisada Exp $
+#
+# <seq>:<def>:<opts>:<htmldoc>:<dsc>:<links>
+#
+
+
+
+#----------------------------------------------------------------------#
+&print:<U><B><FONT SIZE="+1" COLOR="#FF0000"><TT>Group 2: Router and Prefix Discovery</TT></FONT></B></U>
+&#./v6LC_2_0_0.seq:./v6LC_2_0_0.def:::<TT>Initialization</TT>:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.2.2.1 Router Solicitations (Hosts Only)                         #
+#----------------------------------------------------------------------#
+&print:<TT>Test v6LC.2.2.1: Router Solicitations (Hosts Only)</TT>
+&#./V6LC_2_2_1.seq:./V6LC_2_2_1.def:::<TT>Router Solicitations</TT>:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.2.2.2 Router Solicitations, Solicited Router Advertisement      #
+#            (Hosts Only)                                              #
+#----------------------------------------------------------------------#
+&print:<TT>Test v6LC.2.2.2: Router Solicitations, Solicited Router Advertisement (Hosts Only)</TT>
+&#./V6LC_2_2_2_A.seq:./V6LC_2_2_2_A.def:::<TT>Part A&#58; Valid Router Advertisement, No Source Link-layer Address Option</TT>:1
+&#./V6LC_2_2_2_B.seq:./V6LC_2_2_2_B.def:::<TT>Part B&#58; Valid Router Advertisement, Source Link-layer Address Option</TT>:1
+&#./V6LC_2_2_2_C.seq:./V6LC_2_2_2_C.def:::<TT>Part C&#58; Invalid Router Advertisement, Global Source Address</TT>:1
+&#./V6LC_2_2_2_D.seq:./V6LC_2_2_2_D.def:::<TT>Part D&#58; Invalid Router Advertisement, Bad Hop Limit</TT>:1
+&#./V6LC_2_2_2_E.seq:./V6LC_2_2_2_E.def:::<TT>Part E&#58; Invalid Router Advertisement, Bad ICMP Checksum</TT>:1
+&#./V6LC_2_2_2_F.seq:./V6LC_2_2_2_F.def:::<TT>Part F&#58; Invalid Router Advertisement, Bad ICMP Code</TT>:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.2.2.3 Host Ignores Router Solicitations (Hosts Only)            #
+#----------------------------------------------------------------------#
+&print:<TT>Test v6LC.2.2.3: Host Ignores Router Solicitations (Hosts Only)</TT>
+&#./V6LC_2_2_3_A.seq:./V6LC_2_2_3_A.def:::<TT>Part A&#58; All-Router Multicast Destination</TT>:1
+&#./V6LC_2_2_3_B.seq:./V6LC_2_2_3_B.def:::<TT>Part B&#58; All-Nodes Multicast Destination</TT>:1
+&#./V6LC_2_2_3_C.seq:./V6LC_2_2_3_C.def:::<TT>Part C&#58; Link-local Unicast Destination</TT>:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.2.2.11 Default Router Switch (Hosts Only)                       #
+#----------------------------------------------------------------------#
+&print:<TT>Test v6LC.2.2.11: Default Router Switch (Hosts Only)</TT>
+&#./V6LC_2_2_10.seq:./V6LC_2_2_10.def:::<TT>Default Router Switch</TT>:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.2.2.12 Router Advertisement Processing, Validity (Hosts Only)   #
+#----------------------------------------------------------------------#
+&print:<TT>Test v6LC.2.2.12: Router Advertisement Processing, Validity (Hosts Only)</TT>
+&#./V6LC_2_2_11_A.seq:./V6LC_2_2_11_A.def:::<TT>Part A&#58; Global Source Address</TT>:1
+&#./V6LC_2_2_11_B.seq:./V6LC_2_2_11_B.def:::<TT>Part B&#58; Hop Limit less than 255</TT>:1
+&#./V6LC_2_2_11_C.seq:./V6LC_2_2_11_C.def:::<TT>Part C&#58; Invalid Checksum</TT>:1
+&#./V6LC_2_2_11_D.seq:./V6LC_2_2_11_D.def:::<TT>Part D&#58; Invalid ICMP Code</TT>:1
+&#./V6LC_2_2_11_E.seq:./V6LC_2_2_11_E.def:::<TT>Part E&#58; Invalid ICMP Length</TT>:1
+&#./V6LC_2_2_11_F.seq:./V6LC_2_2_11_F.def:::<TT>Part F&#58; Option of Length 0</TT>:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.2.2.13 Router Advertisement Processing, Cur Hop Limit           #
+#----------------------------------------------------------------------#
+&print:<TT>Test v6LC.2.2.13: Router Advertisement Processing, Cur Hop Limit</TT>
+&#./V6LC_2_2_12_A.seq:./V6LC_2_2_12_A.def:::<TT>Part A&#58; Unspecified</TT>:1
+&#./V6LC_2_2_12_B.seq:./V6LC_2_2_12_B.def:::<TT>Part B&#58; Non-Zero</TT>:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.2.2.14 Router Advertisement Processing, Router Lifetime         #
+#             (Hosts Only)                                             #
+#----------------------------------------------------------------------#
+&print:<TT>Test v6LC.2.2.14: Router Advertisement Processing, Router Lifetime (Hosts Only)</TT>
+&#./V6LC_2_2_13_A.seq:./V6LC_2_2_13_A.def:::<TT>Part A&#58; Router Lifetime Updated with Same Lifetime</TT>:1
+&#./V6LC_2_2_13_B.seq:./V6LC_2_2_13_B.def:::<TT>Part B&#58; Router Lifetime Set to Zero</TT>:1
+&#./V6LC_2_2_13_C.seq:./V6LC_2_2_13_C.def:::<TT>Part C&#58; Router Lifetime Set to Five; Allowed to Expire</TT>:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.2.2.15 Router Advertisement Processing, Reachable Time          #
+#----------------------------------------------------------------------#
+&print:<TT>Test v6LC.2.2.15: Router Advertisement Processing, Reachable Time</TT>
+&#./V6LC_2_2_14_A.seq:./V6LC_2_2_14_A.def:::<TT>Part A,1&#58; RA Processing - Reachable Time (Host Only)</TT>:1
+&#./V6LC_2_2_14_B.seq:./V6LC_2_2_14_B.def:::<TT>Part A,2&#58; RA Processing - Reachable Time (Host Only)</TT>:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.2.2.16 Router Advertisement Processing, Neighbor Cache          #
+#             (Hosts Only)                                             #
+#----------------------------------------------------------------------#
+&print:<TT>Test v6LC.2.2.16: Router Advertisement Processing, Neighbor Cache (Hosts Only)</TT>
+&#./V6LC_2_2_15_A.seq:./V6LC_2_2_15_A.def:::<TT>Part A&#58; RA processing, no NCE</TT>:1
+&#./V6LC_2_2_15_B.seq:./V6LC_2_2_15_B.def:::<TT>Part B&#58; RA processing, NCE INCOMPLETE</TT>:1
+&#./V6LC_2_2_15_C.seq:./V6LC_2_2_15_C.def:::<TT>Part C&#58; RA with SLLA changed, NCE REACHABLE</TT>:1
+&#./V6LC_2_2_15_D.seq:./V6LC_2_2_15_D.def:::<TT>Part D&#58; RA with SLLA unchanged, NCE REACHABLE</TT>:1
+&#./v6LC_2_2_16_E-v3_8_2.seq:./v6LC_2_2_16_E-v3_8_2.def:::<TT>Part E&#58; RA without SLLA, NCE REACHABLE</TT>:1
+&#./V6LC_2_2_15_E.seq:./V6LC_2_2_15_E.def:::<TT>Part F&#58; RA with SLLA changed, NCE PROBE</TT>:1
+&#./V6LC_2_2_15_F.seq:./V6LC_2_2_15_F.def:::<TT>Part G&#58; RA with SLLA unchanged, NCE PROBE</TT>:1
+&#./v6LC_2_2_16_H-v3_8_2.seq:./v6LC_2_2_16_H-v3_8_2.def:::<TT>Part H&#58; RA without SLLA, NCE PROBE</TT>:1
+&#./v6LC_2_2_16_I-v3_8_2.seq:./v6LC_2_2_16_I-v3_8_2.def:::<TT>Part I&#58; RA with SLLA changed, NCE STALE</TT>:1
+&#./v6LC_2_2_16_J-v3_8_2.seq:./v6LC_2_2_16_J-v3_8_2.def:::<TT>Part J&#58; RA with SLLA unchanged, NCE STALE</TT>:1
+&#./v6LC_2_2_16_K-v3_8_2.seq:./v6LC_2_2_16_K-v3_8_2.def:::<TT>Part K&#58; RA without SLLA, NCE STALE</TT>:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.2.2.17 Router Advertisement Processing, IsRouter flag           #
+#             (Hosts Only)                                             #
+#----------------------------------------------------------------------#
+&print:<TT>Test v6LC.2.2.17: Router Advertisement Processing, IsRouter flag (Hosts Only)</TT>
+&#./v6LC_2_2_17_A.seq:./v6LC_2_2_17_A.def:::<TT>Part A&#58; RA without Source Link-layer option</TT>:1
+&#./v6LC_2_2_17_B.seq:./v6LC_2_2_17_B.def:::<TT>Part B&#58; RA with same Source Link-layer option as cached</TT>:1
+&#./v6LC_2_2_17_C.seq:./v6LC_2_2_17_C.def:::<TT>Part C&#58; RA with different Source Link-layer option as cached</TT>:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.2.2.18: Next-hop Determination (Hosts Only)                     #
+#----------------------------------------------------------------------#
+&print:<TT>Test v6LC.2.2.18: Next-hop Determination (Hosts Only)</TT>
+&#./v6LC_2_2_18.seq:./v6LC_2_2_18.def:::<TT>Next-hop Determination (Hosts Only)</TT>:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.2.2.19: Router Advertisement Processing, On-link determination  #
+#              (Hosts Only)                                            #
+#----------------------------------------------------------------------#
+&print:<TT>Test v6LC.2.2.19: Router Advertisement Processing, On-link determination (Hosts Only)</TT>
+&#./v6LC_2_2_19.seq:./v6LC_2_2_19.def:::<TT>Router Advertisement Processing, On-link determination (Hosts Only)</TT>:1

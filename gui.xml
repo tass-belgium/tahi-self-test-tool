@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<package protocol="IPv6 Core Protocols">
+    <target name="ipv6ready_p1_host" title="Phase-1 for the host implementation">
+        <subdir name="section1" path="./spec.p2"
+                title="Section 1: RFC 2460 - IPv6 Specification">
+            <index>./spec.p2/INDEX_p1_host</index>
+        </subdir>
+
+        <subdir name="section2" path="./nd.p2"
+                title="Section 2: RFC 4861 - Neighbor Discovery for IPv6">
+            <index>./nd.p2/INDEX_ND_p1_host</index>
+            <index>./nd.p2/INDEX_RD_p1_host</index>
+            <index>./nd.p2/INDEX_REDIRECT_p1_host</index>
+        </subdir>
+
+        <subdir name="section3" path="./addr.p2"
+                title="Section 3: RFC 4862 - IPv6 Stateless Address Autoconfiguration">
+            <index>./addr.p2/INDEX_P1_HOST</index>
+        </subdir>
+
+        <subdir name="section4" path="./pmtu.p2"
+                title="Section 4: RFC 1981 - Path MTU Discovery for IPv6">
+            <index>./pmtu.p2/INDEX_p1_host</index>
+        </subdir>
+
+        <subdir name="section5" path="./icmp.p2"
+                title="Section 5: RFC 4443 - ICMPv6">
+            <index>./icmp.p2/INDEX_BEGIN_ume</index>
+            <index>./icmp.p2/INDEX_P1_host</index>
+        </subdir>
+    </target>
+
+    <target name="ipv6ready_p1_router" title="Phase-1 for the router implementation">
+        <subdir name="section1" path="./spec.p2"
+                title="Section 1: RFC 2460 - IPv6 Specification">
+            <index>./spec.p2/INDEX_p1_router</index>
+        </subdir>
+
+        <subdir name="section2" path="./nd.p2"
+                title="Section 2: RFC 4861 - Neighbor Discovery for IPv6">
+            <index>./nd.p2/INDEX_ND_p1_router</index>
+            <index>./nd.p2/INDEX_RD_p1_router</index>
+            <index>./nd.p2/INDEX_REDIRECT_p1_router</index>
+        </subdir>
+
+        <subdir name="section3" path="./addr.p2"
+                title="Section 3: RFC 4862 - IPv6 Stateless Address Autoconfiguration">
+            <index>./addr.p2/INDEX_P1_ROUTER</index>
+        </subdir>
+
+        <subdir name="section4" path="./pmtu.p2"
+                title="Section 4: RFC 1981 - Path MTU Discovery for IPv6">
+            <index>./pmtu.p2/INDEX_p1_router</index>
+        </subdir>
+
+        <subdir name="section5" path="./icmp.p2"
+                title="Section 5: RFC 4443 - ICMPv6">
+            <index>./icmp.p2/INDEX_BEGIN_ume</index>
+            <index>./icmp.p2/INDEX_P1_router</index>
+        </subdir>
+    </target>
+
+    <target name="ipv6ready_p1_special" title="Phase-1 for the special device implementation">
+        <subdir name="section1" path="./spec.p2"
+                title="Section 1: RFC 2460 - IPv6 Specification">
+            <index>./spec.p2/INDEX_p1_special</index>
+        </subdir>
+
+        <subdir name="section2" path="./nd.p2"
+                title="Section 2: RFC 4861 - Neighbor Discovery for IPv6">
+            <index>./nd.p2/INDEX_ND_p1_special</index>
+            <index>./nd.p2/INDEX_RD_p1_special</index>
+            <index>./nd.p2/INDEX_REDIRECT_p1_special</index>
+        </subdir>
+
+        <subdir name="section3" path="./addr.p2"
+                title="Section 3: RFC 4862 - IPv6 Stateless Address Autoconfiguration">
+            <index>./addr.p2/INDEX_P1_SPECIAL</index>
+        </subdir>
+
+        <subdir name="section4" path="./pmtu.p2"
+                title="Section 4: RFC 1981 - Path MTU Discovery for IPv6">
+            <index>./pmtu.p2/INDEX_p1_special</index>
+        </subdir>
+
+        <subdir name="section5" path="./icmp.p2"
+                title="Section 5: RFC 4443 - ICMPv6">
+            <index>./icmp.p2/INDEX_BEGIN_ume</index>
+            <index>./icmp.p2/INDEX_P1_special</index>
+        </subdir>
+    </target>
+
+    <target name="ipv6ready_p2_host" title="Phase-2 IPv6 Core Protocols for the host implementation">
+        <subdir name="section1" path="./spec.p2"
+                title="Section 1: RFC 2460 - IPv6 Specification">
+            <index>./spec.p2/INDEX_p2_host</index>
+        </subdir>
+
+        <subdir name="section2" path="./nd.p2"
+                title="Section 2: RFC 4861 - Neighbor Discovery for IPv6">
+            <index>./nd.p2/INDEX_ND_p2_host</index>
+            <index>./nd.p2/INDEX_RD_p2_host</index>
+            <index>./nd.p2/INDEX_REDIRECT_p2_host</index>
+        </subdir>
+
+        <subdir name="section3" path="./addr.p2"
+                title="Section 3: RFC 4862 - IPv6 Stateless Address Autoconfiguration">
+            <index>./addr.p2/INDEX_P2_HOST</index>
+        </subdir>
+
+        <subdir name="section4" path="./pmtu.p2"
+                title="Section 4: RFC 1981 - Path MTU Discovery for IPv6">
+            <index>./pmtu.p2/INDEX_p2_host</index>
+        </subdir>
+
+        <subdir name="section5" path="./icmp.p2"
+                title="Section 5: RFC 4443 - ICMPv6">
+            <index>./icmp.p2/INDEX_BEGIN_ume</index>
+            <index>./icmp.p2/INDEX_P2_host</index>
+        </subdir>
+    </target>
+
+    <target name="ipv6ready_p2_host" title="Phase-2 IPv6 Core Protocols for the router implementation">
+        <subdir name="section1" path="./spec.p2"
+                title="Section 1: RFC 2460 - IPv6 Specification">
+            <index>./spec.p2/INDEX_p2_router</index>
+        </subdir>
+
+        <subdir name="section2" path="./nd.p2"
+                title="Section 2: RFC 4861 - Neighbor Discovery for IPv6">
+            <index>./nd.p2/INDEX_ND_p2_router</index>
+            <index>./nd.p2/INDEX_RD_p2_router</index>
+            <index>./nd.p2/INDEX_REDIRECT_p2_router</index>
+        </subdir>
+
+        <subdir name="section3" path="./addr.p2"
+                title="Section 3: RFC 4862 - IPv6 Stateless Address Autoconfiguration">
+            <index>./addr.p2/INDEX_P2_ROUTER</index>
+        </subdir>
+
+        <subdir name="section4" path="./pmtu.p2"
+                title="Section 4: RFC 1981 - Path MTU Discovery for IPv6">
+            <index>./pmtu.p2/INDEX_p2_router</index>
+        </subdir>
+
+        <subdir name="section5" path="./icmp.p2"
+                title="Section 5: RFC 4443 - ICMPv6">
+            <index>./icmp.p2/INDEX_BEGIN_ume</index>
+            <index>./icmp.p2/INDEX_P2_router</index>
+        </subdir>
+    </target>
+
+    <config name="config.pl" path="./config.pl" title="Advanced Functionality">
+        <item type="Boolean" name="$TRANSMITTING_EREQ"
+              defaultvalue="1"
+              description="The support of transmitting Echo Requests and configuring packet size"></item>
+        <item type="Boolean" name="$MULTICAST_ROUTING"
+              defaultvalue="1"
+              description="The support of multicast routing"></item>
+        <item type="Boolean" name="$MTU_CONFIGURATION"
+              defaultvalue="1"
+              description="The support of link MTU configuration"></item>
+        <item type="Boolean" name="$HAS_MULTIPLE_INTERFACES"
+              defaultvalue="1"
+              description="The support of multiple physical network interfaces"></item>
+    </config>
+
+    <config name="spec.p2.config.pl" path="./spec.p2/config.pl" title="Section 1: RFC 2460 - IPv6 Specification">
+        <item type="int" unit="sec" name="$wait_dadns"
+              defaultvalue="5" minimumvalue="" maximumvalue=""
+              description="Wait time for DADNS respond to RA"></item>
+        <item type="int" unit="sec" name="$wait_after_dadns"
+              defaultvalue="5" minimumvalue="" maximumvalue=""
+              description="Wait time for transmit packet after received DADNS"></item>
+        <item type="int" unit="sec" name="$wait_reply"
+              defaultvalue="5" minimumvalue="" maximumvalue=""
+              description="Wait time for echo_reply, icmp_err, ..."></item>
+        <item type="int" unit="sec" name="$exceed_max"
+              defaultvalue="65" minimumvalue="" maximumvalue=""
+              description="Wait time for ICMP Time Exceeded for Fragmentation test"></item>
+        <item type="int" unit="sec" name="$exceed_min"
+              defaultvalue="55" minimumvalue="" maximumvalue=""
+              description="Accept ICMP Time Exceed if this time passed after receiving 1st fragment"></item>
+        <item type="String" name="$cleanup"
+              defaultvalue="normal"
+              description="Common cleanup procedure [ normal | reboot | nothing ]"></item>
+        <item type="int" unit="sec" name="$wait_incomplete"
+              defaultvalue="10" minimumvalue="" maximumvalue=""
+              description="Wait for target neighbor node cache state transit to INCOMPLETE"></item>
+        <item type="int" unit="sec" name="$wait_rebootcmd"
+              defaultvalue="300" minimumvalue="" maximumvalue=""
+              description="Maximum waiting time for putting reboot command to NUT"></item>
+        <item type="int" unit="sec" name="$sleep_after_reboot"
+              defaultvalue="10" minimumvalue="" maximumvalue=""
+              description="Sleep time after reboot"></item>
+        <item type="int" unit="sec" name="$cleanup_interval"
+              defaultvalue="5" minimumvalue="" maximumvalue=""
+              description="Sleep time in cleanup &quot;nothing&quot; procedure"></item>
+    </config>
+
+    <config name="nd.p2.config.pl" path="./nd.p2/config.pl" title="Section 2: RFC 4861 - Neighbor Discovery for IPv6">
+        <item type="int" unit="sec" name="$wait_rebootcmd"
+              defaultvalue="300" minimumvalue="" maximumvalue=""
+              description="Maximum waiting time for putting reboot command to NUT"></item>
+        <item type="int" unit="sec" name="$sleep_after_reboot"
+              defaultvalue="0" minimumvalue="" maximumvalue=""
+              description="Sleep time after reboot"></item>
+    </config>
+
+    <config name="addr.p2.config.pl" path="./addr.p2/config.pl" title="Section 3: RFC 4862 - IPv6 Stateless Address Autoconfiguration">
+        <item type="int" unit="sec" name="$wait_dadna"
+              defaultvalue="5" minimumvalue="" maximumvalue=""
+              description="Time between DAD NS and DAD NA"></item>
+        <item type="int" unit="sec" name="$wait_solna"
+              defaultvalue="5" minimumvalue="" maximumvalue=""
+              description="Time between NS and solicited NA"></item>
+        <item type="int" unit="sec" name="$wait_rs"
+              defaultvalue="5" minimumvalue="" maximumvalue=""
+              description="Time between receiving DAD for LLA and receiving RS"></item>
+        <item type="int" unit="sec" name="$wait_dadns{'reboot'}"
+              defaultvalue="130" minimumvalue="" maximumvalue=""
+              description="Time to reboot"></item>
+        <item type="int" unit="sec" name="$wait_dadns{'ra'}"
+              defaultvalue="5" minimumvalue="" maximumvalue=""
+              description="Time to wait for DAD NS for global address after receiving RA"></item>
+        <item type="int" unit="time" name="$DupAddrDetectTransmits"
+              defaultvalue="1" minimumvalue="" maximumvalue=""
+              description="How many times the target sends DAD NS packets"></item>
+        <item type="String" name="$DADTransmitsGA"
+              defaultvalue="ANY"
+              description="DupAddrDetectTransmits for GA and SLA [ YES | NO | ANY ]"></item>
+        <item type="int" unit="sec" name="$RetransTimerSec"
+              defaultvalue="1" minimumvalue="" maximumvalue=""
+              description="The time between retransmission of NS"></item>
+        <item type="int" unit="sec" name="$wait_rebootcmd"
+              defaultvalue="1" minimumvalue="" maximumvalue=""
+              description="Maximum waiting time for putting reboot command to NUT"></item>
+        <item type="int" unit="sec" name="$wait_addrconf_base"
+              defaultvalue="5" minimumvalue="" maximumvalue=""
+              description="Time to actually address assigment after ending DAD"></item>
+        <item type="String" name="$lla_autoconf"
+              defaultvalue="YES"
+              description="Specify if the target machine configure its link-local address automatically [ YES | NO ]"></item>
+    </config>
+
+    <config name="pmtu.p2.config.pl" path="./pmtu.p2/config.pl" title="Section 4: RFC 1981 - Path MTU Discovery for IPv6">
+        <item type="int" unit="sec" name="$wait_dadns"
+              defaultvalue="5" minimumvalue="" maximumvalue=""
+              description="Wait time for DADNS respond to RA"></item>
+        <item type="int" unit="sec" name="$wait_after_dadns"
+              defaultvalue="5" minimumvalue="" maximumvalue=""
+              description="Wait time for transmit packet after received DADNS"></item>
+        <item type="int" unit="sec" name="$wait_reply"
+              defaultvalue="5" minimumvalue="" maximumvalue=""
+              description="Wait time for echo_reply, icmp_err, ..."></item>
+        <item type="int" unit="octet" name="$default_mtu"
+              defaultvalue="1500" minimumvalue="" maximumvalue=""
+              description="Default MTU specified by Media Type"></item>
+        <item type="String" name="$tmpdef"
+              defaultvalue="./tmpPacket.def"
+              description="Temporary file of packet definition"></item>
+        <item type="String" name="$cleanup"
+              defaultvalue="normal"
+              description="Common cleanup procedure [ normal | reboot | nothing ]"></item>
+        <item type="int" unit="sec" name="$wait_incomplete"
+              defaultvalue="10" minimumvalue="" maximumvalue=""
+              description="Wait for target neighbor node cache state transit to INCOMPLETE"></item>
+        <item type="int" unit="sec" name="$wait_rebootcmd"
+              defaultvalue="300" minimumvalue="" maximumvalue=""
+              description="Maximum waiting time for putting reboot command to NUT"></item>
+        <item type="int" unit="sec" name="$sleep_after_reboot"
+              defaultvalue="10" minimumvalue="" maximumvalue=""
+              description="Sleep time after reboot"></item>
+        <item type="int" unit="sec" name="$cleanup_interval"
+              defaultvalue="5" minimumvalue="" maximumvalue=""
+              description="Sleep time in cleanup &quot;nothing&quot; procedure"></item>
+    </config>
+
+    <config name="icmp.p2.config.pl" path="./icmp.p2/config.pl" title="Section 5: RFC 4443 - ICMPv6">
+        <item type="int" unit="sec" name="$wait_reply"
+              defaultvalue="5" minimumvalue="" maximumvalue=""
+              description="Time to wait for reply of packet from NUT to packet which TN sent"></item>
+        <item type="int" unit="sec" name="$wait_time_exc"
+              defaultvalue="65" minimumvalue="" maximumvalue=""
+              description="The maximun time to wait for fragment reassembly time exceeded message"></item>
+        <item type="String" name="$reboot_incleanup"
+              defaultvalue="NO"
+              description="Whether to reboot in cleanup() function [ YES | NO ]"></item>
+        <item type="int" unit="sec" name="$wait_rebootcmd"
+              defaultvalue="300" minimumvalue="" maximumvalue=""
+              description="Maximum waiting time for putting reboot command to NUT"></item>
+        <item type="int" unit="sec" name="$sleep_after_reboot"
+              defaultvalue="0" minimumvalue="" maximumvalue=""
+              description="Sleep time after reboot"></item>
+        <item type="int" unit="sec" name="$wait_time_for_ns"
+              defaultvalue="10" minimumvalue="" maximumvalue=""
+              description="This parameter shows time after transmitting NA"></item>
+        <item type="int" unit="time" name="$count_ns"
+              defaultvalue="3" minimumvalue="" maximumvalue=""
+              description="This parameter shows number of times which receives NS"></item>
+    </config>
+</package>

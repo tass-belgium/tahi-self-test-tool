@@ -1,0 +1,18 @@
+#
+# common definitions.
+#
+default:\
+	:MAXINTERVAL:MININTERVAL:\
+	:CHLIM:RAFLAGS:RLTIME:RTIME:RETRANS:\
+	:PINFOFLAGS:VLTIME:PLTIME:MTU:\
+	:VLTIME:PLTIME:
+ether:\
+	:MTU:tc=default:
+#
+# interfaces.
+#
+LINK0:\
+        :addrs#1:addr="3ffe:501:ffff:100::":prefixlen#64:tc=ether:
+
+LINK1:\
+        :addrs#1:addr="3ffe:501:ffff:101::":prefixlen#64:tc=ether:

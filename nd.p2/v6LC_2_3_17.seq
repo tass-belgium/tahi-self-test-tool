@@ -1,0 +1,139 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/nd.p2/v6LC_2_3_17.seq,v 1.8 2009/12/28 05:55:17 akisada Exp $
+#
+########################################################################
+
+use redirect;
+
+BEGIN {}
+END   {}
+
+if($V6evalTool::NutDef{'Type'} ne 'router') {
+	exitRouterOnly($Link0);
+	#NOTREACHED
+}
+
+vCapture($Link0);
+
+unless(commonSetup_1_2($Link0)) {
+	exitInitFail($Link0);
+	#NOTREACHED
+}
+
+unless(additionalSetup_v6LC_2_3_17($Link0)) {
+	exitInitFail($Link0);
+	#NOTREACHED
+}
+
+$pktdesc{'local_redirect'} =
+	'    Send Redirect w/ TLL w/o Redirected Header: '.
+	'TR1 (link-local) -&gt; RUT (global)';
+
+unless(v6LC_2_3_17($Link0, $Link1)) {
+	exitFail($Link0);
+	#NOTREACHED
+}
+
+exitPass($Link0);
+#NOTREACHED
+
+
+
+#
+# perldoc
+#
+########################################################################
+__END__
+
+=head1 NAME
+
+  Test v6LC.2.3.17 - Redirect  Receive (Routers Only)
+
+=head1 Purpose
+
+  Verify that a router properly handles reception of Redirect messages.
+
+=head1 References
+
+  * [ND]  Sections 8.2
+
+=head1 Resource Requirements
+
+  * Packet generator
+  * Monitor to capture packets
+
+=head1 Test Setup
+
+  Common Setup 1.2 is performed at the beginning of each test part. The Common Test
+  Cleanup Procedure is performed after each part.
+
+          i.  Configure the RUT with a static route to TN2's Link A prefix through TR1.
+
+=head1 Procedure
+
+   1. TR1 forwards an Echo Request from TN2 to the RUT. The Destination Address is the global
+      address of the RUT.
+   2. Observe the packets transmitted by the RUT.
+   3. TR1 transmits a Redirect message to the RUT. The ICMPv6 Destination Address is the global
+      address of TN2. The Target Address is the link-local address of TR2.
+   4. TN4 transmits an Echo Request to TN2's off link address using the RUT has its first hop.
+   5. Observe the packets transmitted by the RUT.
+
+=head1 Observable Results
+
+  Step 2:
+  The RUT should send an Echo Reply with a first hop through TR1.
+
+  Step 5:
+  The RUT should still forward an Echo Request on to Link A with a first hop through TR1,
+  indicating the RUT did not change its routing table with information from TR1's Redirect message.
+
+=head1 Possible Problems
+
+  * None.
+
+=cut
+

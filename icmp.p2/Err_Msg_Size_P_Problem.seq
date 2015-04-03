@@ -1,0 +1,208 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/icmp.p2/Err_Msg_Size_P_Problem.seq,v 1.6 2008/07/25 04:57:21 hide Exp $
+#----------------------------------------------------------------------
+
+BEGIN { $V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $'; }
+use V6evalTool;
+use icmp;
+
+$IF = Link0;
+
+%pktdesc = (
+    unknown_nxthdr	=> 'Send a packet (1280 bytes) include unknown next header field value',
+    parameter_problem	=> 'Receive Parameter Problem (unrecognized Next Header)'
+);
+
+#----------------------------------------------------------------------
+# Initialization
+#----------------------------------------------------------------------
+
+vLogHTML("<FONT SIZE=\"+1\">Initialization</FONT><BR>");
+
+vCapture($IF);
+
+$ret = mkNCE_Link();
+
+if ($ret != $icmp::subPass) {
+	vLogHTML('<FONT COLOR="#FF0000">*** NUT can not be initialized !! ***</FONT><BR>');
+	goto error;
+}
+else {
+	vLog("TN created the entry of TN's link-local address to Neighbor cache in NUT.");
+};
+
+#----------------------------------------------------------------------
+# Test
+#----------------------------------------------------------------------
+
+
+vLogHTML("<FONT SIZE=\"+1\">Test</FONT><BR>");
+
+vSend($IF, unknown_nxthdr);
+
+#%ret = vRecv($IF, $icmp::wait_reply, 0, 0, parameter_problem);
+%ret = icmp_vRecv($IF, $icmp::wait_reply, 0, 0, parameter_problem);
+
+if ($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">TN can not receive ICMPv6 error message from NUT</FONT><BR>');
+	goto error;
+}
+elsif ($ret{recvFrame} eq 'parameter_problem') {
+	vLog("TN can receive ICMPv6 Parameter Problem message from NUT");
+	vLog("OK");
+	cleanup();
+	vStop($IF);
+	exit($V6evalTool::exitPass);
+}
+else {
+	vLogHTML('<FONT COLOR="#FF0000">TN receive unexpected packets from NUT</FONT><BR>');
+	goto error;
+}   
+
+error:
+
+vLogHTML('<FONT COLOR="#FF0000">FAIL</FONT><BR>');
+cleanup();
+vStop($IF);
+exit($V6evalTool::exitFail);
+
+
+#----------------------------------------------------------------------
+
+__END__
+
+=head1 NAME
+
+	Err_Msg_Size_P_Problem.seq - check Message Processing Rules (ICMPv6
+	Parameter Problem , link local address)
+
+=head1 TARGET
+
+	Host/Router
+
+=head1 SYNOPSIS
+
+	Err_Msg_Size_P_Problem.seq [-tooloption ...] -p Err_Msg_Size_P_Problem.def
+
+=head1 INITIALIZATION
+
+	When test starts, states of Neighbor Cache Entry for TN's 
+	addresses are reachable.
+
+=head1 TEST PROCEDURE
+
+	This test verifies that the message processing rule ,
+	
+	Every ICMPv6 error message (type < 128) includes as much of the
+	IPv6 offending (invoking) packet (the packet that caused the
+	error) as will fit without making the error message packet
+	exceed the minimum IPv6 MTU [IPv6].
+
+
+	TN			NUT
+
+	---------------------------
+
+	1.
+	 === IPv6 packet  ===>
+		next header  is not used in NUT
+		packet size is 1280 octets
+	2.
+	<< JUDGEMENT >>
+
+	 <=== ICMPv6 Prameter Problem ===
+		Code is 1
+		Pointer is 40
+			packet size is 1280 octets
+
+=head1 JUDGEMENT
+
+	<< PASS >>
+		NUT send ICMPv6 ICMPv6 Parameter Problem.
+		
+
+	<< FAIL >>	
+		NUT do not send ICMPv6 Parameter Problem.
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2463
+# 2.4 Message Processing Rules
+# 
+#    Implementations MUST observe the following rules when processing
+#    ICMPv6 messages (from [RFC-1122]):
+# 
+# =begin html
+# <pre>
+#     <b>(c) Every ICMPv6 error message (type < 128) includes as much of the
+#         IPv6 offending (invoking) packet (the packet that caused the
+#         error) as will fit without making the error message packet
+#         exceed the minimum IPv6 MTU [IPv6].</b>
+# </pre>
+# 
+# =end html
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 4443 - ICMPv6 (ICMP for IPv6)
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+	  perldoc V6evalTool
+
+=cut

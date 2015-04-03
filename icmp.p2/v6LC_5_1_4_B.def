@@ -1,0 +1,481 @@
+//
+// Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+// Yokogawa Electric Corporation.
+// All rights reserved.
+// 
+// Redistribution and use of this software in source and binary
+// forms, with or without modification, are permitted provided that
+// the following conditions and disclaimer are agreed and accepted
+// by the user:
+// 
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in
+//    the documentation and/or other materials provided with
+//    the distribution.
+// 
+// 3. Neither the names of the copyrighters, the name of the project
+//    which is related to this software (hereinafter referred to as
+//    "project") nor the names of the contributors may be used to
+//    endorse or promote products derived from this software without
+//    specific prior written permission.
+// 
+// 4. No merchantable use may be permitted without prior written
+//    notification to the copyrighters.
+// 
+// 5. The copyrighters, the project and the contributors may prohibit
+//    the use of this software at any time.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+// CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+// BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+// FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+// COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+// IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+//
+// $TAHI: ct/icmp.p2/v6LC_5_1_4_B.def,v 1.2 2005/01/06 06:49:44 akisada Exp $
+//
+////////////////////////////////////////////////////////////////
+
+#ifndef MCASTADDR
+#define MCASTADDR	"ff1e::1:2"
+#endif	// MCASTADDR
+
+#ifndef LINK0_PREFIX
+#define LINK0_PREFIX	_GLOBAL0_UCAST_PRFX
+#endif	// LINK0_PREFIX
+
+#ifndef LINK0_PREFIXLEN
+#define LINK0_PREFIXLEN	_GLOBAL0_UCAST_PRFXLEN
+#endif	// LINK0_PREFIXLEN
+
+#ifndef LINK1_PREFIX
+#define LINK1_PREFIX	_GLOBAL1_UCAST_PRFX
+#endif	// LINK1_PREFIX
+
+#ifndef LINK1_PREFIXLEN
+#define LINK1_PREFIXLEN	_GLOBAL1_UCAST_PRFXLEN
+#endif	// LINK1_PREFIXLEN
+
+#ifndef TRX_MAC
+#define TRX_MAC		"00:00:00:00:b0:b0"
+#endif	// TRX_MAC
+
+#ifndef TNX_MAC
+#define TNX_MAC		"00:00:00:00:b0:b0"
+#endif	// TNX_MAC
+
+#ifndef TR1_MAC
+#define TR1_MAC		A0N_MAC_ADDR
+#endif	// TR1_MAC
+
+#ifndef TR1_LINKLOCAL
+#define TR1_LINKLOCAL	_LLOCAL0A0N_UCAST_ADDR
+#endif	// TR1_LINKLOCAL
+
+_HETHER_define(
+	HETHER_tn2_to_mcastaddr,
+	tnether(),
+	v62ethermulti(v6(MCASTADDR))
+)
+
+_HETHER_define(
+	HETHER_tn1_to_mcastaddr,
+	tnether(),
+	v62ethermulti(v6(MCASTADDR))
+)
+
+_HETHER_define(
+	_HETHER_trX_to_allnodes,
+	ether(TRX_MAC),
+	v62ethermulti(v6(_ALLNODES_MCAST_ADDR))
+)
+
+_HETHER_define(
+	_HETHER_trX_to_nut,
+	ether(TRX_MAC),
+	nutether()
+)
+
+_HETHER_define(
+	_HETHER_nut_to_trX,
+	nutether(),
+	ether(TRX_MAC)
+)
+
+_HETHER_define(
+	_HETHER_tnX_to_allnodes,
+	ether(TNX_MAC),
+	v62ethermulti(v6(_ALLNODES_MCAST_ADDR))
+)
+
+_HETHER_define(
+	_HETHER_tnX_to_nut,
+	ether(TNX_MAC),
+	nutether()
+)
+
+_HETHER_define(
+	_HETHER_nut_to_tnX,
+	nutether(),
+	ether(TNX_MAC)
+)
+
+_HETHER_define(
+	_HETHER_nut_to_tr1solnode,
+	nutether(),
+	_ETHER_SOLNODE_MCAST(v6(TR1_LINKLOCAL))
+)
+
+_HETHER_define(
+	_HETHER_tr1_to_nut,
+	ether(TR1_MAC),
+	nutether()
+)
+
+_HETHER_define(
+	_HETHER_nut_to_tr1,
+	nutether(),
+	ether(TR1_MAC)
+)
+
+FEM_icmp6_mldreport_exth(
+	tn2_mld_report,
+	HETHER_tn2_to_mcastaddr,
+	{
+		HopLimit	= 1;
+		_SRC(tnv6());
+		_DST(v6(MCASTADDR));
+	},
+	{
+		header	= _HDR_IPV6_NAME(tn2_mld_report);
+		exthdr	= ext_hop_by_hop;
+		upper	= _ICMPV6_NAME(tn2_mld_report);
+	},
+	{
+		MulticastAddress	= v6(MCASTADDR);
+	}
+)
+
+#if 1
+FEM_icmp6_echo_request(
+	tn1_ereq,
+	HETHER_tn1_to_mcastaddr,
+	{
+		_SRC(tn2v6(LINK0_PREFIX, LINK0_PREFIXLEN));
+		_DST(v6(MCASTADDR));
+	},
+	{
+		payload	= payload1452;
+	}
+)
+#else
+FEM_icmp6_echo_request(
+	tn1_ereq,
+	_HETHER_tn2nut,
+	{
+		_SRC(tn2v6(LINK0_PREFIX, LINK0_PREFIXLEN));
+		_DST(tn2v6(LINK1_PREFIX, LINK1_PREFIXLEN));
+	},
+	{
+		payload	= payload1452;
+	}
+)
+#endif
+
+FEM_icmp6_ns(
+	tn1_mcast_ns_linklocal,
+	_HETHER_nut2tnsolnode,
+	{
+		HopLimit	= 255;
+		_SRC(nutv6());
+		_DST(_IPV6_SOLNODE_MCAST(tn2v6(LINK0_PREFIX, LINK0_PREFIXLEN)));
+	},
+	{
+		TargetAddress	= tn2v6(LINK0_PREFIX, LINK0_PREFIXLEN);
+		option		= _SLLOPT_nut;
+	}
+)
+
+FEM_icmp6_ns(
+	tn1_mcast_ns_global,
+	_HETHER_nut2tnsolnode,
+	{
+		HopLimit	= 255;
+		_SRC(nut2v6(LINK0_PREFIX, LINK0_PREFIXLEN));
+		_DST(_IPV6_SOLNODE_MCAST(tn2v6(LINK0_PREFIX, LINK0_PREFIXLEN)));
+	},
+	{
+		TargetAddress	= tn2v6(LINK0_PREFIX, LINK0_PREFIXLEN);
+		option		= _SLLOPT_nut;
+	}
+)
+
+FEM_icmp6_na(
+	tn1_na_linklocal,
+	_HETHER_tn2nut,
+	{
+		HopLimit	= 255;
+		_SRC(tn2v6(LINK0_PREFIX, LINK0_PREFIXLEN));
+		_DST(nutv6());
+	},
+	{
+		RFlag		= 0;
+		SFlag		= 1;
+		OFlag		= 1;
+		TargetAddress	= tn2v6(LINK0_PREFIX, LINK0_PREFIXLEN);
+		option		= _TLLOPT_tn;
+	}
+)
+
+FEM_icmp6_na(
+	tn1_na_global,
+	_HETHER_tn2nut,
+	{
+		HopLimit	= 255;
+		_SRC(tn2v6(LINK0_PREFIX, LINK0_PREFIXLEN));
+		_DST(nut2v6(LINK0_PREFIX, LINK0_PREFIXLEN));
+	},
+	{
+		RFlag		= 0;
+		SFlag		= 1;
+		OFlag		= 1;
+		TargetAddress	= tn2v6(LINK0_PREFIX, LINK0_PREFIXLEN);
+		option		= _TLLOPT_tn;
+	}
+)
+
+Hdr_HopByHop ext_hop_by_hop {
+	option	= opt_pad2;
+	option	= opt_router_alert;
+}
+
+Opt_PadN opt_pad2 {}
+
+Opt_RouterAlert opt_router_alert {
+	Value	= 0;
+}
+
+Payload payload1452 {
+	data	= repeat(0x00, 1452);
+}
+
+Payload payload8 {
+	data	= hexstr("0123456789abcdef", 8);
+}
+
+FEM_icmp6_na(
+	tn1_na_cleanup,
+	_HETHER_tnX_to_allnodes,
+	{
+		HopLimit	= 255;
+		_SRC(tnv6());
+		_DST(v6(_ALLNODES_MCAST_ADDR));
+	},
+	{
+		RFlag		= 0;
+		SFlag		= 0;
+		OFlag		= 1;
+		TargetAddress	= tn2v6(LINK0_PREFIX, LINK0_PREFIXLEN);
+		option		= opt_tll_tnX;
+	}
+)
+
+FEM_icmp6_na(
+	tr1_na_cleanup,
+	_HETHER_trX_to_allnodes,
+	{
+		HopLimit	= 255;
+		_SRC(v6(TR1_LINKLOCAL));
+		_DST(v6(_ALLNODES_MCAST_ADDR));
+	},
+	{
+		RFlag		= 1;
+		SFlag		= 0;
+		OFlag		= 1;
+		TargetAddress	= v6(TR1_LINKLOCAL);
+		option		= opt_tll_trX;
+	}
+)
+
+FEM_icmp6_echo_request(
+	tn1_ereq_cleanup,
+	_HETHER_tnX_to_nut,
+	{
+		_SRC(tn2v6(LINK0_PREFIX, LINK0_PREFIXLEN));
+		_DST(nut2v6(LINK0_PREFIX, LINK0_PREFIXLEN));
+	},
+	{
+		payload	= payload8;
+	}
+)
+
+FEM_icmp6_echo_reply(
+	tn1_erep_cleanup,
+	_HETHER_nut_to_tnX,
+	{
+		_SRC(nut2v6(LINK0_PREFIX, LINK0_PREFIXLEN));
+		_DST(tn2v6(LINK0_PREFIX, LINK0_PREFIXLEN));
+	},
+	{
+		payload	= payload8;
+	}
+)
+
+FEM_icmp6_echo_request(
+	tr1_ereq_cleanup,
+	_HETHER_trX_to_nut,
+	{
+		_SRC(v6(TR1_LINKLOCAL));
+		_DST(nutv6());
+	},
+	{
+		payload	= payload8;
+	}
+)
+
+FEM_icmp6_echo_reply(
+	tr1_erep_cleanup,
+	_HETHER_nut_to_trX,
+	{
+		_SRC(nutv6());
+		_DST(v6(TR1_LINKLOCAL));
+	},
+	{
+		payload	= payload8;
+	}
+)
+
+Opt_ICMPv6_TLL opt_tll_tnX {
+	LinkLayerAddress	= ether(TNX_MAC);
+}
+
+Opt_ICMPv6_TLL opt_tll_trX {
+	LinkLayerAddress	= ether(TRX_MAC);
+}
+#if 0
+FEM_icmp6_packet_too_big (
+	pkt_too_big_link0,
+	_HETHER_nut2tn,
+	{
+		_SRC(nut2v6(LINK0_PREFIX, LINK0_PREFIXLEN, "Link0"));
+		_DST(tn2v6(LINK0_PREFIX, LINK0_PREFIXLEN));
+		PayloadLength	<= 1240;
+	},
+	{
+		MTU	= 1280;
+		payload	= any;
+	}
+)
+#endif
+FEM_icmp6_packet_too_big (
+	pkt_too_big_link1,
+	_HETHER_nut2tn,
+	{
+		_SRC(nut2v6(LINK1_PREFIX, LINK1_PREFIXLEN, "Link1"));
+		_DST(tn2v6(LINK0_PREFIX, LINK0_PREFIXLEN));
+		PayloadLength	<= 1240;
+	},
+	{
+		MTU	= 1280;
+		payload	= any;
+	}
+)
+
+FEM_icmp6_ns(
+	tr1_mcast_ns_linklocal,
+	_HETHER_nut_to_tr1solnode,
+	{
+		HopLimit	= 255;
+		_SRC(nutv6());
+		_DST(_IPV6_SOLNODE_MCAST(v6(TR1_LINKLOCAL)));
+	},
+	{
+		TargetAddress	= v6(TR1_LINKLOCAL);
+		option		= _SLLOPT_nut;
+	}
+)
+
+FEM_icmp6_ns(
+	tr1_mcast_ns_global,
+	_HETHER_nut_to_tr1solnode,
+	{
+		HopLimit	= 255;
+		_SRC(nut2v6(LINK0_PREFIX, LINK0_PREFIXLEN));
+		_DST(_IPV6_SOLNODE_MCAST(v6(TR1_LINKLOCAL)));
+	},
+	{
+		TargetAddress	= v6(TR1_LINKLOCAL);
+		option		= _SLLOPT_nut;
+	}
+)
+
+FEM_icmp6_na(
+	tr1_na_linklocal,
+	_HETHER_tr1_to_nut,
+	{
+		HopLimit	= 255;
+		_SRC(v6(TR1_LINKLOCAL));
+		_DST(nutv6());
+	},
+	{
+		RFlag		= 1;
+		SFlag		= 1;
+		OFlag		= 1;
+		TargetAddress	= v6(TR1_LINKLOCAL);
+		option		= opt_tll_tr1;
+	}
+)
+
+FEM_icmp6_na(
+	tr1_na_global,
+	_HETHER_tr1_to_nut,
+	{
+		HopLimit        = 255;
+		_SRC(v6(TR1_LINKLOCAL));
+		_DST(nut2v6(LINK0_PREFIX, LINK0_PREFIXLEN));
+	},
+	{
+		RFlag		= 1;
+		SFlag		= 1;
+		OFlag		= 1;
+		TargetAddress	= v6(TR1_LINKLOCAL);
+		option		= opt_tll_tr1;
+	}
+)
+
+Opt_ICMPv6_TLL opt_tll_tr1 {
+	LinkLayerAddress	= ether(TR1_MAC);
+}
+
+FEM_icmp6_echo_request(
+	tr1_ereq,
+	_HETHER_tr1_to_nut,
+	{
+		_SRC(v6(TR1_LINKLOCAL));
+		_DST(nutv6());
+	},
+	{
+		payload	= payload8;
+	}
+)
+
+FEM_icmp6_echo_reply(
+	tr1_erep,
+	_HETHER_nut_to_tr1,
+	{
+		_SRC(nutv6());
+		_DST(v6(TR1_LINKLOCAL));
+	},
+	{
+		payload	= payload8;
+	}
+)

@@ -1,0 +1,168 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/nd.p2/V6LC_2_2_14_A.seq,v 1.7 2009/12/28 05:55:17 akisada Exp $
+#
+########################################################################
+
+use rdisc;
+
+BEGIN {}
+END   {}
+
+if($V6evalTool::NutDef{'Type'} ne 'host') {
+	exitHostOnly($Link0);
+	#NOTREACHED
+}
+
+vCapture($Link0);
+
+$pktdesc{'local_ra'}
+	= '    Send RA (rltime=0, rtime=10000) w/o SLL: '.
+		'TR1 (link-local) -&gt; all-nodes multicast address';
+
+unless(v6LC_2_2_14_A($Link0)) {
+        exitFail($Link0);
+        #NOTREACHED
+}
+
+exitPass($Link0);
+#NOTREACHED
+
+
+
+#
+# perldoc
+#
+########################################################################
+__END__
+
+=head1 NAME
+
+  Test v6LC.2.2.15 - Router Advertisement Processing, Reachable Time
+  Part A: RA Processing  Reachable Time (Host Only)
+
+=head1 Purpose
+
+  Verify that a node updates its BaseReachableTime variable and re-computes its
+  ReachableTime variable upon receipt of a Router Advertisement or a configuration with a specified
+  Reachable Time.
+
+=head1 References
+
+  * [ND]  Sections 6.2.1 and 6.3.4
+
+=head1 Resource Requirements
+
+  * Packet generator
+  * Monitor to capture packets
+
+=head1 Test Setup
+
+  No Common Test Setup is performed. The Common Test Cleanup procedure is
+  performed after each part.
+
+=begin html
+
+<BLOCKQUOTE>
+
+<TABLE BORDER>
+<Caption>Router Advertisement</Caption>
+<TR>
+<TD>
+        IPv6 Header<br>
+        Next Header: 58<br>
+        Source Address: TR1's Link-local Address<br>
+</TD>
+</TR>
+<TR>
+<TD>
+	Router Advertisement<br>
+	Router Lifetime: [see below]<br>
+	Reachable Time: [see below]<br>
+	Retransmit Interval: 1 second<br>
+</TD>
+</TR>
+</TABLE>
+
+</BLOCKQUOTE>
+
+=end html
+
+=head1 Procedure
+
+  Part A: RA Processing  Reachable Time (Host Only)
+   1. TR1 transmits the Router Advertisement with a Router Lifetime of 0 seconds and a Reachable
+      Time of 10 seconds.
+   2. TN1 transmits a link-local Echo Request to the HUT. TN1 must reply to any Neighbor
+      Solicitations from the HUT.
+   3. Observe the packets transmitted by the HUT.
+   4. Repeat Step 2 every second for 40 seconds.
+   5. Observe the packets transmitted by the HUT.
+   6. TR1 transmits the Router Advertisement with a Reachable Time of 40 seconds.
+   7. Repeat Step 2 every seconds for 140 seconds.
+   8. Observe the packets transmitted by the HUT.
+
+=head1 Observable Results
+
+  Part A
+     Step 3:
+     The HUT should solicit for TN1's link-local address and transmit an Echo Reply.
+
+     Step 5:
+     The HUT should transmit a Neighbor Solicitation with a Target Address of TN1's
+     link-local address at an interval between 10 and 20 seconds. [ReachableTime time (between
+     5 and 15 seconds) + DELAY_FIRST_PROBE_TIME (5 seconds)].
+
+     Step 8:
+     The HUT should transmit Neighbor Solicitations at an interval between 25 and 65
+     seconds. [ReachableTime time (between 20 and 60 seconds) +
+     DELAY_FIRST_PROBE_TIME (5 seconds)].
+
+=head1 Possible Problems
+
+  * None. 
+
+=cut
+

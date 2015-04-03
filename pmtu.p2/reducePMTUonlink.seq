@@ -1,0 +1,552 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Name: V6LC_5_0_0 $
+#
+# $Id: reducePMTUonlink.seq,v 1.16 2008/07/31 03:02:06 hide Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+use CommonPMTU;
+
+$pktdesc{'echo_request_pl1400'}		= 'Send Echo Request (Payload Length is 1460)';
+$pktdesc{'echo_request_pl1400_1st'}	= 'Send Echo Request (Payload Length is 1460) 1st';
+$pktdesc{'echo_request_pl1400_2nd'}	= 'Send Echo Request (Payload Length is 1460) 2nd';
+
+$pktdesc{'echo_request_pl1400_gl'}	= 'Send Echo Request (Payload Length is 1460)';
+$pktdesc{'echo_request_pl1400_1st_gl'}	= 'Send Echo Request (Payload Length is 1460) 1st';
+$pktdesc{'echo_request_pl1400_2nd_gl'}	= 'Send Echo Request (Payload Length is 1460) 2nd';
+
+$pktdesc{'echo_reply_pl1400'}	= 'Recv Echo Reply (Payload Length is 1460)';
+$pktdesc{'echo_reply_pl1400_gl'}= 'Recv Echo Reply (Payload Length is 1460)';
+$pktdesc{'PktTooBig1280'}	= 'Send Packet Too Big message (1280 octets)';
+$pktdesc{'PktTooBig1280_gl'}	= 'Send Packet Too Big message (1280 octets)';
+
+$endStatus = $V6evalTool::exitPass;
+$IF = 'Link0';
+
+#fake data
+$fragment_id = 0;
+$PTB_payload = '_PACKET_IPV6_echo_reply_pl1400';
+$packet_len = 1500;
+
+vCapture($IF);
+
+my $true	= 1;
+my $false	= 0;
+my $bool	= $false;
+
+@echo_request = (
+	'echo_request_pl1400',
+	'echo_request_pl1400_gl'
+);
+@echo_request_1st = (
+	'echo_request_pl1400_1st',
+	'echo_request_pl1400_1st_gl'
+);
+@echo_request_2nd = (
+	'echo_request_pl1400_2nd',
+	'echo_request_pl1400_2nd_gl'
+);
+
+%echo_reply = (
+	$echo_request[0] => 'echo_reply_pl1400',
+	$echo_request[1] => 'echo_reply_pl1400_gl',
+);
+
+%packet_too_big = (
+	$echo_request[0] => 'PktTooBig1280',
+	$echo_request[1] => 'PktTooBig1280_gl',
+);
+
+%ip_srcs = (
+	$echo_request[0] => 'nutv6()',
+	$echo_request[1] => 'nut2v6(_GLOBAL0_UCAST_PRFX, _GLOBAL0_UCAST_PRFXLEN)'
+);
+
+%ip_dsts = (
+	$echo_request[0] => 'tnv6()',
+	$echo_request[1] => 'tn2v6(_GLOBAL0_UCAST_PRFX, _GLOBAL0_UCAST_PRFXLEN)'
+);
+
+for(my $d = 0; $d <= $#echo_request; $d ++) {
+	#======================================================================
+	if (setup11alt($IF) != $CommonPMTU::Success) {
+		$ret = cleanupalt($IF);
+		if ($ret == $CommonPMTU::Success) {
+			exit($V6evalTool::exitFail);
+		} else {
+			exit($V6evalTool::exitFatal);
+		}
+	}
+	#======================================================================
+
+	#----- test
+	#----- create fragment pkt.def(from tn1 to nut(onlink))
+	
+	#must same echo reply packet
+	$original_name = $echo_reply{$echo_request[$d]};
+
+	#MTU value, fixed
+	$MTU_value = 1500;
+
+	#this size is IPv6 pakcet size.,1280,1400,1500 etc
+	$PKT_size = 1500;
+	
+	#1280 or 48 #should be 48
+	$frag_start =  48;
+	
+	$data_size_1st = $frag_start - 40 - 8; 
+	$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+	
+	#define packet format
+	$header_ether = '_HETHER_nut2tn';
+	$ip_src = $ip_srcs{$echo_request[$d]};
+	$ip_dst = $ip_dsts{$echo_request[$d]};
+	
+	#fragment define file
+	$def_file = 'pkt_frag.def';
+	
+	#write def file
+	if(writefragdef($def_file, $original_name, $MTU_value, $PKT_size,
+		$data_size_1st, $data_size_2nd,
+		$header_ether, $ip_src, $ip_dst) != $CommonPMTU::Success) {
+
+		exit($V6evalTool::exitFatal);
+	}
+
+	vCPP("-DFRAG_DEF -DFRAG_ID=any");
+	
+	#packet send
+	vSend($IF, $echo_request[$d]);
+	
+	%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0,
+		$echo_reply{$echo_request[$d]}, @CommonPMTU::fragment_1st_name);
+	
+	if($ret{'status'} == 0) {
+		$packet_len = 0;
+		$fragment_id = 0;
+		$PTB_payload = '_PACKET_IPV6_'. $echo_reply{$echo_request[$d]};
+		if($ret{'recvFrame'} eq $echo_reply{$echo_request[$d]}){
+			vLogHTML('OK<BR>');
+			my $PayloadLength = 'Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength';
+			$packet_len = $ret{$PayloadLength} + 40;
+		} else{
+			vLogHTML('OK. recive 1st fragment.<BR>');
+			$pkt_name = $ret{'recvFrame'};
+			$PTB_payload = "_PACKET_IPV6_$pkt_name";
+			$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+			$size_2nd_frag = $1-$2-40;
+			$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+		
+			#get ipv6 packet length
+			$packet_len = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;
+	        #get id
+			$fragment_id = $ret{"Frame_Ether.Packet_IPv6.Hdr_Fragment.Identification"};
+			%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+			if ($ret{'status'} == 0) {
+				vLogHTML('OK. recive 2nd fragment.<BR>');
+				#get ipv6 packet length
+				$packet_len_2nd = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;	
+	           
+				if($packet_len < $packet_len_2nd){
+					$PTB_payload = "_PACKET_IPV6_$name_2nd_frag";
+					$packet_len = $packet_len_2nd; 
+	
+	                #get id
+					$fragment_id = $ret{"Frame_Ether.Packet_IPv6.Hdr_Fragment.Identification"};
+				}
+			} else {
+				vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+				$endStatus = $V6evalTool::exitFail;
+			}
+		}
+	}else {
+		vLogHTML('Cannot receive Echo Reply<BR>');
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+		$endStatus = $V6evalTool::exitFail;
+	}
+	
+	#send Packet Too Big to NUT for echo reply to TN2
+	if($packet_len > 1280){
+		vCPP("-DFRAG_DEF -DPAYLOAD=$PTB_payload -DFRAG_ID=$fragment_id");
+		vSend($IF, $packet_too_big{$echo_request[$d]});
+	}else{
+		vLogHTML('<FONT COLOR="#FF0000">Cannot send Packet Too Big message</FONT><BR>');
+	}
+
+	unlink($def_file);
+	
+	
+	#----- create fragment pkt.def(from tn1 to nut(onlink))
+	
+	$original_name = $echo_reply{$echo_request[$d]}; #must same echo reply packet
+	$MTU_value = 1280; #MTU value, fixed
+	$PKT_size = 1500; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+	
+	$frag_start =  48; #1280 or 48 #should be 48
+	
+	$data_size_1st = $frag_start - 40 - 8; 
+	$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+	
+	#define packet format
+	$header_ether = '_HETHER_nut2tn';
+	$ip_src = $ip_srcs{$echo_request[$d]};
+	$ip_dst = $ip_dsts{$echo_request[$d]};
+	
+	$def_file = 'pkt_frag.def'; #fragment define file
+	
+	#write def file
+	if(writefragdef($def_file, $original_name, $MTU_value, $PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+		exit($V6evalTool::exitFatal);
+	}
+	vCPP("-DFRAG_DEF -DFRAG_ID=any");
+	
+	#packet send
+	
+	vSend($IF, $echo_request_1st[$d], $echo_request_2nd[$d]);
+	
+	%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0,@CommonPMTU::fragment_1st_name);
+	
+	if ($ret{'status'} == 0) {
+		vLogHTML('OK. recive 1st fragment.<BR>');
+		$pkt_name = $ret{'recvFrame'};
+		$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+		$size_2nd_frag = $1-$2-40;
+		$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+		
+		
+		%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+		if ($ret{'status'} == 0) {
+			vLogHTML('OK. recive 2nd fragment.<BR>');
+			
+		}
+		else {
+			vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+			$endStatus = $V6evalTool::exitFail;
+		}
+			
+	}else {
+		vLogHTML('Cannot receive Echo Reply<BR>');
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+		$endStatus = $V6evalTool::exitFail;
+	}
+
+	unlink($def_file);
+
+	unless($bool) {
+		if(vRemote('reboot.rmt',
+			"timeout=$CommonPMTU::wait_rebootcmd")) {
+
+			vLogHTML('<FONT COLOR="#FF0000"><B>reboot.rmt: '.
+				'Could\'t reboot</B></FONT><BR>');
+
+			exit($V6evalTool::exitFatal);
+		}
+
+		if($CommonPMTU::sleep_after_reboot) {
+			vSleep($CommonPMTU::sleep_after_reboot);
+		}
+	}
+
+	$bool	= $true;
+	#----- end test
+}
+
+$ret = cleanupalt($IF);
+vStop($IF);
+if ($ret == $CommonPMTU::Success) {
+	exit($endStatus);
+} else {
+	exit($V6evalTool::exitFatal);
+}
+
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  reducePMTUonlink - Reduce PMTU On-link
+
+=head1 TARGET
+
+  Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./reducePMTUonlink.seq">reducePMTUonlink.seq</A> [-tooloption ...] -pkt <A HREF="./reducePMTUonlink.def">reducePMTUonlink.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+	Common Test Setup 1.1
+
+
+=cut
+
+#        Summary: This minimal setup procedure provides the NUT with
+#                 a default router TR1, a global prefix,
+#                 and ensures that the NUT can communicate with TR1.
+#            1. If the NUT is a host, TR1 transmits a Router Advertisement to the all-nodes multicast address.
+#               The Router Advertisement includes a Prefix Advertisement with a global prefix and the L and A bits sets.
+#               This should cause the NUT to add TR1 to its Default Router List,
+#               configure a global address, and compute Reachable Time.
+#               The Router and Prefix Lifetimes are long enough such that they do not expire during the test.
+#            2. If the NUT is a router,
+#               configure a default route with TR1 as the next hop.
+#            3. TR1 transmits an Echo Request to the NUT and responds to Neighbor Solicitations from the NUT.
+#               Wait for an Echo Reply from the NUT.
+#               This should cause the NUT to resolve the address of TR1 and create a Neighbor Cache entry for TR1 in state REACHABLE.
+
+=pod
+
+=head1 TEST PROCEDURE
+
+Verify that a node properly processes a Packet Too Big message indicating a reduction in Path MTU for an on-link destination.
+
+   TR1                         NUT
+    |                           |
+    |-------------------------->|
+    |   1.Echo Request          |
+    |   (1500 octets)           | 
+    |                           |
+    |<--------------------------|
+    |   2.Echo Reply            |
+    |   (1500 octets)           |
+    |                           |
+    |-------------------------->|
+    |   3.Packet Too Big        |
+    |   (MTU is 1280)           |
+    |                           |
+    |-------------------------->|
+    |   4.Echo Request          |
+    |   (1500 octets)           |
+    |                           |
+    |<--------------------------|
+    |   5.Fragmented Echo Reply |
+    |   (1st + 2nd = 1500)      |
+    |                           |
+    v                           v
+
+
+  1. TR1 transmits a 1500 byte link-local Echo Request to the NUT.
+  2. Observe the packets transmitted by the NUT. <<Check 1>>
+  3. Even though TR1 is configured with a link MTU associated with its media type (1500 for Ethernet),
+     TR1 transmits a Packet Too Big message to the NUT with an MTU of 1280.
+  4. TR1 transmits a 1500 byte link-local fragmented Echo Request to the NUT.
+     The fragmented packets are no larger than 1280 octets in size.
+  5. Observe the packets transmitted by the NUT. <<Check 2>>
+  6. Repeat Steps 1 through 5,
+     transmitting an on-link global Echo Request to the NUT for both Steps 1 and 4.
+
+  Echo Request Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 1460
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = TR1's Link-Local Address
+            DestinationAddress = NUT's Link-Local Address
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = (1452 octets)
+
+  Packet Too Big message is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 1280
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = TR1's Link-Local Address
+            DestinationAddress = NUT Link-Local Address
+
+        ICMP Echo Request
+            Type           = 2 (Packet Too Big)
+            Code           = 0
+            Checksum       = (auto)
+            MTU            = 1280
+            PayloadData    = (1232 octets)
+
+
+=head1 JUDGEMENT
+
+  PASS: <<Check 1>> The NUT should respond to the Echo Request.
+        <<Check 2>> The NUT should correctly fragment its response to the Echo Request,
+                    indicating the NUT processed the Packet Too Big mesage.
+                    The Fragmented packets must not be larger than 1280 octets in size.
+
+=head1 CLEANUP
+
+Common Test Cleanup
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC1981
+# 
+# 3. Protocol overview
+# 
+#    This memo describes a technique to dynamically discover the PMTU of a
+#    path.  The basic idea is that a source node initially assumes that
+#    the PMTU of a path is the (known) MTU of the first hop in the path.
+#    If any of the packets sent on that path are too large to be forwarded
+#    by some node along the path, that node will discard them and return
+#    ICMPv6 Packet Too Big messages [ICMPv6].  Upon receipt of such a
+#    message, the source node reduces its assumed PMTU for the path based
+#    on the MTU of the constricting hop as reported in the Packet Too Big
+#    message.
+# 
+#    The Path MTU Discovery process ends when the node's estimate of the
+#    PMTU is less than or equal to the actual PMTU.  Note that several
+#    iterations of the packet-sent/Packet-Too-Big-message-received cycle
+#    may occur before the Path MTU Discovery process ends, as there may be
+#    links with smaller MTUs further along the path.
+# 
+#    Alternatively, the node may elect to end the discovery process by
+#    ceasing to send packets larger than the IPv6 minimum link MTU.
+# 
+#    The PMTU of a path may change over time, due to changes in the
+#    routing topology.  Reductions of the PMTU are detected by Packet Too
+#    Big messages.  To detect increases in a path's PMTU, a node
+#    periodically increases its assumed PMTU.  This will almost always
+#    result in packets being discarded and Packet Too Big messages being
+#    generated, because in most cases the PMTU of the path will not have
+#    changed.  Therefore, attempts to detect increases in a path's PMTU
+#    should be done infrequently.
+# 
+#    Path MTU Discovery supports multicast as well as unicast
+#    destinations.  In the case of a multicast destination, copies of a
+#    packet may traverse many different paths to many different nodes.
+#    Each path may have a different PMTU, and a single multicast packet
+#    may result in multiple Packet Too Big messages, each reporting a
+#    different next-hop MTU.  The minimum PMTU value across the set of
+#    paths in use determines the size of subsequent packets sent to the
+#    multicast destination.
+# 
+#    Note that Path MTU Discovery must be performed even in cases where a
+#    node "thinks" a destination is attached to the same link as itself.
+#    In a situation such as when a neighboring router acts as proxy [ND]
+#    for some destination, the destination can to appear to be directly
+#    connected but is in fact more than one hop away.
+# 
+#   (omit)
+# 
+# 5.1. Layering
+# 
+#    In the IP architecture, the choice of what size packet to send is
+#    made by a protocol at a layer above IP.  This memo refers to such a
+#    protocol as a "packetization protocol".  Packetization protocols are
+#    usually transport protocols (for example, TCP) but can also be
+#    higher-layer protocols (for example, protocols built on top of UDP).
+# 
+# 
+#    Implementing Path MTU Discovery in the packetization layers
+#    simplifies some of the inter-layer issues, but has several drawbacks:
+#    the implementation may have to be redone for each packetization
+#    protocol, it becomes hard to share PMTU information between different
+#    packetization layers, and the connection-oriented state maintained by
+#    some packetization layers may not easily extend to save PMTU
+#    information for long periods.
+# 
+#    It is therefore suggested that the IP layer store PMTU information
+#    and that the ICMP layer process received Packet Too Big messages.
+#    The packetization layers may respond to changes in the PMTU, by
+#    changing the size of the messages they send.  To support this
+#    layering, packetization layers require a way to learn of changes in
+#    the value of MMS_S, the "maximum send transport-message size".  The
+#    MMS_S is derived from the Path MTU by subtracting the size of the
+#    IPv6 header plus space reserved by the IP layer for additional
+#    headers (if any).
+# 
+#    It is possible that a packetization layer, perhaps a UDP application
+#    outside the kernel, is unable to change the size of messages it
+#    sends.  This may result in a packet size that exceeds the Path MTU.
+#    To accommodate such situations, IPv6 defines a mechanism that allows
+#    large payloads to be divided into fragments, with each fragment sent
+#    in a separate packet (see [IPv6-SPEC] section "Fragment Header").
+#    However, packetization layers are encouraged to avoid sending
+#    messages that will require fragmentation (for the case against
+#    fragmentation, see [FRAG]).
+# 
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 1981 - Path MTU Discovery for IPv6
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

@@ -1,0 +1,204 @@
+#!/usr/bin/perl
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: EX_NH_UnrecognizedIN.seq,v 1.3 2005/01/06 06:49:57 akisada Exp $
+#
+######################################################################
+
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+use CommonSPEC;
+
+if ($V6evalTool::NutDef{'Type'} ne 'router') {
+    vLogHTML("This test is for the router only<BR>");
+    exit($V6evalTool::exitRouterOnly);
+}
+
+$pktdesc{'packet_ur_to_link0'}		= 'Send IPv6 packet with Unrecognized Next Header in Destination Options Header to link0';
+$pktdesc{'icmperr'}			= 'Recv ICMP Error message from link1 (Unrecognized Next Header type encounted)';
+$pktdesc{'packet_ur_from_link1'}	= 'Recv forwarded IPv6 packet with Unrecognized Next Header in Destination Options Header from link1';
+$pktdesc{'echo_request_to_link0'}	= 'Send Echo Request to link0';
+$pktdesc{'echo_request_from_link1'}	= 'Recv Echo Request from link1';
+
+$endStatus = $V6evalTool::exitPass;
+$min = 136;
+$max = 254;
+
+######################################################################
+
+$IF0 = 'Link0';
+$IF1 = 'Link1';
+
+vCapture($IF0);
+vCapture($IF1);
+
+######################################################################
+
+vLogHTML('<B> -- Test --</B><BR>');
+
+for ($step = $min; $step <= $max; $step++) {
+	vLogHTML("<B>Next Header = $step</B><BR>");
+
+	vCPP("-DNEXTHEADER=$step");
+
+	vSend($IF0, 'packet_ur_to_link0');
+	%ret = nd_vRecv_IN($IF1, $CommonSPEC::wait_reply, 0, 0, 'packet_ur_from_link1');
+	if ($ret{'status'} == 0) {
+		vLogHTML('<FONT COLOR="#FF0000">Receive unexpected forwarded packet</FONT><BR>');
+		vLogHTML('<B><FONT COLOR="#FF0000">NG</FONT></B><BR>');
+		$endStatus = $V6evalTool::exitFail;
+		last;
+	}
+	%ret = nd_vRecv_IN($IF0, $CommonSPEC::wait_reply, 0, 0, 'icmperr');
+	if ($ret{'status'} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">Cannot receive ICMP Error message</FONT><BR>');
+		vLogHTML('<B><FONT COLOR="#FF0000">NG</FONT></B><BR>');
+		$endStatus = $V6evalTool::exitFail;
+		last;
+	}
+
+	vClear($IF0);
+	vClear($IF1);
+	vSend($IF0, 'echo_request_to_link0');
+	%ret = nd_vRecv_IN($IF1, $CommonSPEC::wait_reply, 0, 0, 'echo_request_from_link1');
+	if ($ret{'status'} == 0) {
+		vLogHTML('<FONT COLOR="#008000">Receive forwarded Echo Request on link1</FONT><BR>');
+		vLogHTML('<B>OK</B><BR>');
+	} else {
+		vLogHTML('<FONT COLOR="#FF0000">Cannot receive forwarded Echo Request on link1</FONT><BR>');
+		vLogHTML('<B><FONT COLOR="#FF0000">NG</FONT></B><BR>');
+		$endStatus = $V6evalTool::exitFail;
+		last;
+	}
+
+	vClear($IF0);
+	vClear($IF1);
+}
+#----- end test
+
+$ret = cleanup($IF0, $IF1);
+vStop($IF0);
+vStop($IF1);
+if ($ret == $CommonSPEC::Success) {
+	exit($endStatus);
+} else {
+	exit($V6evalTool::exitFatal);
+}
+
+
+######################################################################
+__END__
+
+=head1 NAME
+
+    EX_NH_UnrecognizedIN - Unrecognized Next Header in Extension Header - Intermediate Node (Multiple Values)
+
+=head1 TARGET
+
+    Router
+
+=head1 SYNOPSIS
+
+=begin html
+    <PRE>
+    <A HREF="./EX_NH_UnrecognizedIN.seq">EX_NH_UnrecognizedIN.seq</A> [-tooloption ...] -pkt <A HREF="./EX_NH_UnrecognizedIN.def">EX_NH_UnrecognizedIN.def</A>
+        -tooloption: v6eval tool option
+    </PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+    None
+
+=head1 TEST PROCEDURE
+
+    1. Send Unrecognized Next Header packet to Link0.
+    2. Wait ICMP Error message or NS on Link0.
+    3. If NS received then send NA, and wait ICMP Error message again.
+    4. Receive ICMP Error message.
+    5. Send Echo Request to Link0.
+    6. Wait forwarded Echo Request or NS on Link1.
+    7. If NS received then send NA, and wait forwarded Echo Request again.
+    8. Receive Echo Request.
+    9. repeat from 1 to 5 (with increase Next Header value).
+
+    last Unrecognized Next Header packet is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 24
+            NextHeader         = 0 (Hop-by-Hop Options)
+            HopLimit           = 64
+            SourceAddress      = Tester Global Address (Link0)
+            DestinationAddress = Tester Global Address (Link1)
+
+        Hop-by-Hop Options
+            NextHeader         = 136 - 254 (be increased for each packets.)
+            HeaderExtLength    = 0
+
+            Opt_PadN
+                OptionType     = 1
+                OptDataLength  = 4
+                pad            = {0, 0, 0, 0}
+
+=head1 JUDGEMENT
+
+    PASS : received ICMP Error message as a reply of Unrecognized packet,
+           and received forwarded Echo Request.
+
+    FAIL : don't received ICMP Error message or forwarded Echo Request.
+
+=head1 SEE ALSO
+
+    perldoc V6evalTool
+
+=cut

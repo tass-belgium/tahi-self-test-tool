@@ -1,0 +1,980 @@
+//
+// Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+// Yokogawa Electric Corporation.
+// All rights reserved.
+// 
+// Redistribution and use of this software in source and binary
+// forms, with or without modification, are permitted provided that
+// the following conditions and disclaimer are agreed and accepted
+// by the user:
+// 
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in
+//    the documentation and/or other materials provided with
+//    the distribution.
+// 
+// 3. Neither the names of the copyrighters, the name of the project
+//    which is related to this software (hereinafter referred to as
+//    "project") nor the names of the contributors may be used to
+//    endorse or promote products derived from this software without
+//    specific prior written permission.
+// 
+// 4. No merchantable use may be permitted without prior written
+//    notification to the copyrighters.
+// 
+// 5. The copyrighters, the project and the contributors may prohibit
+//    the use of this software at any time.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+// CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+// BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+// FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+// COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+// IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+// $TINY: PMTU.def,v 1.10 2002/03/26 11:00:09 miyata Exp $
+// 
+
+
+//#####################################################################
+//#####################################################################
+// Macro Definition Part
+//#####################################################################
+//#####################################################################
+
+//
+// OFFLINK_GLOBAL_ADDRESS		Off-Link host's Global Address
+// TN_GLOBAL_ADDRESS   			TN's Global Address
+//
+
+// Prefix
+#define OFFLINK_GLOBAL_UCAST_PRFX _GLOBAL9_UCAST_PRFX
+#define TN_GLOBAL_UCAST_PRFX _GLOBAL0_UCAST_PRFX
+#define NUT_GLOBAL_UCAST_PRFX _GLOBAL0_UCAST_PRFX
+// Prefix Length
+#define GLOBAL_UCAST_PRFXLEN _GLOBAL0_UCAST_PRFXLEN
+// Address
+#define TN_GLOBAL_ADDRESS v6merge(   TN_GLOBAL_UCAST_PRFX, \
+                GLOBAL_UCAST_PRFXLEN, \
+                v6("::1"))
+#define NUT_GLOBAL_ADDRESS v6merge(   NUT_GLOBAL_UCAST_PRFX, \
+                GLOBAL_UCAST_PRFXLEN, \
+                nutv6())
+
+#define OFFLINK_GLOBAL_ADDRESS v6merge(   OFFLINK_GLOBAL_UCAST_PRFX, \
+                GLOBAL_UCAST_PRFXLEN, \
+                tnv6())
+
+//
+// define Packets
+//
+
+#define PMTU_echo_request_tn2nut_GLOBALADDR( \
+	_pNAME, \
+	_EchoRequest_data \
+) \
+FEM_icmp6_echo_request( \
+	 _pNAME, \
+	 _HETHER_tn2nut, \
+		{ \
+		_SRC(OFFLINK_GLOBAL_ADDRESS); \
+		_DST(NUT_GLOBAL_ADDRESS); \
+	 }, \
+		 { \
+		 payload=_EchoRequest_data; \
+	 } \
+)  
+
+#define PMTU_echo_request_tn2nut_GLOBALADDR_ONLINK( \
+	_pNAME, \
+	_EchoRequest_data \
+) \
+FEM_icmp6_echo_request( \
+	 _pNAME, \
+	 _HETHER_tn2nut, \
+		{ \
+		_SRC(TN_GLOBAL_ADDRESS); \
+		_DST(NUT_GLOBAL_ADDRESS); \
+	 }, \
+		 { \
+		 payload=_EchoRequest_data; \
+	 } \
+)  
+
+#define PMTU_echo_reply_nut2tn_GLOBALADDR( \
+	_pNAME,\
+	_EchoReply_data \
+) \
+FEM_icmp6_echo_reply( \
+	_pNAME, \
+	_HETHER_nut2tn, \
+		{ \
+		_SRC(NUT_GLOBAL_ADDRESS); \
+		_DST(OFFLINK_GLOBAL_ADDRESS); \
+	}, \
+		{ \
+		payload=_EchoReply_data; \
+	} \
+)
+
+#define PMTU_echo_reply_nut2tn_GLOBALADDR_ONLINK( \
+	_pNAME,\
+	_EchoReply_data \
+) \
+FEM_icmp6_echo_reply( \
+	_pNAME, \
+	_HETHER_nut2tn, \
+		{ \
+		_SRC(NUT_GLOBAL_ADDRESS); \
+		_DST(TN_GLOBAL_ADDRESS); \
+	}, \
+		{ \
+		payload=_EchoReply_data; \
+	} \
+)
+
+#define PMTU_echo_request_tn2nut_LLA_ONLINK_DiffSrc( \
+	_pNAME, \
+	_EchoRequest_data \
+) \
+FEM_icmp6_echo_request( \
+	 _pNAME, \
+	 _HETHER_tn2nut, \
+		{ \
+		_SRC(v6(_LLOCAL0A0N_UCAST_ADDR)); \
+		_DST(nutv6()); \
+	 }, \
+		 { \
+		 payload=_EchoRequest_data; \
+	 } \
+)  
+
+#define PMTU_echo_reply_nut2tn_LLA_ONLINK_DiffDst( \
+	_pNAME,\
+	_EchoReply_data \
+) \
+FEM_icmp6_echo_reply( \
+	_pNAME, \
+	_HETHER_nut2tn, \
+		{ \
+		_SRC(nutv6()); \
+		_DST(v6(_LLOCAL0A0N_UCAST_ADDR)); \
+	}, \
+		{ \
+		payload=_EchoReply_data; \
+	} \
+)
+
+#define _HDR_FRAGMENT_NAME(_pNAME) _FRAGMENT_##_pNAME 
+#define _PAYLOAD_NAME(_pNAME) _PAYLOAD_##_pNAME 
+
+
+
+#define PMTU_fragment(_pNAME,_pETHER,_oHDR_IPV6, \
+					 _oHDR_FRAGMENT,_oPAYLOAD) \
+FEM_hdr_ipv6_exth(_pNAME,_pETHER,_oHDR_IPV6, \
+		{ \
+		header=_HDR_IPV6_NAME(_pNAME); \
+                exthdr=_HDR_FRAGMENT_NAME(_pNAME); \
+                upper=_PAYLOAD_NAME(_pNAME); \
+	} \
+) \
+Hdr_Fragment _HDR_FRAGMENT_NAME(_pNAME) \
+	_oHDR_FRAGMENT \
+Payload _PAYLOAD_NAME(_pNAME) \
+	_oPAYLOAD
+
+
+
+#define PMTU_fragment_tn2nut_GLOBALADDR(_pNAME,_oHDR_FRAGMENT,_oPAYLOAD) \
+PMTU_fragment( \
+	 _pNAME, \
+	 _HETHER_tn2nut, \
+		{ \
+		NextHeader=44; \
+         _SRC(OFFLINK_GLOBAL_ADDRESS); \
+		 _DST(NUT_GLOBAL_ADDRESS); \
+	 }, \
+	 _oHDR_FRAGMENT,\
+	 _oPAYLOAD \
+)
+
+
+#define PMTU_fragment_nut2tn_GLOBALADDR(_pNAME,_oHDR_FRAGMENT,_oPAYLOAD) \
+PMTU_fragment( \
+	_pNAME, \
+	_HETHER_nut2tn, \
+		{ \
+		NextHeader=44; \
+        _SRC(NUT_GLOBAL_ADDRESS); \
+        _DST(OFFLINK_GLOBAL_ADDRESS); \
+	}, \
+	_oHDR_FRAGMENT, \
+	_oPAYLOAD \
+)
+
+#define PMTU_fragment_tn2nut_LLADDR(_pNAME,_oHDR_FRAGMENT,_oPAYLOAD) \
+PMTU_fragment( \
+	 _pNAME, \
+	 _HETHER_tn2nut, \
+		{ \
+		NextHeader=44; \
+         _SRC(tnv6()); \
+         _DST(nutv6()); \
+	 }, \
+	 _oHDR_FRAGMENT,\
+	 _oPAYLOAD \
+)
+
+
+#define PMTU_fragment_nut2tn_LLADDR(_pNAME,_oHDR_FRAGMENT,_oPAYLOAD) \
+PMTU_fragment( \
+	_pNAME, \
+	_HETHER_nut2tn, \
+		{ \
+		NextHeader=44; \
+        _SRC(nutv6()); \
+        _DST(tnv6()); \
+	}, \
+	_oHDR_FRAGMENT, \
+	_oPAYLOAD \
+)
+
+#define PMTU_fragment_nut2tn_LLA_DiffDst(_pNAME,_oHDR_FRAGMENT,_oPAYLOAD) \
+PMTU_fragment( \
+	_pNAME, \
+	_HETHER_nut2tn, \
+		{ \
+		NextHeader=44; \
+        _SRC(nutv6()); \
+        _DST(v6(_LLOCAL0A0N_UCAST_ADDR)); \
+	}, \
+	_oHDR_FRAGMENT, \
+	_oPAYLOAD \
+)
+
+//#####################################################################
+//#####################################################################
+// Packet Definition Part
+//#####################################################################
+//#####################################################################
+
+//
+// Packets for Initialize NUT
+//
+
+_HETHER_define(HETHER_nut2onlinksolnode,  nutether(), _ETHER_SOLNODE_MCAST(TN_GLOBAL_ADDRESS))
+
+_HETHER_define(HETHER_nut2tn_oneof,  nutether(), oneof(tnether(),_ETHER_SOLNODE_MCAST(TN_GLOBAL_ADDRESS),_ETHER_SOLNODE_MCAST(tnv6())))
+
+
+
+FEM_icmp6_ra (
+	ra,
+	_HETHER_tn2allnodes,
+		{
+		_SRC(tnv6());
+		_DST(v6(_LLOCAL_ALLNODES_MCAST_ADDR));
+		HopLimit=255;
+	},
+		{
+		CurHopLimit=254;
+		LifeTime=3600;
+		ReachableTime=60000;
+		RetransTimer=1005;
+		option=_SLLOPT_tn;
+		option=prefix_ra;
+	}
+)
+	
+Opt_ICMPv6_Prefix prefix_ra { 
+	LFlag=1;
+	AFlag=1;
+	ValidLifetime=3600005;
+	PreferredLifetime=3600005;
+	Prefix=v6(NUT_GLOBAL_UCAST_PRFX);
+}
+
+
+//
+// RA MTU 1400
+//
+
+FEM_icmp6_ra (
+        RA_1400,
+        _HETHER_tn2allnodes,
+                {
+                _SRC(tnv6());
+                _DST(v6(_LLOCAL_ALLNODES_MCAST_ADDR));
+                HopLimit=255;
+        },
+                {
+                CurHopLimit=254;
+                LifeTime=3600;
+                ReachableTime=0;
+                RetransTimer=1005;
+		option=_SLLOPT_tn;
+		option=prefix_ra;
+                option=MTU_ra_1400;
+        }
+)
+
+Opt_ICMPv6_MTU MTU_ra_1400 {
+        MTU=1400;
+}
+
+//
+// ns
+// NUT's link local address 
+//           to
+// TN's solicited Multicast address or TN's unicast address
+
+FEM_icmp6_ns (
+	ns,
+	HETHER_nut2tn_oneof,
+		{
+		_SRC(nutv6());
+		_DST(oneof(_IPV6_SOLNODE_MCAST(tnv6()),_IPV6_SOLNODE_MCAST(TN_GLOBAL_ADDRESS),tnv6(),TN_GLOBAL_ADDRESS));
+		HopLimit=255;
+	},
+		{
+		TargetAddress=tnv6();
+		option=_SLLOPT_nut;
+	}
+)
+
+//
+// ns
+// NUT's global address
+//           to
+// TN's solicited Multicast address or TN's unicast address
+
+FEM_icmp6_ns (
+	ns_srcGlobal,
+	HETHER_nut2tn_oneof,
+		{
+		_SRC(NUT_GLOBAL_ADDRESS);
+		_DST(oneof(_IPV6_SOLNODE_MCAST(tnv6()),_IPV6_SOLNODE_MCAST(TN_GLOBAL_ADDRESS),tnv6(),TN_GLOBAL_ADDRESS));
+		HopLimit=255;
+	},
+		{
+		TargetAddress=tnv6();
+		option=_SLLOPT_nut;
+	}
+)
+
+
+//
+// na
+// TN's link local  address
+//           to
+// NUT's link local address
+//
+// Targetaddress TN's link local address
+
+FEM_icmp6_na (
+	na,
+	_HETHER_tn2nut,
+		{
+		_SRC(tnv6());
+		_DST(nutv6());
+		HopLimit=255;
+        },
+		{
+		RFlag=1; 
+		SFlag=1;
+		OFlag=1;
+		TargetAddress=tnv6();
+		option=_TLLOPT_tn;
+	}
+)
+//
+// na
+// TN's global address
+//           to
+// NUT's global address
+//
+// Targetaddress TN's link local address
+
+FEM_icmp6_na (
+	na_srcGlobal,
+	_HETHER_tn2nut,
+		{
+		_SRC(TN_GLOBAL_ADDRESS);
+        _DST(NUT_GLOBAL_ADDRESS); 
+		HopLimit=255;
+        },
+		{
+		SFlag=1;
+		OFlag=1;
+		TargetAddress=tnv6();
+		option=_TLLOPT_tn;
+	}
+)
+
+//
+// na
+// TN's global  address
+//           to
+// NUT's global address
+//
+// Targetaddress TN's global address
+FEM_icmp6_na (
+	na_global,
+	_HETHER_tn2nut,
+		{
+        _SRC(TN_GLOBAL_ADDRESS); 
+        _DST(NUT_GLOBAL_ADDRESS); 
+		HopLimit=255;
+        },
+		{
+		SFlag=1;
+		OFlag=1;
+		TargetAddress=TN_GLOBAL_ADDRESS;
+		option=_TLLOPT_tn;
+	}
+)
+
+//
+// na
+// TN's link local  address
+//           to
+// NUT's link local address
+//
+// Targetaddress TN's global address
+FEM_icmp6_na (
+	na_srcLocal_global,
+	_HETHER_tn2nut,
+		{
+		_SRC(tnv6());
+		_DST(nutv6());
+		HopLimit=255;
+        },
+		{
+		SFlag=1;
+		OFlag=1;
+		TargetAddress=TN_GLOBAL_ADDRESS;
+		option=_TLLOPT_tn;
+	}
+)
+//
+// na
+// TN's global  address
+//           to
+// NUT(router)'s global address
+//
+// Targetaddress TN's global address
+FEM_icmp6_na (
+	na_router_global,
+	_HETHER_tn2nut,
+		{
+        _SRC(TN_GLOBAL_ADDRESS); 
+        _DST(NUT_GLOBAL_ADDRESS); 
+		HopLimit=255;
+        },
+		{
+		RFlag=1; 
+		SFlag=1;
+		OFlag=1;
+		TargetAddress=TN_GLOBAL_ADDRESS;
+		option=_TLLOPT_tn;
+	}
+)
+
+//
+// na
+// TN's link local address
+//           to
+// NUT(router)'s link local address
+//
+// Targetaddress TN's global address
+FEM_icmp6_na (
+	na_srcLocal_router_global,
+	_HETHER_tn2nut,
+		{
+		_SRC(tnv6());
+		_DST(nutv6());
+		HopLimit=255;
+        },
+		{
+		RFlag=1; 
+		SFlag=1;
+		OFlag=1;
+		TargetAddress=TN_GLOBAL_ADDRESS;
+		option=_TLLOPT_tn;
+	}
+)
+//
+// na
+// TN's link local  address
+//           to
+// NUT(router)'s link local address
+//
+// Targetaddress TN's link local address
+FEM_icmp6_na (
+	na_router,
+	_HETHER_tn2nut,
+		{
+		_SRC(tnv6());
+		_DST(nutv6());
+		HopLimit=255;
+        },
+		{
+		RFlag=1; 
+		SFlag=1;
+		OFlag=1;
+		TargetAddress=tnv6();
+		option=_TLLOPT_tn;
+	}
+)
+//
+// na
+// TN's link local  address
+//           to
+// NUT(router)'s link local address
+//
+// Targetaddress TN's link local address
+FEM_icmp6_na (
+	na_srcGlobal_router,
+	_HETHER_tn2nut,
+		{
+        _SRC(TN_GLOBAL_ADDRESS); 
+        _DST(NUT_GLOBAL_ADDRESS); 
+		HopLimit=255;
+        },
+		{
+		RFlag=1; 
+		SFlag=1;
+		OFlag=1;
+		TargetAddress=tnv6();
+		option=_TLLOPT_tn;
+	}
+)
+
+Payload ping_data
+	{
+	data=repeat(0xff,16);
+	}
+
+FEM_icmp6_echo_request (
+	EchoRequest,
+	_HETHER_tn2nut,
+		{
+		_SRC(tnv6());
+		_DST(nutv6());
+       	},
+		{
+		payload=ping_data;
+	}
+)
+
+FEM_icmp6_echo_request (
+	EchoRequest_1500,
+	_HETHER_tn2nut,
+		{
+		_SRC(tnv6());
+		_DST(nutv6());
+       	},
+		{
+		payload=ping_data_1452;
+	}
+)
+
+
+
+PMTU_echo_request_tn2nut_GLOBALADDR (
+	EchoRequest_tn2nut_global,
+	ping_data
+)
+
+FEM_icmp6_echo_reply (
+	EchoReply,
+	_HETHER_nut2tn,
+		{
+		_SRC(nutv6());
+		_DST(tnv6());
+	},
+		{
+		payload=ping_data;
+	}
+)
+
+FEM_icmp6_echo_reply (
+	EchoReply_1500,
+	_HETHER_nut2tn,
+		{
+		_SRC(nutv6());
+		_DST(tnv6());
+	},
+		{
+		payload=ping_data_1452;
+	}
+)
+
+
+PMTU_echo_reply_nut2tn_GLOBALADDR (
+	EchoReply_nut2tn_global,
+	ping_data
+)
+
+_HETHER_define(pmtu_hether_nut2z, nutether(), ether(A9N_MAC_ADDR))
+
+//----------------------------------------------------------------------
+Payload pmtu_echo_data {
+        data=repeat(0xff,0x10);
+}
+
+//----------------------------------------------------------------------
+// unicast NS w/o SLLA
+//      NUT(link-local) ==> TN(link-local)
+//      target=TN(link-local)
+//----------------------------------------------------------------------
+FEM_icmp6_ns(pmtu_unicast_ns, _HETHER_nut2tn,
+        {
+	 _SRC(oneof(nutv6(),nut2v6(NUT_GLOBAL_UCAST_PRFX,GLOBAL_UCAST_PRFXLEN)));
+         _DST(tnv6());
+         HopLimit=255;
+        },
+        {
+         TargetAddress=tnv6();
+        }
+)
+//----------------------------------------------------------------------
+// unicast NS w/o SLLA
+//      NUT(Global) ==> TN(Global)
+//      target=TN(Global)
+//----------------------------------------------------------------------
+FEM_icmp6_ns(pmtu_unicast_global_ns, _HETHER_nut2tn,
+        {
+         _SRC(oneof(nutv6(),NUT_GLOBAL_ADDRESS));
+         _DST(TN_GLOBAL_ADDRESS);
+         HopLimit=255;
+        },
+        {
+         TargetAddress=TN_GLOBAL_ADDRESS;
+        }
+)
+
+//----------------------------------------------------------------------
+// Define Common Ping data
+//----------------------------------------------------------------------
+
+// Data for 64 Byte ping packet
+Payload ping_data_16 {
+     data=repeat(0xff,16);
+}
+
+// Data for 768Byte ping packet
+Payload ping_data_720 {
+     data=repeat(0xff,720);
+}
+
+
+// Data for 1000Byte ping packet
+Payload ping_data_952 {
+     data=repeat(0xff,952);
+}
+
+// Data for 1280Byte ping packet
+Payload ping_data_1232 {
+     data=repeat(0xff,1232);
+}
+
+// Data for 1400Byte ping packet
+Payload ping_data_1352 {
+     data=repeat(0xff,1352);
+}
+
+// Data for 1492Byte ping packet
+Payload ping_data_1444 {
+     data=repeat(0xff,1444);
+}
+
+// Data for 1500Byte ping packet
+Payload ping_data_1452 {
+     data=repeat(0xff,1452);
+}
+
+PMTU_echo_request_tn2nut_GLOBALADDR(echo_request_64, ping_data_16)
+PMTU_echo_reply_nut2tn_GLOBALADDR(echo_reply_64, ping_data_16)
+
+PMTU_echo_request_tn2nut_GLOBALADDR(echo_request_1280, ping_data_1232)
+PMTU_echo_reply_nut2tn_GLOBALADDR(echo_reply_1280, ping_data_1232)
+
+PMTU_echo_request_tn2nut_GLOBALADDR(echo_request_1400, ping_data_1352)
+PMTU_echo_reply_nut2tn_GLOBALADDR(echo_reply_1400, ping_data_1352)
+
+PMTU_echo_request_tn2nut_GLOBALADDR(echo_request_1500, ping_data_1452)
+PMTU_echo_reply_nut2tn_GLOBALADDR(echo_reply_1500, ping_data_1452)
+
+
+//#####################################################################
+// Packet Definition Part Test Specific 
+//  But used in some tests
+//#####################################################################
+
+
+PMTU_fragment_tn2nut_GLOBALADDR(
+     frag_echo_request_1500_1st_mtu1400,
+             {
+             NextHeader=58;
+             FragmentOffset=0;
+             MFlag=1;
+             Identification=65536;
+     },
+            {
+    data=substr(_PACKET_IPV6_NAME(echo_request_1500),40,1352);
+     }
+)
+
+PMTU_fragment_tn2nut_GLOBALADDR(
+     frag_echo_request_1500_2nd_mtu1400,
+             {
+             NextHeader=58;
+             FragmentOffset=169;
+             MFlag=0;
+             Identification=65536;
+     },
+            {
+    data=substr(_PACKET_IPV6_NAME(echo_request_1500),1392,108);
+     }
+)
+
+PMTU_fragment_nut2tn_GLOBALADDR(
+     frag_echo_reply_1500_1st_mtu1400,
+             {
+             NextHeader=58;
+             FragmentOffset=0;
+             MFlag=1;
+             Identification=any;
+     },
+            {
+    data=substr(_PACKET_IPV6_NAME(echo_reply_1500),40,1352);
+     }
+)
+
+PMTU_fragment_nut2tn_GLOBALADDR(
+     frag_echo_reply_1500_2nd_mtu1400,
+             {
+             NextHeader=58;
+             FragmentOffset=169;
+             MFlag=0;
+             Identification=any;
+     },
+            {
+    data=substr(_PACKET_IPV6_NAME(echo_reply_1500),1392,108);
+     }
+)
+
+PMTU_fragment_nut2tn_GLOBALADDR(
+     frag_echo_reply_1500_1st_mtu1280,
+             {
+             NextHeader=58;
+             FragmentOffset=0;
+             MFlag=1;
+             Identification=any;
+     },
+            {
+    data=substr(_PACKET_IPV6_NAME(echo_reply_1500),40,1232);
+     }
+)
+
+PMTU_fragment_nut2tn_GLOBALADDR(
+     frag_echo_reply_1500_2nd_mtu1280,
+             {
+             NextHeader=58;
+             FragmentOffset=154;
+             MFlag=0;
+             Identification=any;
+     },
+            {
+    data=substr(_PACKET_IPV6_NAME(echo_reply_1500),1272,228);
+     }
+)
+
+PMTU_fragment_nut2tn_GLOBALADDR(
+     frag_echo_reply_1500_1st_mtu1272,
+             {
+             NextHeader=58;
+             FragmentOffset=0;
+             MFlag=1;
+             Identification=any;
+     },
+            {
+    data=substr(_PACKET_IPV6_NAME(echo_reply_1500),40,1224);
+     }
+)
+
+PMTU_fragment_nut2tn_GLOBALADDR(
+     frag_echo_reply_1500_2nd_mtu1272,
+             {
+             NextHeader=58;
+             FragmentOffset=152;
+             MFlag=0;
+             Identification=any;
+     },
+            {
+    data=substr(_PACKET_IPV6_NAME(echo_reply_1500),1264,236);
+     }
+)
+
+PMTU_fragment_nut2tn_GLOBALADDR(
+     frag_echo_reply_1400_1st_mtu1280,
+             {
+             NextHeader=58;
+             FragmentOffset=0;
+             MFlag=1;
+             Identification=any;
+     },
+            {
+    data=substr(_PACKET_IPV6_NAME(echo_reply_1400),40,1232);
+     }
+)
+
+PMTU_fragment_nut2tn_GLOBALADDR(
+     frag_echo_reply_1400_2nd_mtu1280,
+             {
+             NextHeader=58;
+             FragmentOffset=154;
+             MFlag=0;
+             Identification=any;
+     },
+            {
+    data=substr(_PACKET_IPV6_NAME(echo_reply_1400),1272,128);
+     }
+)
+
+PMTU_fragment_nut2tn_LLADDR(
+     frag_echo_reply_1500_1st_mtu1400_LLA,
+             {
+             NextHeader=58;
+             FragmentOffset=0;
+             MFlag=1;
+             Identification=any;
+     },
+            {
+    data=substr(_PACKET_IPV6_NAME(EchoReply_1500),40,1352);
+     }
+)
+
+PMTU_fragment_nut2tn_LLADDR(
+     frag_echo_reply_1500_2nd_mtu1400_LLA,
+             {
+             NextHeader=58;
+             FragmentOffset=169;
+             MFlag=0;
+             Identification=any;
+     },
+            {
+    data=substr(_PACKET_IPV6_NAME(EchoReply_1500),1392,108);
+     }
+)
+
+PMTU_fragment_nut2tn_LLADDR(
+     frag_echo_reply_1500_1st_mtu1280_LLA,
+             {
+             NextHeader=58;
+             FragmentOffset=0;
+             MFlag=1;
+             Identification=any;
+     },
+            {
+    data=substr(_PACKET_IPV6_NAME(EchoReply_1500),40,1232);
+     }
+)
+
+PMTU_fragment_nut2tn_LLADDR(
+     frag_echo_reply_1500_2nd_mtu1280_LLA,
+             {
+             NextHeader=58;
+             FragmentOffset=154;
+             MFlag=0;
+             Identification=any;
+     },
+            {
+    data=substr(_PACKET_IPV6_NAME(EchoReply_1500),1272,228);
+     }
+)
+
+FEM_icmp6_echo_request (
+	echo_request_1500_someone,
+	_HETHER_tn2nut,
+		{
+                _SRC(v6("3ffe:501:ffff:108::1"));
+                _DST(NUT_GLOBAL_ADDRESS);
+       	},
+		{
+                payload=ping_data_1452;
+	}
+)
+
+FEM_icmp6_echo_reply(
+	echo_reply_1500_someone,
+	_HETHER_nut2tn,
+        {
+                 _SRC(NUT_GLOBAL_ADDRESS);
+                 _DST(v6("3ffe:501:ffff:108::1"));
+        },
+        {
+                 payload=ping_data_1452;
+        }
+)
+
+PMTU_fragment(
+	frag_echo_reply_1500_1st_mtu1280_someone,
+	_HETHER_nut2tn,
+		{
+		NextHeader=44;
+		_SRC(NUT_GLOBAL_ADDRESS);
+		_DST(v6("3ffe:501:ffff:108::1"));
+	},
+                {
+             NextHeader=58;
+             FragmentOffset=0;
+             MFlag=1;
+             Identification=any;
+        },
+                { 
+        data=substr(_PACKET_IPV6_NAME(echo_reply_1500_someone),40,1232);
+        }
+)
+
+PMTU_fragment(
+	frag_echo_reply_1500_2nd_mtu1280_someone,
+	_HETHER_nut2tn,
+		{
+		NextHeader=44;
+		_SRC(NUT_GLOBAL_ADDRESS);
+		_DST(v6("3ffe:501:ffff:108::1"));
+	},
+                {
+             NextHeader=58;
+             FragmentOffset=154;
+             MFlag=0;
+             Identification=any;
+        },
+                { 
+        data=substr(_PACKET_IPV6_NAME(echo_reply_1500_someone),1272,228);
+        }
+)
+
+// To Check NUT Global address
+FEM_icmp6_echo_request (
+	addr_check_pkt,
+	_HETHER_tn2tn,
+		{
+		_SRC(tnv6());
+		_DST(NUT_GLOBAL_ADDRESS);
+       	},
+		{
+		payload=ping_data;
+	}
+)

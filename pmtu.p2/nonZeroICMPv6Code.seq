@@ -1,0 +1,434 @@
+#!/usr/bin/perl
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: nonZeroICMPv6Code.seq,v 1.8 2008/07/31 03:02:06 hide Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+use CommonPMTU;
+
+$pktdesc{'echo_request_pl1400'}	= 'Send Echo Request (Payload Length is 1400)';
+$pktdesc{'echo_reply_pl1400'}	= 'Recv Echo Reply (Payload Length is 1400)';
+$pktdesc{'PktTooBig1280_code0xff'}	= 'Send Packet Too Big message (1280 octets, Code field is 0xff)';
+
+$endStatus = $V6evalTool::exitPass;
+$IF = 'Link0';
+
+#fake data
+$fragment_id = 0;
+$PTB_payload = '_PACKET_IPV6_echo_reply_pl1400';
+$packet_len = 1500;
+
+vCapture($IF);
+#======================================================================
+if (setup11($IF) != $CommonPMTU::Success) {
+	$ret = cleanup($IF);
+	if ($ret == $CommonPMTU::Success) {
+		exit($V6evalTool::exitFail);
+	} else {
+		exit($V6evalTool::exitFatal);
+	}
+}
+#======================================================================
+#----- test
+
+#----- create fragment pkt.def(from tn1 to nut(onlink))
+
+$original_name = "echo_reply_pl1400"; #must same echo reply packet
+$MTU_value = 1500; #MTU value, fixed
+$PKT_size = 1440; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8; 
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_HETHER_nut2tn';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'TN2_GL2_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef($def_file, $original_name, $MTU_value, $PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF -DFRAG_ID=any");
+
+#packet send
+
+vSend($IF, 'echo_request_pl1400');
+
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, 'echo_reply_pl1400',@CommonPMTU::fragment_1st_name);
+
+if ($ret{'status'} == 0) {
+	$packet_len = 0;
+	$fragment_id = 0;
+	$PTB_payload = '_PACKET_IPV6_echo_reply_pl1400';
+	if($ret{'recvFrame'} eq 'echo_reply_pl1400'){
+		vLogHTML('OK<BR>');
+		$packet_len = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;
+	}
+	else{
+		vLogHTML('OK. recive 1st fragment.<BR>');
+		$pkt_name = $ret{'recvFrame'};
+		$PTB_payload = "_PACKET_IPV6_$pkt_name";
+		$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+		$size_2nd_frag = $1-$2-40;
+		$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+	
+		#get ipv6 packet length
+		$packet_len = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;
+		%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+		if ($ret{'status'} == 0) {
+			vLogHTML('OK. recive 2nd fragment.<BR>');
+			#get ipv6 packet length
+			$packet_len_2nd = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;	
+
+			if($packet_len < $packet_len_2nd){
+				$PTB_payload = "_PACKET_IPV6_$name_2nd_frag";
+				$packet_len = $packet_len_2nd; 
+				#get id
+				$fragment_id = $ret{"Frame_Ether.Packet_IPv6.Hdr_Fragment.Identification"};
+			}
+		}
+		else {
+			vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+			$endStatus = $V6evalTool::exitFail;
+		}
+	}
+	
+	
+}else {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+
+
+
+#send Packet Too Big to NUT for echo reply to TN2
+if($packet_len > 1280){
+	vCPP("-DFRAG_DEF -DPAYLOAD=$PTB_payload -DFRAG_ID=$fragment_id");
+	vSend($IF, 'PktTooBig1280_code0xff');
+}else{
+	vLogHTML('<FONT COLOR="#FF0000">Cannot send Packet Too Big message</FONT><BR>');
+}
+
+unlink($def_file);
+
+
+#----- create fragment pkt.def(from tn1 to nut(onlink))
+
+$original_name = "echo_reply_pl1400"; #must same echo reply packet
+$MTU_value = 1280; #MTU value, fixed
+$PKT_size = 1440; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8;
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_HETHER_nut2tn';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'TN2_GL2_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef($def_file, $original_name, $MTU_value,$PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF -DFRAG_ID=any");
+
+#packet send
+
+vSend($IF, 'echo_request_pl1400');
+
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, @CommonPMTU::fragment_1st_name);
+
+if ($ret{'status'} == 0) {
+	vLogHTML('OK. recive 1st fragment.<BR>');
+	$pkt_name = $ret{'recvFrame'};
+	$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+	$size_2nd_frag = $1-$2-40;
+	$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+	
+	
+	%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+	if ($ret{'status'} == 0) {
+		vLogHTML('OK. recive 2nd fragment.<BR>');
+		
+	}
+	else {
+		vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+		$endStatus = $V6evalTool::exitFail;
+	}
+
+
+}else {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+unlink($def_file);
+
+
+
+#----- end test
+
+$ret = cleanup($IF);
+vStop($IF);
+if ($ret == $CommonPMTU::Success) {
+	exit($endStatus);
+} else {
+	exit($V6evalTool::exitFatal);
+}
+
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  nonZeroICMPv6Code - Non-zero ICMPv6 Code
+
+=head1 TARGET
+
+  Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./nonZeroICMPv6Code.seq">nonZeroICMPv6Code.seq</A> [-tooloption ...] -pkt <A HREF="./nonZeroICMPv6Code.def">nonZeroICMPv6Code.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+	Common Test Setup 1.1
+
+=head1 TEST PROCEDURE
+
+ Verify that a node properly processes a Packet Too Big message with a non-zero ICMPv6 Code field.
+
+   TN2                    TR1                    NUT
+    |                      |                      |
+    |-------------------------------------------->|
+    |   1.Echo Request     |                      |
+    |   (1440 octets)      |                      |
+    |                      |                      |
+    |<--------------------------------------------|
+    |   2.Echo Reply       |                      |
+    |   (1440 octets)      |                      |
+    |                      |                      |
+    |                      +--------------------->|
+    |                      |  3.Packet Too Big    |
+    |                      |    (MTU 1280)        |
+    |                      |                      |
+    |-------------------------------------------->|
+    |   4.Echo Request     |                      |
+    |   (1440 octets)      |                      |
+    |                      |                      |
+    |<--------------------------------------------|
+    | 5.Fragment Echo Reply|                      |
+    |   (1st + 2nd = 1440) |                      |
+    |                      |                      |
+    v                      v                      v
+
+  1. Send Echo Request
+  2. Receive Echo Reply <<Check 1>>
+  3. Send Packet Too Big message
+  4. Send Echo Request
+  5. Receive fragmented Echo Reply <<Check 2>>
+
+  Echo Request Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 1400
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = TN2's Global Address
+            DestinationAddress = NUT's Global Address
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = (1392 octets)
+
+  Packet Too Big message is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 1400
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = TR1's Global Address
+            DestinationAddress = NUT's Global Address
+
+        ICMP Echo Request
+            Type           = 2 (Packet Too Big)
+            Code           = 0xff 
+            Checksum       = (auto)
+            MTU            = 1280
+            PayloadData    = (1232 octets)
+
+
+=head1 JUDGEMENT
+
+  PASS: <<Check 1>> Echo Reply Received or Fragment Echo Reply Received
+        <<Check 2>> Fragment Echo Reply Received. 1st and 2nd fragment no larger than 1280 octets.
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = 0
+            FlowLabel           = 0
+            PayloadLength       = 1400
+            NextHeader          = 58 (ICMPv6)
+            SourceAddress       = NUT's Global Address
+            Destination Address = TN2's Global Address
+
+        ICMP Echo Reply
+            Type           = 129 (Echo Reply)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff (same as Echo Request)
+            SequenceNumber = 1 (same as Echo Request)
+            PayloadData    = (1392 octets) (same as Echo Request)
+
+=head1 CLEANUP
+
+Common Test Cleanup
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2463
+# 
+# 3.2 Packet Too Big Message
+# 
+#        0                   1                   2                   3
+#        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#       |     Type      |     Code      |          Checksum             |
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#       |                             MTU                               |
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#       |                    As much of invoking packet                 |
+#       +               as will fit without the ICMPv6 packet           +
+#       |               exceeding the minimum IPv6 MTU [IPv6]           |
+# 
+#    IPv6 Fields:
+# 
+#    Destination Address
+# 
+#                   Copied from the Source Address field of the invoking
+# 
+#                   packet.
+# 
+#    ICMPv6 Fields:
+# 
+#    Type           2
+# 
+#    Code           Set to 0 (zero) by the sender and ignored by the
+#                   receiver
+# 
+#    MTU            The Maximum Transmission Unit of the next-hop link.
+# 
+#   Description
+# 	
+#    A Packet Too Big MUST be sent by a router in response to a packet
+#    that it cannot forward because the packet is larger than the MTU of
+#    the outgoing link.  The information in this message is used as part
+#    of the Path MTU Discovery process [PMTU].
+# 
+#    Sending a Packet Too Big Message makes an exception to one of the
+#    rules of when to send an ICMPv6 error message, in that unlike other
+#    messages, it is sent in response to a packet received with an IPv6
+#    multicast destination address, or a link-layer multicast or link-
+#    layer broadcast address.
+# 
+#    Upper layer notification
+# 
+#    An incoming Packet Too Big message MUST be passed to the upper-layer
+#    process.
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 1981 - Path MTU Discovery for IPv6
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

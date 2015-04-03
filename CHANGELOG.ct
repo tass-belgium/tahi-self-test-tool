@@ -1,0 +1,1698 @@
+
+
+
+                                CHANGELOG
+
+                                   for
+
+                         IPv6 Ready Logo Program
+                   Phase-1/Phase-2 IPv6 Core Protocols
+                        Conformance Test Package
+
+
+
+2010/05/19    Release 5.0.0
+    Official release
+        - Support IPv6 Ready Logo Program Phase-1/Phase-2 IPv6 Core
+          Protocols test specification version 4.0.6
+        - Indeed this release is the minor revision up, but we assigned
+          version 5 to this release in order to avoid the confliction of
+          version number between the test tool and the test
+          specification
+        - This version strongly has the dependency with v6eval-3.3.0.
+
+
+2010/05/10    Yukiyo Akisada
+    M spec.p2/IP_NH_Unrecognized.seq   (v6LC.1.1.7.A),
+              EX_NH_UnrecognizedEN.seq (v6LC.1.2.3.A),
+    M icmp.p2/P_Problem_Global.def     (v6LC.5.1.7)
+        - Updated unrecognized protocol numbers to 143-252
+
+
+2010/05/07    Yukiyo Akisada
+    M icmp.p2/Pkt_Too_Big.{def,seq} (v6LC.5.1.4.A)
+        - Accepted any addresses belonging to NUT as the source address of
+          Packet Too Big
+
+    M nd.p2/common.pm, rdisc.pm, config.pl
+            v6LC_2_2_7_C.def, v6LC_2_2_7_C_p1.def, v6LC_2_2_7_D.def
+        - Changed router configuration variables to be configurable
+
+
+2010/03/30    Yukiyo Akisada
+    M spec.p2/F_Reassembly_1500.seq
+    M spec.p2/F_Reassembly_FID.seq
+    M spec.p2/F_Reassembly_Valid.seq
+    M spec.p2/F_Reassembly_dst.seq
+    M spec.p2/F_Reassembly_reverse.seq
+    M spec.p2/F_Reassembly_src.seq
+        - Added the Common Test Setup 1.1
+
+    M nd.p2/V6LC_2_2_6_A.{seq,def} (v6LC.2.2.6.A)
+    M nd.p2/V6LC_2_2_6_B.{seq,def} (v6LC.2.2.6.B)
+    M nd.p2/rdisc.{pm,def}, common.pm
+        - Added the procedure to send an additional RS from TN1's link-local
+          address
+
+
+2010/03/29    Yukiyo Akisada
+    M nd.p2/V6LC_2_1_17_A.seq (v6LC.2.1.17.A)
+    M nd.p2/V6LC_2_1_17_B.seq (v6LC.2.1.17.B)
+    M nd.p2/nd_na.def
+        - Fixed infinite loop by unexpected packets
+
+    M nd.p2/nd.pm (v6LC.2.1.18.[A-H,L-N,Q-R])
+        - Fixed infinite loop by unexpected packets
+          at nd::ndSendNaReachable2Reachable()
+
+    M nd.p2/nd_na.def, nd_ns.def, ndisc.def
+        - Fixed the duplication of packet definitions
+
+    M icmp.p2/To_ICMPErr_Dst_Unreach_0.def (v6LC.5.1.9.A)
+        - Changed the source address of the packet 'dst_unreach'
+          from Link-Local scope to Global scope
+
+    M icmp.p2/To_ICMPErr_Dst_Unreach_3.def (v6LC.5.1.9.B)
+        - Changed the source address of the packet 'dst_unreach'
+          from Link-Local scope to Global scope
+        - Changed the destination address of the packet 'dst_unreach'
+          to the off-link address on RUT's Link1 interface
+
+    M icmp.p2/To_ICMPErr_Time_Exc_Code0.{seq,def} (v6LC.5.1.9.C)
+        - Changed the destination address of the packet 'dst_unreach'
+          to the off-link address that does not exist
+        - Removed the default route configuration on RUT
+        - Fixed the typo at the paket description
+
+    M icmp.p2/To_ICMPErr_Time_Exc_Code1.{seq,def} (v6LC.5.1.9.D)
+        - Changed the destination address of the packet 'dst_unreach'
+          to the off-link address that does not exist
+        - Removed the default route configuration on RUT
+        - Fixed the typo at the paket description
+
+    M icmp.p2/To_ICMPErr_Parameter_Problem.{seq,def} (v6LC.5.1.9.F)
+        - Changed the destination address of the packet 'dst_unreach'
+          to the off-link address on RUT's Link1 interface
+        - Added the default route configuration on RUT to fit with the
+          Common Test Setup 1.1 defined in the test specification
+
+
+2010/03/26    Yukiyo Akisada
+    M nd.p2/nd.pm, nd_ns.def, ndisc.def (v6LC.2.1.7.[A-H])
+        - Fixed infinite loop by unexpected packets
+          at nd::ndSendNsIgnore()
+
+    M nd.p2/V6LC_2_1_11_A.seq (v6LC.2.1.10.A)
+    M nd.p2/V6LC_2_1_11_B.seq (v6LC.2.1.10.B)
+    M nd.p2/V6LC_2_1_11_C.seq (v6LC.2.1.10.C)
+    M nd.p2/V6LC_2_1_11_D.seq (v6LC.2.1.10.D)
+        - Fixed infinite loop by unexpected packets
+
+    M nd.p2/ndisc.pm (v6LC.2.1.11.[A-D])
+        - Fixed infinite loop by unexpected packets
+          at ndisc::ndiscReachable2Stale()
+
+
+2010/03/24    Yukiyo Akisada
+    A AdvancedFunctionality.def
+    A AdvancedFunctionality.pm
+    A config.pl
+    R config.txt
+    R configure.pl
+        - Changed user configuration file from config.txt to config.pl
+
+
+2010/03/18    Yukiyo Akisada
+    M spec.p2/F_Reassembly_FID.seq (v6LC.1.3.1.C)
+    M spec.p2/F_Reassembly_src.seq (v6LC.1.3.1.D)
+    M spec.p2/F_Reassembly_dst.seq (v6LC.1.3.1.E)
+    M spec.p2/F_TX_only1st.seq (v6LC.1.3.2.C)
+    M spec.p2/v6LC_1_3_2_D.seq (v6LC.1.3.2.D)
+        - Added the lower limitation for delay time to transmit ICMPv6
+          Time Exceeded message
+
+
+2010/01/14    Yukiyo Akisada
+    M nd.p2/V6LC_2_1_6_[A-B].seq
+        - Fixed infinite loop by unexpected packets
+    M nd.p2/nd.pm
+        - Fixed infinite loop by unexpected packets
+          at nd::ndProbe2None(), nd::ndResolutionWaitQueueMultiple() and
+          nd::ndResolutionWaitQueueSingle()
+
+
+2010/01/13    Yukiyo Akisada
+    M nd.p2/ndisc.pm
+        - Fixed infinite loop by unexpected packets
+          at ndisc::flushBuffer() and ndisc::ignoreDAD()
+
+
+2009/12/28    Yukiyo Akisada
+    M spec.p2/IP_Version.seq
+        - Removed unexpected =back directive
+    M spec.p2/v6LC_1_1_10_G.seq
+        - Corrected Perl documentation to support the test specification
+          published by IPv6 Ready Logo Committee
+    M nd.p2/*.seq
+        - Corrected POD syntax in Perl documentation
+
+
+2009/12/04    Yukiyo Akisada
+    M addr.p2/SAA.pm
+        - Corrected return values at the error in SAA::seqExitFATAL()
+          although this function is unused at this moment
+
+
+2009/07/13    Yukiyo Akisada
+    M nd.p2/common.pm
+        - fixed to avoid loop in common::commonCleanup()
+          when exitTypeMismatch() is called
+
+
+2009/03/24    Yukiyo Akisada
+    M addr.p2/Makefile
+    R addr.p2/Makefile.test
+    M icmp.p2/Makefile
+    R icmp.p2/Makefile.test
+    M nd.p2/Makefile
+    R nd.p2/Makefile.test
+    M pmtu.p2/Makefile
+    R pmtu.p2/Makefile.test
+    M spec.p2/Makefile
+    R spec.p2/Makefile.test
+        - Replaced Makefile with Makefile.test
+          because Self_Test doesn't need to be installed into the
+          specific directory anymore
+
+
+2009/03/17    Release 4.0.5
+    Official release
+
+
+2009/03/16    Yukiyo Akisada
+    M spec.p2/v6LC_1_1_10_H.def (v6LC.1.1.10.H)
+              v6LC_1_1_10_I.def (v6LC.1.1.10.I)
+              v6LC_1_1_10_J.def (v6LC.1.1.10.J)
+              v6LC_1_1_10_K.def (v6LC.1.1.10.K)
+        - Changed multicast addresses according to the test
+          specification
+
+
+2009/03/04    Yukiyo Akisada
+    M addr.p2/LLA_DAD_NSPostDAD_SameDstSameTgt.seq (v6LC.3.1.2.B)
+              LLA_DAD_NAPostDAD_SameTgt.seq        (v6LC.3.1.2.D)
+              LLA_DAD_NSPostDAD_Reserved.seq       (v6LC.3.1.3.I)
+              LLA_DAD_NSPostDAD_wTLL.seq           (v6LC.3.1.3.J)
+              LLA_DAD_NAPostDAD_Reserved.seq       (v6LC.3.1.4.H)
+              LLA_DAD_NAPostDAD_wSLL.seq           (v6LC.3.1.4.I)
+              LLA_SAA.def
+        - Added verification point to verify the NUT does not transmit
+          any RS after failing DAD for its link-local address.
+
+    M addr.p2/LLA_SAA.def (v6LC.3.1.5.B)
+        - Added Source Link-layer Address option to NS sent from the
+          tester
+
+    M addr.p2/LLA_DAD_NSPostDAD_SameDstDiffTgt.seq (v6LC.3.1.2.A)
+              v6LC_3_1_2_B_p1.seq                  (v6LC.3.1.2.B)
+              LLA_DAD_NSPostDAD_SameDstSameTgt.seq (v6LC.3.1.2.B)
+              LLA_DAD_NAPostDAD_DiffTgt.seq        (v6LC.3.1.2.C)
+              v6LC_3_1_2_D_p1.seq                  (v6LC.3.1.2.D)
+              LLA_DAD_NAPostDAD_SameTgt.seq        (v6LC.3.1.2.D)
+              LLA_DAD_NSPostDAD_invalidLEN.seq     (v6LC.3.1.3.A)
+              LLA_DAD_NSPostDAD_HL254.seq          (v6LC.3.1.3.B)
+              LLA_DAD_NSPostDAD_DstTent.seq        (v6LC.3.1.3.C)
+              LLA_DAD_NSPostDAD_DstAll.seq         (v6LC.3.1.3.D)
+              LLA_DAD_NSPostDAD_CODEnon0.seq       (v6LC.3.1.3.E)
+              LLA_DAD_NSPostDAD_invalidCHKSUM.seq  (v6LC.3.1.3.F)
+              LLA_DAD_NSPostDAD_tgtMCAST.seq       (v6LC.3.1.3.G)
+              LLA_DAD_NSPostDAD_wSLL.seq           (v6LC.3.1.3.H)
+              v6LC_3_1_3_I_p1.seq                  (v6LC.3.1.3.I)
+              LLA_DAD_NSPostDAD_Reserved.seq       (v6LC.3.1.3.I)
+              v6LC_3_1_3_J_p1.seq                  (v6LC.3.1.3.J)
+              LLA_DAD_NSPostDAD_wTLL.seq           (v6LC.3.1.3.J)
+              LLA_DAD_NAPostDAD_invalidLEN.seq     (v6LC.3.1.4.A)
+              LLA_DAD_NAPostDAD_HL254.seq          (v6LC.3.1.4.B)
+              LLA_DAD_NAPostDAD_CODEnon0.seq       (v6LC.3.1.4.C)
+              LLA_DAD_NAPostDAD_invalidCHKSUM.seq  (v6LC.3.1.4.D)
+              LLA_DAD_NAPostDAD_SF1.seq            (v6LC.3.1.4.E)
+              LLA_DAD_NAPostDAD_tgtMCAST.seq       (v6LC.3.1.4.F)
+              LLA_DAD_NAPostDAD_invalidOptLen.seq  (v6LC.3.1.4.G)
+              v6LC_3_1_4_H_p1.seq                  (v6LC.3.1.4.H)
+              LLA_DAD_NAPostDAD_Reserved.seq       (v6LC.3.1.4.H)
+              v6LC_3_1_4_I_p1.seq                  (v6LC.3.1.4.I)
+              LLA_DAD_NAPostDAD_wSLL.seq           (v6LC.3.1.4.I)
+              LLA_DAD_NSPostDAD_SrcUni.seq         (v6LC.3.1.5.A)
+              LLA_DAD_NSPostDAD_SrcDstUni.seq      (v6LC.3.1.5.B)
+              LLA_SAA.def
+              SAA.pm
+        - Added procedure sending unicast NS to confirm address
+          assignment
+
+
+2009/03/02    Yukiyo Akisada
+    M nd.p2/V6LC_2_2_1.def, rdisc.pm (v6LC.2.2.1)
+        - Added verification point to verify the HUT does not transmit
+          a RS from its link-local address before performing DAD.
+
+
+2009/01/22    Release 4.0.4
+    Official release
+
+
+2009/01/22    Yukiyo Akisada
+    M spec.p2/INDEX_p1_host
+    M spec.p2/INDEX_p1_router
+    M spec.p2/INDEX_p1_special
+        - correct test title
+          from Test v6LC.1.2.10 to Test v6LC.1.2.9 only in Phase-1
+        - correct test title
+          from Test v6LC.1.2.11 to Test v6LC.1.2.10 only in Phase-1
+
+    M nd.p2/INDEX_RD_p1_host
+        - disable v6LC.2.2.19 only in Phase-1 host test case
+          according to the test specification
+
+
+2009/01/09    Yukiyo Akisada
+    M pmtu.p2/storedPMTU.seq
+        - correct to expand variables for the packet description
+
+
+2008/10/23    Release 4.0.3
+    Official release
+
+
+2008/10/23    Yukiyo Akisada
+    M icmp.p2/Echo_Multicast_Router.def, To_Multi_Pkt_Too_Big.def
+              (v6LC.5.1.2.D, v6LC.5.1.4.B)
+        - correct the destination MAC address in Echo Request
+
+    M spec.p2/HHO_MSB10mc_IN.def, HHO_MSB11mc_IN.def,
+              v6LC_1_1_10_[H-K].def
+              (v6LC.1.1.10.[H-K], v6LC.1.2.7.[G-H])
+        - correct the destination MAC address in Echo Request
+        - correct the destination MAC address in MLD Report
+
+    M spec.p2/HHO_MSB10mc_IN.seq, HHO_MSB11mc_IN.seq
+              (v6LC.1.2.7.[G-H])
+        - flush packet buffer also on Link1 before sending test packet
+
+    M icmp.p2/Echo_Multicast_Router.seq
+              (v6LC.5.1.2.D)
+        - typo: fix packet description on the report
+
+
+2008/06/30    Release 4.0.2
+    Official release
+
+
+2008/06/30    Yukiyo Akisada
+    M nd.p2/redirect.pm
+        - redirect::v6LC_2_3_13_A_B()
+        - redirect::v6LC_2_3_13_C_D_E()
+        - redirect::v6LC_2_3_14_A_B()
+        - redirect::v6LC_2_3_14_C_D_E()
+            allow upper-layer reachability confirmation by receiving
+            Redirect at v6LC.2.3.13 and v6LC.2.3.14
+
+
+2008/06/02    Release 4.0.1
+    Official release
+
+
+2008/06/02    Yukiyo Akisada
+    M spec.p2/v6LC_1_1_10_[C-D].{def,seq}, v6LC_1_1_10_[F-I].{def,seq}
+        - Internal Problem
+          These files are not reflected to CVS server
+
+
+2008/05/30    Release 4.0.0
+    Official release
+
+
+2008/05/27    Yukiyo Akisada
+    M addr.p2/v6LC_3_2_1_[A-C].seq, v6LC_3_2_4_J.seq
+        - allow time for all devices
+          to perform stateless address autoconfiguration and
+          Duplicate Address Detection.
+
+
+2008/05/21    Yukiyo Akisada
+    M addr.p2/INDEX_P1_HOST, INDEX_P1_SPECIAL, INDEX_P2_HOST
+    A addr.p2/v6LC_3_2_4_J.{def,seq}
+        - add new test (v6LC.3.2.4.J)
+
+
+2008/05/12    Yukiyo Akisada
+    M nd.p2/v6LC_2_3_4_[E-H].seq, redirect.pm (v6LC.2.3.4)
+    M nd.p2/redirect.pm (v6LC.2.3.5, v6LC.2.3.6, v6LC.2.3.8, v6LC.2.3.9)
+        - set TR2's NCE to REACHABLE before sending ICMPv6 Redirect
+
+    M nd.p2/redirect.pm (v6LC.2.3.7)
+        - set TR2 and TR3's NCE to REACHABLE before sending ICMPv6
+          Redirect
+
+
+2008/05/09    Release 4.0.0b2
+    pre-release for public review of major version up
+ 
+    *** This version is not for logo use. ***
+
+
+2008/05/09    Release 1.4.15
+    Official release
+
+
+2008/05/09    Yukiyo Akisada
+    M icmp.p2/Echo_Sitelocal.seq
+        - correct not to call manualaddrconf.rmt at host test case
+
+        *** This modification is not included in v1.4.15 ***
+
+    M icmp.p2/Echo_Loopback.{def,seq}, Echo_Unspecified.{def,seq}
+        - change to reject only Echo Reply against invalid Echo Request
+
+        *** This modification is not included in v1.4.15 ***
+
+    M addr.p2/RA_SAA.def
+        - Allow to use the unspecified address as Source Address field
+          in RS
+
+
+2008/05/08    Yukiyo Akisada
+    M nd.p2/redirect.def, v6LC_2_3_17.def
+        - Change not to use Link1 at host test cases
+
+
+2008/05/07    Yukiyo Akisada
+    M nd.p2/v6LC_2_3_3_G.{def,seq}
+        - Correct checksum
+
+
+2008/04/24    Release 1.4.14
+    Official release
+
+
+2008/04/10    Release 4.0.0b1
+    pre-release for public review of major version up
+ 
+    *** This version is not for logo use. ***
+
+
+2008/04/04    Yukiyo Akisada
+    M addr.p2/INDEX_P1_HOST, INDEX_P1_ROUTER, INDEX_P1_SPECIAL
+        - change to require all part of v6LC.3.1.2, v6LC.3.1.3 and
+          v6LC.3.1.4 in Phase-1
+
+    M addr.p2/INDEX_P1_HOST, INDEX_P1_ROUTER, INDEX_P1_SPECIAL
+    A addr.p2/v6LC_3_1_2_{B,D}_p1.seq, v6LC_3_1_3_{I,J}_p1.seq,
+              v6LC_3_1_4_{H,I}_p1.seq
+        - remove requirements to disable IP operation only in Phase-1
+
+    M spec.p2/INDEX_p1_host, INDEX_p1_special
+        - change to perform RFC 5095 test cases
+          for Host and Special Device in Phase-1
+
+    M spec.p2/INDEX_p1_router, INDEX_p2_router,
+              v6LC_1_1_10_B.{def,seq}, v6LC_1_1_10_E.{def,seq}
+    A spec.p2/v6LC_1_1_10_J.{def,seq}, v6LC_1_1_10_K.{def,seq}
+        - add new tests and renumber
+            Test v6LC.1.1.10: Source and Destination Address -
+                              Intermediate Node (Routers Only)
+                Part B: Request sent to global unicast address
+                        (prefixe ended with zero-valued fields)
+                Part E: Request sent from Link-Local address
+
+    M nd.p2/INDEX_RD_p1_router, INDEX_RD_p2_router, rdisc.pm
+    A nd.p2/v6LC_2_2_7_[E-F].def,seq
+        - add new tests by supporting RFC 4291
+
+
+2008/04/03    Yukiyo Akisada
+    M addr.p2/SAA.pm
+        - V6LC.3.1.2.{B,D}: Receiving DAD Neighbor Solicitations
+                            and Advertisements
+        - v6LC.3.1.3.{I,J}: Validation of DAD Neighbor Solicitations
+        - v6LC.3.1.4.{H,I}: Receiving Invalid Neighbor Advertisements
+            added the transmission of NS to the NUT
+            in the procedure to verify that IP operation was disabled.
+            (rfc 4862 update)
+
+
+2008/04/01    Yukiyo Akisada
+    M spec.p2/INDEX_p1_router, INDEX_p2_router
+    A spec.p2/v6LC_1_1_10_[A-I].{def,seq}
+        - Added New Tests (RFC 4291 Support)
+            - V6LC.5.1.2.E: Replying to Echo Request, Unspecified Addr,
+                            Intermediate Node (Routers Only)
+            - V6LC.5.1.2.G: Replying to Echo Request, Lookback Addr,
+                            Intermediate Node (Routers Only)
+            - V6LC.5.1.2.I: Replying to Echo Request, Site-local Addr,
+                            Intermediate Node (Routers Only)
+            - V6LC.5.1.2.J: Replying to Echo Request, Multicast Addr,
+                            (reserved=0) Intermediate Node (Routers
+                            Only)
+            - V6LC.5.1.2.K: Replying to Echo Request, Multicast Addr,
+                            (Reserved=F) Intermediate Node (Routers
+                            Only)
+
+    M index.html
+    M addr.p2/.footer, Makefile.test
+    M icmp.p2/.footer, Makefile.test
+    M nd.p2/.footer, Makefile.test
+    M pmtu.p2/.footer
+    M spec.p2/.footer
+        - update RFC number
+
+    M spec.p2/INDEX_p1_host, INDEX_p1_router, INDEX_p1_special
+              INDEX_p2_host, INDEX_p2_router
+    R spec.p2/R_RespondingEN.{def,seq},              (v6LC.1.2.9)
+              R_ReservedEN.{def,seq},                (v6LC.1.2.12)
+              R_ReservedIN.{def,seq},                (v6LC.1.2.13)
+              R_Processing_HELodd_EN.{def,seq},      (v6LC.1.2.14.A)
+              R_Processing_AdrMC_EN.{def,seq},       (v6LC.1.2.14.B)
+              R_Processing_HELodd_IN.{def,seq},      (v6LC.1.2.15.A)
+              R_Processing_SegLftGTadr_IN.{def,seq}, (v6LC.1.2.15.B)
+              R_Processing_AdrMC_IN.{def,seq},       (v6LC.1.2.15.C)
+              R_Processing_DstMC_IN.{def,seq},       (v6LC.1.2.15.D)
+              R_Processing_HL0_IN.{def,seq},         (v6LC.1.2.15.E)
+              R_Processing_HL1_IN.{def,seq},         (v6LC.1.2.15.F)
+              R_Processing_Valid_IN.{def,seq}        (v6LC.1.2.15.G)
+        - remove obsoleted tests by supporting RFC 5095
+
+    M CHANGELOG.ct, INSTALL.ct, config.txt, configure.pl
+    M spec.p2/R_UnrecognizedRoutingTypeEN_RH0.seq,
+              R_UnrecognizedRoutingTypeIN_RH0.seq
+        - remove TYPE_0_RH_SUPPORT option by mandating RFC 5095
+
+    M INSTALL.ct, config.txt, configure.pl
+    M icmp.p2/Dst_Unreach_2.seq
+        - remove DST_UNREACH_CODE_2_SUPPORT option by mandating RFC 4443
+
+    M nd.p2/V6LC_2_1_17_[C-D].seq
+        - v6LC.2.1.17.C, D: NA Processing, NCE State Incomplete 
+          Removed last Echo Request in procedure in order to keep
+          consistency with 2.1.12 and 2.1.20 state change tests
+
+    M nd.p2/nd.pm
+        nd::ndResolutionWaitQueueSingleSetup()
+        nd::ndResolutionWaitQueueMultipleSetup()
+        nd::ndResolutionWaitQueueSingleWriteEcho()
+        - v6LC.2.1.2.A,B: Resolution Wait Queue
+          changed to update the sequence number instead of the ID
+
+
+2008/03/27    Yukiyo Akisada
+    A addr.p2/v6LC_3_2_1_[A-C].{def,seq}
+    M addr.p2/INDEX_P1_HOST, INDEX_P1_ROUTER, INDEX_P1_SPECIAL,
+              INDEX_P2_HOST, INDEX_P2_ROUTER 
+        - V6LC.3.2.1:
+          Updated procedure to include Routers
+          Added Steps 6, 7 (RFC 4291 Support)
+
+    A icmp.p2/Echo_Loopback.{def,seq}, Echo_Multicast_Router.{def,seq},
+              Echo_Sitelocal.{def,seq}, Echo_Unspecified.{def,seq}
+    M icmp.p2/INDEX_P1_host, INDEX_P1_router, INDEX_P1_special,
+              INDEX_P2_host, INDEX_P2_router
+        - Added New Tests (RFC 4291 Support)
+            - V6LC.5.1.2.D: Replying to Echo Request,
+                            The Unspecified Address
+            - V6LC.5.1.2.F: Replying to Echo Request,
+                            The Loopback Address
+            - V6LC.5.1.2.H: Replying to Echo Request,
+                            Site-Local IPv6 Unicast Addresses
+
+
+2008/03/26    Yukiyo Akisada
+    M nd.p2/common.def, redirect.{def,pm}, v6LC_2_3_17.seq
+        - v6LC.2.3.17:
+          Updated procedure step 4 and 5 to use Rut's routing table
+
+
+2008/03/05    Release 1.4.13
+    Official release
+
+
+2008/03/05    Yukiyo Akisada
+    M nd.p2/V6LC_2_1_7.seq, v6LC_2_1_6_[B-D]-v3_8_2.seq (v6LC.2.1.6)
+        - correct Common Setup 1.1
+
+    M nd.p2/ndisc.pm
+        - change to remove default route after flush neighbor cache
+
+
+2008/03/04    Release 1.4.12
+    Official release
+
+
+2008/03/04    Yukiyo Akisada
+    M nd.p2/V6LC_2_1_1_D.seq, V6LC_2_1_7.seq,
+            v6LC_2_1_13_[A-C]-v3_8_2.seq, v6LC_2_1_6_[B-D]-v3_8_2.seq
+        - correct the use of boolean value
+
+
+2008/02/20    Release 1.5.0b4
+    pre-release for public review of major revision up
+ 
+    *** This version is not for logo use. ***
+
+
+2008/02/20    Release 1.4.11
+    Official release
+
+
+2008/02/20    Yukiyo Akisada
+    M nd.p2/v6LC_2_2_7_B.def
+        - correct Router Lifetime value of expected packet definition
+
+
+2008/02/15    Release 1.4.10
+    Official release
+
+
+2008/02/07    Release 1.5.0b3
+    pre-release for public review of major revision up
+ 
+    *** This version is not for logo use. ***
+
+
+2008/02/06    Yukiyo Akisada
+    M nd.p2/V6LC_2_1_1_[A-D].seq, V6LC_2_1_2_[A-B].seq,
+            V6LC_2_1_3.{seq,def},
+            V6LC_2_1_5_[A-B].{seq,def}, V6LC_2_1_6_[A-B].{seq,def},
+            V6LC_2_1_6_A_p1.seq, v6LC_2_1_6_[B-D]-v3_8_2.{seq,def},
+            V6LC_2_1_7.{seq,def}, V6LC_2_1_8_[A-H].seq,
+            v6LC_2_1_8_C-v3_8_2.seq, V6LC_2_1_9_[A-B].seq,
+            v6LC_2_1_9_C-v3_8_2.{seq,def}, V6LC_2_1_10_[A-B].seq,
+            V6LC_2_1_11_[A-D].seq, V6LC_2_1_12_[A-D].seq,
+            V6LC_2_1_13_[A-D].seq, v6LC_2_1_13_[A-C]-v3_8_2.{seq,def},
+            V6LC_2_1_14.seq, V6LC_2_1_15_[A-G].seq
+            V6LC_2_1_16_[A-H].seq, V6LC_2_1_17_[A-E].seq,
+            V6LC_2_1_18_[A-R].seq, V6LC_2_1_19_[A-R].seq,
+            V6LC_2_1_20_[A-R].seq, V6LC_2_1_21_[A-H].{seq,def}, nd.pm,
+            ndisc.pm, ndisc_common.def, ndisc_echo.def, ndisc_na.def,
+            ndisc_ns.def, ndisc_ra.def 
+
+        - correct cleanup procedure
+
+
+2008/02/01    Yukiyo Akisada
+    M pmtu.p2/receiveMTU0.seq
+    M pmtu.p2/receiveMTU512.seq
+        - typo in perldoc
+
+    M addr.p2/Makefile.test
+    M nd.p2/Makefile.test
+        - change to re-generate AdvancedFunctionality.{pm,def}
+
+    M icmp.p2/Err_Condition_Port_UnspecAddr.def (v6LC.5.1.11.A)
+    M icmp.p2/Err_Condition_Port_GMaddr.def     (v6LC.5.1.12.A)
+        - handle neighbor discovery for invalid packet
+
+    M nd.p2/V6LC_2_1_1_B.seq
+        - wait for NUT to be NONCE befor exit
+
+
+2007/12/14    Release 1.5.0b2
+    pre-release for public review of major revision up
+ 
+    *** This version is not for logo use. ***
+
+
+2007/12/14    Yukiyo Akisada
+    addr.p2/DAD_Failure_Host.def,
+            INDEX_P1_HOST, INDEX_P1_SPECIAL, INDEX_P2_HOST
+        - avoid to use Link1
+
+    pmtu.p2/receiveMTU0.seq, receiveMTU512.seq
+        - fix typo in perldoc
+
+
+2007/11/27    Release 1.5.0b1
+    pre-release for public review of major revision up
+ 
+    *** This version is not for logo use. ***
+
+
+2007/11/27    Yukiyo Akisada
+    INSTALL.ct.TAKE, config.txt, configure.pl
+        - add the configurable parameter - DST_UNREACH_CODE_2_SUPPORT
+
+
+2007/11/16    Yukiyo Akisada
+    icmp.p2/INDEX_P1_router, INDEX_P2_router,
+            Dst_Unreach_2.{seq,def} (v6LC.5.1.3.E)
+        - add test for Destination Unreachable Message generation
+          code field 2 -- beyond scope of source addr according to RFC
+          4443.
+
+
+2007/11/08    Yukiyo Akisada
+    nd.p2/v6LC_2_2_19.{seq,def}
+          INDEX_RD_p1_host, INDEX_RD_p1_special, INDEX_RD_p2_host
+        - add the test for on-link determination
+          and invalid porefix length field according to RFC 4861
+
+    addr.p2/LLA_DAD_NSPostDAD_SameDstSameTgt.seq, (v6LC.3.1.2.B)
+            LLA_DAD_NAPostDAD_SameTgt.seq,        (v6LC.3.1.2.D)
+            LLA_DAD_NSPostDAD_Reserved.seq,       (v6LC.3.1.3.I)
+            LLA_DAD_NSPostDAD_wTLL.seq,           (v6LC.3.1.3.J)
+            LLA_DAD_NAPostDAD_Reserved.seq,       (v6LC.3.1.4.H)
+            LLA_DAD_NAPostDAD_wSLL.seq,           (v6LC.3.1.4.I)
+            SAA.pm, DAD_Failure.def,
+            INDEX_P1_HOST, INDEX_P1_ROUTER, INDEX_P1_SPECIAL,
+            INDEX_P2_HOST, INDEX_P2_ROUTER
+        - add procedure to verify that IP operation was disabled
+          according to RFC 4862
+
+
+2007/11/07    Yukiyo Akisada
+    icmp.p2/Unknown_Infomsg.{seq,def}
+        - update the type field value to 254 according to RFC 4443
+
+    nd.p2/V6LC_2_1_1_B.{seq,def},
+          INDEX_ND_p1_host, INDEX_ND_p1_router, INDEX_ND_p1_special,
+          INDEX_ND_p2_host, INDEX_ND_p2_router
+        - remove v6LC.2.1.1.B according to RFC 4861
+
+
+2007/10/26    Yukiyo Akisada
+    index.html
+        - change title from Phase-2 to Phase-1/Phase-2
+
+
+2007/10/02    Yukiyo Akisada
+    INSTALL.ct.TAKE, config.txt, configure.pl
+        - add TYPE_0_RH_SUPPORT as the configurable parameter
+
+    spec.p2/INDEX_p1_host, INDEX_p1_router, INDEX_p1_special
+            INDEX_p2_host, INDEX_p2_router
+            R_UnrecognizedRoutingTypeIN.{seq,def}
+        - updated to include all nodes in test v6LC.1.2.11.A
+
+    spec.p2/INDEX_p1_host, INDEX_p1_router, INDEX_p1_special,
+            INDEX_p2_host, INDEX_p2_router,
+            R_UnrecognizedRoutingTypeEN_RH0.{seq,def},
+            R_UnrecognizedRoutingTypeIN_RH0.{seq,def}
+        - add new tests -- v6LC.1.2.10.B, v6LC.1.2.11.B
+        - skip if TYPE_0_RH_SUPPORT is true
+
+    spec.p2/R_RespondingEN.seq, R_ReservedEN.seq, R_ReservedIN.seq,
+            R_Processing_HELodd_EN.seq, R_Processing_AdrMC_EN.seq,
+            R_Processing_HELodd_IN.seq, R_Processing_SegLftGTadr_IN.seq,
+            R_Processing_AdrMC_IN.seq, R_Processing_DstMC_IN.seq,
+            R_Processing_HL0_IN.seq, R_Processing_HL1_IN.seq,
+            R_Processing_Valid_IN.seq
+        - skip if TYPE_0_RH_SUPPORT is false in tests v6LC.1.2.9,
+          v6LC.1.2.12, v6LC.1.2.13, v6LC.1.2.14 and v6LC.1.2.15
+
+
+2007/10/02    Yukiyo Akisada
+    nd.p2/common.pm, redirect.pm
+        - add Echo exchange sequence before transmitting Redirect
+          in test v6LC.2.3.10, v6LC.2.3.11, v6LC.2.3.12, v6LC.2.3.13,
+          v6LC.2.3.14 and v6LC.2.3.15
+        - remove RA from TR2
+          in test v6LC.2.3.13
+          in test v6LC.2.3.14
+
+
+2007/10/01    Release 1.4.9
+    Official release
+
+
+2007/09/28    Yukiyo Akisada
+    nd.p2/redirect.pm
+        - remove RA from TR2 in test v6LC 2.3.6
+        - remove RA from TR2 and TR3 in test v6LC 2.3.7
+
+        *** This modification is not included in v1.4.9 ***
+
+
+2007/09/27    Yukiyo Akisada
+    nd.p2/v6LC_2_3_4_[E-F].seq, redirect.pm
+        - remove RA from TR2 in test v6LC 2.3.4
+
+        *** This modification is not included in v1.4.9 ***
+
+    nd.p2/v6LC_2_3_4_I.{seq,def}
+        - remove these tests because of above modification
+
+        *** This modification is not included in v1.4.9 ***
+
+
+2007/09/26    Yukiyo Akisada
+    nd.p2/v6LC_2_3_6_G.def
+        - correct packet definition
+
+    nd.p2/v6LC_2_3_1_[A-D].{seq,def}, v6LC_2_3_4_[A-D].{seq,def}
+        - remove these tests because of overinterpretation from RFC
+
+        *** This modification is not included in v1.4.9 ***
+
+
+2007/06/21    Release 1.4.8
+    Official release
+
+
+2007/06/21    Yukiyo Akisada
+    nd.p2/V6LC_2_2_12_A.{def,seq}, V6LC_2_2_12_B.{def,seq}, rdisc.pm
+        - fix the verification of CurHopLimit in Test v6LC.2.2.13
+
+
+2007/04/13    Release 1.4.7
+    Official release
+
+
+2007/04/11    Yukiyo Akisada
+    spec.p2/EX_NH_UnrecognizedEN.seq, IP_NH_Unrecognized.seq
+        - fix the conflict of unrecognized Next Header values
+
+
+2007/01/30    Yukiyo Akisada
+    spec.p2/{HHO_MSB10mc_EN,HHO_MSB11mc_EN}.seq
+        - Change to Basic Functionality Tests.
+            * These test are not Advanced Functionality Tests.
+
+
+2006/12/14    Hideshi Enokihara
+    pmtu.p2/mcastOne.seq
+        - fix the lack of unexpected packet processing
+
+    pmtu.p2/mcastTwo.seq
+        - fix the lack of unexpected packet processing
+
+
+2006/12/13    Yukiyo Akisada
+    nd.p2/nd.pm
+        - Editorial Bug Fix: correct %pktdesc() for V6LC_2_1_2_B.seq
+
+
+2006/12/06    Hideshi Enokihara
+    pmtu.p2/increase1500.seq
+        - fix the lack of unexpected packet processing
+
+    pmtu.p2/increase0x1fffffff.seq
+        - fix the lack of unexpected packet processing
+
+
+2006/12/04    Release 1.4.6
+    Official release
+
+
+2006/12/04    Yukiyo Akisada
+    nd.p2/INDEX_ND_p1_{host,special}
+        - use V6LC_2_1_6_A_p1.seq for v6LC.2.1.5(A)
+          as like as INDEX_ND_p1_router
+
+
+2006/11/29    Release 1.4.5
+    Official release
+
+
+2006/11/29    Yukiyo Akisada
+    nd.p2/v6LC_2_2_7_C_p1.def
+        - fix the lack of packet definition file
+
+
+2006/11/28    Release 1.4.4
+    Official release
+
+
+2006/11/28    Yukiyo Akisada
+    nd.p2/INDEX_ND_p1_router, V6LC_2_1_6_A_p1.seq
+        - remove AdvRetransTimer=5000 milliseconds test cases
+          from Phase-1 router test sets
+
+        This modification will allow the NUT to behave loose in
+        v6LC.2.1.5(A) only for Phase-1 router test case
+
+    nd.p2/ndisc.pm
+        - allow to use link-local address as the source address of
+          multicast NS
+
+        This modification will allow the NUT to behave loose in
+        v6LC.2.1.6(C) for Phase-1/Phase-2 IPv6 Core Protocols
+
+    nd.p2/INDEX_RD_p1_router, rdisc.pm, v6LC_2_2_7_C_p1.seq
+        - remove to test omission of MTU option
+
+        This modification will allow the NUT to behave loose in
+        v6LC.2.2.7(C) only for Phase-1 router test case
+
+    pmtu.p2/mcastOne.seq, mcastTwo.seq
+        - avoid to fall in internal error when NUT doesn't send any
+          packet
+
+
+2006/09/26    Release 1.4.3
+    Official release
+
+
+2006/09/26    Yukiyo Akisada
+    spec.p2/CommonSPEC.pm
+        - send RA when NUT is the special device
+            CommonSPEC::setup11_v6LC_1_3_2()
+            CommonSPEC::cleanup_v6LC_1_3_2()
+            CommonSPEC::cleanup_v6LC_1_3_2_D()
+
+            This modification will correct the behavior of
+            v6LC.1.3.2(A-E).
+
+
+2006/08/04    Release 1.4.2
+    Official release
+
+
+2006/08/04    Yukiyo Akisada
+    nd.p2/{common,rdisc}.pm
+        - add cleanup procedure with $rut_rtadvd_param_change
+
+
+2006/07/27    Release 1.4.1
+    Official release
+
+
+2006/07/26    Yukiyo Akisada
+    icmp.p2/Echo_Global.seq, icmp.pm
+        - support 'special' as NutDef{'Type'} for Phase-1 test
+          in Common Test Setup
+
+
+2006/07/25    Yukiyo Akisada
+    nd.p2/common.pm
+        - support 'special' as NutDef{'Type'} for Phase-1 test
+          in Common Test Cleanup
+
+
+2006/06/07    Release 1.4.0
+    Official release
+
+
+2006/06/02    Yukiyo Akisada
+    nd.p2/V6LC_2_2_13_[B-C].{def,seq}, rdisc.pm
+        - changed to retain 2 entries
+          in default router list instead of 3.
+            v6LC.2.2.14 (B), v6LC.2.2.14 (C)
+
+
+2006/05/25    Yukiyo Akisada
+    nd.p2/nd.pm
+        - change to call vSend() for each packets
+            V6LC.2.1.2 (A), V6LC.2.1.2 (B)
+
+
+2006/04/28    Release 1.4.0b1
+    Official release
+
+
+2006/04/28    Yukiyo Akisada
+    nd.p2/rdisc.pm
+          v6LC_2_2_7_[B-D].{def,seq}.
+          v6LC_2_2_10_[A-I].{def,seq}.
+          v6LC_2_2_17_[A-C].{def,seq}.
+          v6LC_2_2_18.{def,seq}.
+
+    addr.p2/v6LC_3_2_1.seq
+
+        - add new tests
+
+
+2006/04/27    Yukiyo Akisada
+    nd.p2/common.pm, rdisc.pm
+          v6LC_2_2_16_{E,[H-K]}-v3_8_2.{def,seq}
+
+        - add new tests
+
+
+2006/04/26    Yukiyo Akisada
+    spec.p2/CommonSPEC.pm,
+            v6LC_1_1_5_B.{def,seq}, v6LC_1_3_2_D.{def,seq}
+
+    nd.p2/nd.pm, ndisc.pm,
+          v6LC_2_1_6_[B-D]-v3_8_2.{def,seq},
+          v6LC_2_1_8_C-v3_8_2.{def,seq},
+          v6LC_2_1_9_C-v3_8_2.{def,seq},
+          v6LC_2_1_13_[A-C]-v3_8_2.{def,seq},
+          v6LC_2_1_18_[Q-R].{def,seq},
+          v6LC_2_1_19_[Q-R].{def,seq},
+          V6LC_2_1_20_[Q-R].{def,seq},
+          V6LC_2_1_21_[E-H].{def,seq}
+
+        - add new tests
+
+
+2006/04/17    Release 1.3.7
+    Official release
+
+
+2006/03/13    Yukiyo Akisada
+    icmp.p2/INDEX_P2_host
+        - remove Test v6LC.5.1.13 from host tests
+
+
+2006/03/09    Yukiyo Akisada
+    icmp.p2/Pkt_Too_Big.{def,seq}, icmp.{def,pm} (Test v6LC.5.1.4 (A))
+        - make sure to create neighbor cache entry for TN1 and TN2
+
+
+2006/03/07    Release 1.3.6
+    Official release
+
+
+2006/03/06    Hideshi Enokihara
+    nd.p2/V6LC_2_2_9_B.seq, rdisc.pm (Test v6LC.2.2.9 (B))
+        - correct the name of packet definition to use
+
+
+2006/03/03    Yukiyo Akisada
+    nd.p2/rdisc.{def,pm} (Test v6LC.2.2.8)
+        - Allow NUT to remove Prefix Information option from RA,
+          when NUT stops sending RA.
+
+
+2006/02/02    Release 1.3.5
+    Official release
+
+
+2006/02/01    Yukiyo Akisada
+    icmp.p2/Pkt_Too_Big.def (Test v6LC.5.1.4 (A))
+        - Correct MTU value in Packet Too Big used
+          at when HAS_MULTIPLE_INTERFACES is false
+
+
+2006/01/20    Release 1.3.4
+    Official release
+
+
+2006/01/20    Yukiyo Akisada
+    nd.p2/V6LC_2_1_6_A.seq V6LC_2_1_6_B.seq V6LC_2_1_7.seq
+        - wait DAD after RA
+
+
+2006/01/19    Release 1.3.3
+    Official release
+
+
+2006/01/18    Yukiyo Akisada
+    pmtu.p2/CommonPMTU.pm
+        - reboot at every cleanup
+        - Support test specification ver.3.7.1
+
+    pmtu.p2/CommonHost.def
+        - set prefix lifetime as long enough such
+          that they do not expire during the test
+
+
+2006/01/13    Release 1.3.2
+    Official release
+
+
+2006/01/12    Yukiyo Akisada
+    icmp.p2/To_Multi_Pkt_Too_Big.seq
+        - correct to call function which set MTU (Test v6LC.5.1.4 (A))
+
+    nd.p2/{common, rdisc}.pm
+        - add cleanup procedure (Test v6LC.2.2.12 (B))
+        - add cleanup procedure (Test v6LC.2.2.14)
+
+
+2006/01/11    Yukiyo Akisada
+    Makefile.inc 
+        - define V6EVALROOT variable
+
+    nd.p2/ndisc.pm
+        - fix typo
+
+    nd.p2/rdisc.pm
+        - correct variable name
+
+
+2006/01/10    Release 1.3.1
+    Official release
+
+
+2006/01/10    Yukiyo Akisada
+    nd.p2/V6LC_2_1_6_A.seq, V6LC_2_1_6_B.seq, ndisc.pm
+        - correct cleanup procedure (Test v6LC.2.1.5)
+
+    icmp.p2/Err_Condition_Port_Unreachable.seq,
+            Err_Condition_Port_ACaddr.def (Test v6LC.5.1.13 (A))
+        - handle neighbor discovery for invalid packet
+
+
+2006/01/06    Release 1.3
+    Official release
+
+
+2005/12/01    Release 1.3.0b1
+    Official release
+
+
+2005/12/01    Yukiyo Akisada
+    - support the router which has only one physical interface
+
+
+2005/11/30    Yukiyo Akisada
+    spec.p2/EX_NH_UnrecognizedEN.def
+        - add payload to Packet A (Test v6LC.1.2.3 Part A)
+
+    nd.p2/rdisc.{pm,def}, common_ra.def
+        - allow RUT to send RA with MTU option (Test v6LC.2.2.5)
+
+    nd.p2/rdisc.{pm,def}, common_ra.def
+        - allow RUT to send RA with MTU option (Test v6LC.2.2.6 Part B)
+
+    nd.p2/rdisc.{pm,def}, common_ra.def, V6LC_2_2_7.{seq,def}
+        - allow RUT to send RA with MTU option (Test v6LC.2.2.7)
+
+    nd.p2/rdisc.{pm,def}, common_ra.def
+        - allow RUT to send RA with MTU option (Test v6LC.2.2.8)
+
+    nd.p2/rdisc.{pm,def}, common_ra.def
+        - allow RUT to send RA with MTU option (Test v6LC.2.2.9 Part A)
+
+    nd.p2/rdisc.{pm,def}, common_ra.def, V6LC_2_2_9_B.def
+        - allow RUT to send RA with MTU option (Test v6LC.2.2.9 Part B)
+
+    pmtu.p2/INDEX_p2_router, receiveMTU0.{seq,def}
+        - change MTU in Packet Too Big from 0 to 56
+          (Test v6LC.4.1.6 Part A)
+
+    pmtu.p2/INDEX_p2_router, receiveMTU512.{seq,def}
+        - change MTU in Packet Too Big from 512 to 1279
+          (Test v6LC.4.1.6 Part B)
+
+
+2005/07/20    Release 1.2.18
+    Official release
+
+
+2005/07/20    Yukiyo Akisada
+    nd.p2/INDEX_RD_p2_router, V6LC_2_2_8_B.{seq,def}
+        - remove Test v6LC.2.2.8 Part B
+
+
+2005/07/19    Release 1.2.17
+    Official release
+
+
+2005/07/19    Yukiyo Akisada
+    spec.p2/IP_NH_Unrecognized.def
+        - correct Payload Length in IPv6 Header (Test v6LC.1.1.7 Part A)
+
+    spec.p2/HHO_MSB10mc_IN.def
+        - correct L2 destination address of multicast packet
+          (Test v6LC.1.2.7 Part G)
+
+    nd.p2/V6LC_2_1_6_A.seq, V6LC_2_1_6_B.{seq,def}
+          ndisc.pm, ndisc_common.def
+        - satisfy test specification (Test v6LC.2.1.5)
+
+    icmp.p2/To_Multi_Pkt_Too_Big.def
+        - correct L2 destination address of multicast packet
+          (Test v6LC.5.1.4 Part B)
+
+
+2005/07/05    Yukiyo Akisada
+    nd.p2/v6LC_2_3_6_B.seq (Test v6LC.2.3.6 Part B)
+        - fix typo in perldoc
+
+
+2005/06/20    Release 1.2.16
+    Official release
+
+
+2005/06/14    Yukiyo Akisada
+    Support IPv6 READY Phase II Test Specification Revision 3.6.0
+
+    nd.p2/INDEX_ND_p2_host, ndisc.{pm,def}, V6LC_2_1_4.{seq,def}
+        - remove Test v6LC.2.1.4
+
+
+2005/06/02    Yukiyo Akisada
+    pmtu.p2/storedPMTU.seq, CommonPMTU.pm, CommonHost.def
+            (Test v6LC.4.1.2)
+        - increase AdvDefaultLifetime not to expire during the test
+
+    pmtu.p2/CommonHost.def (Common Test Cleanup)
+        - correct AdvReachableTime and AdvRetransTimer for sending RA
+        - remove SLL option for sending RA for sending RA
+        - add MTU option for sending RA for sending RA
+
+
+2005/05/31    Release 1.2.15
+    Official release
+
+
+2005/05/31    Yukiyo Akisada
+    icmp.p2/To_ICMPErr_Packet_Too_Big.def (Test v6LC.5.1.9 Part E)
+        - correct MAC address of packet to send
+
+
+2005/05/25    Release 1.2.14
+    Official release
+
+
+2005/05/12    Yukiyo Akisada
+    spec.p2/R_Processing_HELodd_IN.def (Test v6LC.1.2.15 Part A)
+        - allow to use Link1 address for Parameter Problem
+
+    nd.p2/V6LC_2_1_7.seq (Test v6LC.2.1.7)
+        - change to ignore unexpected packets
+          which aren't related to test
+
+    addr.p2/SAA.pm
+        - change to call vClrear() before vSend()
+          and remove seektime for vRect().
+
+    pmtu.p2/storedPMTU.{seq,def}
+        - make it sure to keep neighbor cache for TN1&TR1 (v6LC.4.1.2)
+
+    pmtu.p2/reducePMTUonlink.seq, CommonPMTU.pm
+        - create neighbor cache for TR1 global address at setup
+
+
+2005/04/27    Release 1.2.13
+    Official release
+
+
+2005/04/27    Yukiyo Akisada
+    pmtu.p2/reducePMTUonlink.{seq,def} (Test v6LC.4.1.4)
+        - add sequence to test also for global scope
+        - correct echo request packet size as like as test specification
+
+
+2005/04/25    Yukiyo Akisada
+    icmp.p2, nd.p2, pmtu.p2, spec.p2
+        - enable to configure delay time for reboot by config.pl
+
+
+2005/04/14    Release 1.2.12
+    Official release
+
+
+2005/04/14    Yukiyo Akisada
+    nd.p2/V6LC_2_1_21_[A-D].seq, ndisc.def, ndisc.pm
+        - correct common cleanup procedure
+
+    nd.p2/V6LC_2_2_3_[A-C].seq, rdisc.pm, common.pm
+        - insert 3 seconds delay after transmitting RS
+
+    nd.p2/v6LC_2_3_10_[A-D].seq, redirect.pm
+        - insert 3 seconds delay after transmitting Redirect
+
+    nd.p2/v6LC_2_3_12_[A-E].seq, redirect.pm
+        - insert 3 seconds delay after transmitting Redirect
+
+    nd.p2/v6LC_2_3_13_[A-E].seq, redirect.pm
+        - insert 3 seconds delay after transmitting Redirect
+
+    nd.p2/v6LC_2_3_14_[C-E].seq, redirect.pm
+        - insert 3 seconds delay after transmitting Redirect
+
+    nd.p2/v6LC_2_3_15_[A-I].seq, redirect.pm
+        - insert 3 seconds delay after transmitting Redirect
+
+
+2005/04/13    Yukiyo Akisada
+    nd.p2/V6LC_2_1_8_A.{seq,def}
+        - use all-nodes multicast address instead of solicited-node
+          multicast address as the invalid NS's target address
+
+    nd.p2/V6LC_2_2_10.{seq,def}
+        - use 1,000 milliseconds as AdvRetransTimer
+
+    nd.p2/V6LC_2_2_11_[A-F].{seq,def}
+        - use 20 seconds as AdvDefaultLifetime
+        - use 600,000 milliseconds as AdvReachableTime
+        - use 1,000 milliseconds as AdvRetransTimer
+
+    nd.p2/V6LC_2_2_13_[A-C].{seq,def}, common_ra.def, rdisc.pm,
+          common.pm
+        - use 600,000 milliseconds as AdvReachableTime
+        - use 1,000 milliseconds as AdvRetransTimer
+        - use 100 seconds as AdvValidLifetime
+        - use 20 seconds as AdvPreferredLifetime
+
+    nd.p2/V6LC_2_2_15_[A-F].{seq,def}
+        - use 10,000 milliseconds as AdvReachableTime
+        - use 1,000 milliseconds as AdvRetransTimer
+
+
+2005/03/11    Release 1.2.11
+    Official release
+
+
+2005/03/10    Hiroki Endou
+    spec.p2/CommonHost.def
+    spec.p2/CommonSPEC.pm
+    spec.p2/F_TX_intime.seq, 
+    spec.p2/F_TX_expire.seq
+    spec.p2/F_TX_only1st.seq
+    spec.p2/F_TX_only2nd.seq
+        - change to perform Common Test Setup 1.1 in v6LC.1.3.2
+
+
+2005/03/09    Release 1.2.10
+    Official release
+
+
+2005/03/08    Hiroki Endou
+    icmp.p2/Pkt_Too_Big.seq
+    icmp.p2/Pkt_Too_Big.def
+    icmp.p2/To_Multi_Pkt_Too_Big.seq
+    icmp.p2/Err_Condition_Too_Big.seq
+    icmp.p2/Err_Condition_Too_Big_ACaddr.def
+    icmp.p2/Err_Condition_Too_Big_GMaddr.def
+    icmp.p2/Err_Condition_Too_Big_UnspecAddr.def
+        - remove unnecessary sequence to add route and make NCE
+          modify TN2 address
+
+
+2005/03/07    Hiroki Endou
+    icmp.p2/To_Multi_Pkt_Too_Big.seq
+        - remove unnecessary sequence in v6LC.5.1.4.B
+
+    spec.p2/IP_TC_NonZeroEN.seq, IP_TC_NonZeroEN.def
+    spec.p2/IP_TC_NonZeroIN.seq, IP_TC_NonZeroIN.def
+        - change to use 0x20 as Traffic Class value in v6LC.1.1.2
+          and v6LC.1.1.3
+
+    spec.p2/R_Processing_HELodd_IN.seq
+        - correct interface transmitting Packet A in v6LC.1.2.15
+
+    spec.p2/F_TX_intime.seq, F_TX_intime.def
+    spec.p2/F_TX_expire.seq, F_TX_expire.def
+    spec.p2/F_TX_only1st.seq, F_TX_only1st.def
+    spec.p2/F_TX_only2nd.seq, F_TX_only2nd.def
+        - change to use global address in v6LC.1.3.2
+
+
+2005/03/04    Hiroki Endou
+    icmp.p2/Dst_Unreach_3_Global.seq, Dst_Unreach_3_Global.def
+        - change packet definition into on-link global address
+          in v6LC.5.1.3.B
+
+    icmp.p2/To_Multi_Pkt_Too_Big.seq, To_Multi_Pkt_Too_Big.def
+        - correct global multicast address in v6LC.5.1.4.B
+
+    icmp.p2/P_Problem_Err_Header_Field.seq
+    icmp.p2/P_Problem_Err_Header_Field.def
+        - correct ICMPv6 Data Length in Packt A in v6LC.5.1.6
+
+    icmp.p2/P_Problem_Global.seq, icmp.p2/P_Problem_Global.def
+        - append ICMPv6 header to Packt A in v6LC.5.1.7
+
+
+2005/02/22    Release 1.2.9
+    Official release
+
+
+2005/02/22    Yukiyo Akisada
+    spec.p2/HHO_MSB10mc_IN.seq, HHO_MSB11mc_IN.seq
+            HHO_MSB10mc_IN.def, HHO_MSB11mc_IN.def
+        - add procedure for multicast routing in v6LC.1.2.7.G,H
+
+    nd.p2/rdisc.pm
+        - correct expiration timer in v6LC.2.2.13.A
+
+
+2005/02/18    Yukiyo Akisada
+    addr.p2/v6LC_3_2_4_C.seq (was addr.p2/RA_decVLT.seq)
+        - correct test sequence to fit test specification
+
+
+2005/02/17    Yukiyo Akisada
+    spec.p2/EX_NH_UnrecognizedEN.seq
+    spec.p2/EX_NH_UnrecognizedEN.def
+        - remove difference between perldoc and packet definition
+          in v6LC.1.2.3.A
+
+    nd.p2/common.pm,        common_echo.def
+          common_tn_na.def, common_tn_ns.def
+          redirect.pm,      v6LC_2_3_16_A.seq
+        - add ND handling for on-link destination
+          in v6LC.2.3.16.A
+
+
+2005/02/01    Yukiyo Akisada
+    nd.p2/ndisc.pm
+    nd.p2/rdisc.pm
+        correct vRecv() arguments
+
+
+2005/01/21    Release 1.2.8
+    Official release
+
+
+2005/01/21    Hiroki Endou
+    spec.p2/HHO_MSB10mc_IN.def
+    spec.p2/HHO_MSB11mc_IN.def
+        - correct packet definition
+
+    nd.p2/rdisc.pm
+        - correct pass condition
+
+
+2005/01/20    Release 1.2.7
+    Official release
+
+
+2005/01/20    Hiroki Endou
+    spec.p2/R_Processing_HELodd_IN.seq
+    spec.p2/R_Processing_SegLftGTadr_IN.seq
+    spec.p2/R_Processing_AdrMC_IN.seq
+    spec.p2/R_Processing_DstMC_IN.seq
+    spec.p2/R_Processing_HL0_IN.seq
+    spec.p2/R_Processing_HL1_IN.seq
+    spec.p2/R_Processing_Valid_IN.seq
+    spec.p2/R_UnrecognizedRoutingTypeEN.seq
+    spec.p2/R_UnrecognizedRoutingTypeIN.seq
+        - correct perldoc
+
+    spec.p2/CommonHost.def
+        - change ReachableTime value
+
+    spec.p2/CommonSPEC.pm
+    spec.p2/F_Reassembly_1500.seq
+        - change to process lightly
+
+    pmtu.p2/CommonPMTU.pm
+        - change to process lightly
+
+
+2005/01/19    Hiroki Endou
+    spec.p2/CommonSPEC.pm
+        - remove needless default route setup in Common Setup 1.2
+          for v6LC.1.2.11
+
+    spec.p2/R_Processing_HELodd_IN.def
+        - correct packet definition of Routing Header
+
+    nd.p2/redirect.pm
+    nd.p2/v6LC_2_3_1_A.seq nd.p2/v6LC_2_3_1_B.seq 
+    nd.p2/v6LC_2_3_1_E.seq nd.p2/v6LC_2_3_1_F.seq 
+        - cancel previous changes of v6LC.2.3.1.A, B, E and F
+
+
+2005/01/18    Release 1.2.6
+    Official release
+
+
+2005/01/17    Hiroki Endou
+    nd.p2/nd.pm 
+    nd.p2/V6LC_2_1_21_A.seq nd.p2/V6LC_2_1_21_B.seq 
+    nd.p2/V6LC_2_1_21_C.seq nd.p2/V6LC_2_1_21_D.seq 
+    nd.p2/rdisc.pm
+    nd.p2/V6LC_2_2_13_A.seq nd.p2/V6LC_2_2_13_B.seq 
+    nd.p2/V6LC_2_2_13_C.seq
+    nd.p2/redirect.pm
+    nd.p2/v6LC_2_3_1_A.seq nd.p2/v6LC_2_3_1_B.seq 
+    nd.p2/v6LC_2_3_1_E.seq nd.p2/v6LC_2_3_1_F.seq 
+        - correct test sequnce for not using onlink assumption
+
+    spec.p2/EX_NH_NoneIN.def
+        - correct Checksum value
+
+    spec.p2/EX_NH_NoneIN.def
+        - correct Extention Header
+
+    spec.p2/CommonSPEC.pm
+    spec.p2/F_Reassembly_1500.seq
+    spec.p2/F_Reassembly_1500.def
+        - adapt fragmentation
+
+
+2005/01/14    Release 1.2.5
+    Official release
+
+
+2005/01/14    Yukiyo Akisada
+    nd.p2/redirect.pm 
+        - correct procedure related to v6LC.2.3.14
+          to change reachablity state to PROBE
+
+
+2005/01/14    Yukiyo Akisada
+    nd.p2/v6LC_2_3_10_D.seq nd.p2/v6LC_2_3_11_A.seq 
+    nd.p2/v6LC_2_3_11_D.seq nd.p2/v6LC_2_3_12_E.seq 
+    nd.p2/v6LC_2_3_13_A.seq nd.p2/v6LC_2_3_13_B.seq 
+    nd.p2/v6LC_2_3_13_E.seq nd.p2/v6LC_2_3_14_A.seq 
+    nd.p2/v6LC_2_3_14_B.seq nd.p2/v6LC_2_3_14_E.seq 
+        - correct packet description
+
+
+2005/01/14    Yukiyo Akisada
+    nd.p2/V6LC_2_1_20_A.seq nd.p2/V6LC_2_1_20_B.seq 
+    nd.p2/V6LC_2_1_20_C.seq nd.p2/V6LC_2_1_20_D.seq 
+    nd.p2/V6LC_2_1_20_E.seq nd.p2/V6LC_2_1_20_F.seq 
+    nd.p2/V6LC_2_1_20_G.seq nd.p2/V6LC_2_1_20_H.seq 
+    nd.p2/V6LC_2_1_20_I.seq nd.p2/V6LC_2_1_20_J.seq 
+    nd.p2/V6LC_2_1_20_K.seq nd.p2/V6LC_2_1_20_L.seq 
+    nd.p2/V6LC_2_1_20_M.seq nd.p2/V6LC_2_1_20_N.seq 
+    nd.p2/V6LC_2_1_20_O.seq nd.p2/V6LC_2_1_20_P.seq 
+        - correct procedure to change reachablity state to PROBE
+
+
+2005/01/14    Hiroki Endou
+    nd.p2/V6LC_2_1_13_A.seq nd.p2/V6LC_2_1_13_B.seq 
+    nd.p2/V6LC_2_1_13_C.seq nd.p2/V6LC_2_1_13_D.seq 
+    nd.p2/ndisc.pm 
+        - correct procedure to change reachablity state to PROBE
+
+
+2005/01/14    Release 1.2.4
+    Official release
+
+
+2005/01/14    Yukiyo Akisada
+    nd.p2/ndisc.def
+    nd.p2/ndisc.pm
+        - correct clean up procedure related to V6LC_2_1_5_A
+
+
+2005/01/14    Hiroki Endou
+    nd.p2/V6LC_2_1_6_A.seq
+    nd.p2/V6LC_2_1_6_B.seq
+        - modify packet waiting time
+
+    pmtu.p2/storedPMTU.seq
+        - insert vClear before each transmitting Echo Request
+
+    pmtu.p2/mcastOne.seq
+    pmtu.p2/mcastTwo.seq
+        - insert vClear before each ping6.rmt
+
+    spec.p2/Makefile.test
+    pmtu.p2/Makefile.test
+    icmp.p2/Makefile.test
+        - modify AdvancedFunctionality.pm creation rule
+
+
+2005/01/13    Release 1.2.3
+    Official release
+
+
+2005/01/13    Hiroki Endou
+    spec.p2/INDEX_p2_host
+    spec.p2/INDEX_p2_router
+        - remove a test v6LC.1.2.14.C
+
+    spec.p2/R_Processing_HELodd_IN.def
+        - correct packet definition
+
+    spec.p2/IP_NH_NoneIN.def
+        - correct packet definition
+
+    nd.p2/V6LC_2_1_13_A.def
+    nd.p2/V6LC_2_1_13_B.def
+    nd.p2/V6LC_2_1_13_C.def
+    nd.p2/V6LC_2_1_13_D.def
+        - add packet definition include file
+
+    nd.p2/nd.p2
+        - correct NS retransmit timer margin calculation for V6LC.2.1.7
+
+    icmp.p2/To_ICMPErr_Dst_Unreach_0.def
+        - correct Hdr_Ether of Prameter Problem message
+
+    icmp.p2/INDEX_P2_router
+    icmp.p2/To_ICMPErr_Dst_Unreach_0.def
+    icmp.p2/To_ICMPErr_Dst_Unreach_0.seq
+    icmp.p2/To_ICMPErr_Dst_Unreach_3.def
+    icmp.p2/To_ICMPErr_Dst_Unreach_3.seq
+    icmp.p2/To_ICMPErr_Packet_Too_Big.def
+    icmp.p2/To_ICMPErr_Packet_Too_Big.seq
+    icmp.p2/To_ICMPErr_Parameter_Problem.def
+    icmp.p2/To_ICMPErr_Parameter_Problem.seq
+    icmp.p2/To_ICMPErr_Time_Exc_Code0.def
+    icmp.p2/To_ICMPErr_Time_Exc_Code0.seq
+    icmp.p2/To_ICMPErr_Time_Exc_Code1.def
+    icmp.p2/To_ICMPErr_Time_Exc_Code1.seq
+        - correct test sequence
+
+
+2005/01/12    Release 1.2.2
+    Official release
+
+
+2005/01/12    Hiroki Endou
+    nd.p2/V6LC_2_1_1_B.seq
+        - modify for removing on-link assumption
+
+    nd.p2/INDEX_RD_p2_host
+        - correct test title
+
+    nd.p2/V6LC_2_1_20_A.seq - V6LC_2_1_20_P.seq 
+    nd.p2/ndisc.pm
+        - modify procedure for state transition to PROBE
+
+    icmp.p2/Pkt_Too_Big.seq
+    icmp.p2/To_Multi_Pkt_Too_Big.def
+        - correct interface which Package Too Big Message is transmitted
+
+    spec.p2/R_Processing_HELodd_IN.seq
+        - add common setup 1.1
+
+    pmtu.p2/INDEX_p2_host
+        - delete an obsolete test
+
+
+2005/01/12    Yukiyo Akisada
+    nd.p2/ndisc.def
+    nd.p2/ndisc.pm
+        - correct clean up procedure related to V6LC_2_1_5_A
+
+
+2005/01/12    Yukiyo Akisada
+    nd.p2/V6LC_2_2_11_A.seq
+    nd.p2/V6LC_2_2_11_A.def
+        - correct source address of test packet
+
+
+2005/01/06    Hiroki Endou
+    spec.p2/IP_NH_Unexpected.seq
+    spec.p2/IP_NH_Unexpected.def
+        - modify Identification value in transmitting Fragment Header
+        - modify Pointer value in expected ICMP Error message
+
+
+2004/12/29    Release 1.2.1
+    Official release
+
+
+2004/12/29    Hiroki Endou
+    icmp.p2/Time_Exc.def
+        - modify to receive multiple source address
+
+    addr.p2/RA_gt2lt2.seq
+        - modify to time correctly
+
+    nd.p2/ndisc.pm
+        - modify to transmit global address cleanup NS for v6LC.2.1.4
+
+    nd.p2/v6LC_2_0_0.seq
+        - modify to wait RSs after initialization
+
+
+2004/11/29    Release 1.2
+    Official release
+
+
+2004/11/29    Hiroki Endou
+    nd.p2/V6LC_2_2_12_A.seq
+    nd.p2/V6LC_2_1_12_B.seq
+    nd.p2/V6LC_2_2_14_C.seq
+    nd.p2/rdisc.pm
+        - adapt for routers test
+        - add to configure CurHopLimit
+
+    pmtu.p2/CommonPMTU.pm
+        - change to ignore the contents of Echo Request and check 
+        the only payload length of Echo Request for v6LC.4.1.10 
+        and v6LC.4.1.11.
+
+
+2004/11/18    Yukiyo Akisada
+    fix typo in INSTALL.ct
+
+
+2004/11/16    Release 1.1.1
+    Official release
+
+
+2004/11/16    Hiroki Endou
+    nd.p2/V6LC_2_1_6_A.seq
+    nd.p2/V6LC_2_1_6_B.seq
+        - change to check RetransTimer interval
+
+    pmtu.p2/checkIncreasePMTU.seq
+        - change to transmit NA in response to NS from NUT
+
+
+2004/11/12    Release 1.1
+    Official release
+
+
+2004/11/11    Hiroki Endou
+    config.txt
+    configure.pl
+        - add to check the advanced functionalities support
+
+    icmp.p2/Echo_Request_Link-Locals.seq
+    pmtu.p2/Makefile.test
+    pmtu.p2/mcastOne.seq
+    pmtu.p2/mcastTwo.seq
+        - change to check the advanced functionalitiy (transmitting 
+        Echo Requests or can not set packet size) support
+
+    spec.p2/Makefile.test
+    spec.p2/HHO_MSB10mc_EN.seq
+    spec.p2/HHO_MSB11mc_EN.seq
+    spec.p2/HHO_MSB10mc_IN.seq
+    spec.p2/HHO_MSB11mc_IN.seq
+    icmp.p2/Makefile.test
+    icmp.p2/To_Multi_Pkt_Too_Big.seq
+        - change to check the advanced functionality (multicast 
+        routing) support
+
+    icmp.p2/Pkt_Too_Big.seq
+    icmp.p2/To_Multi_Pkt_Too_Big.seq
+    icmp.p2/Err_Condition_Too_Big.seq
+        - change to check the advanced functionality (MTU 
+        configuration) support
+
+    bin/mkph2.sh
+        - change to check out config.txt configure.pl
+
+    icmp.p2/INDEX_P2_router
+        - correct test title
+
+
+2004/10/20    Release 1.0.1
+    Official release
+
+
+2004/10/12    Yukiyo Akisada
+    spec.p2/IP_NH_Unexpected.def:
+        - correct pointer in parameter problem
+
+    nd.p2/V6LC_2_1_1_D.{seq,def}:
+        - correct test sequence for host
+
+    nd.p2/common.pm
+    nd.p2/common_tn_ns.def
+    nd.p2/common_tr1_na.def
+    nd.p2/common_tr1_ns.def
+    nd.p2/common_tr2_ns.def:
+        - change to accept NS
+          wich has source address using different address scope
+
+
+2004/10/01    Release 1.0
+    1st official release
+
+
+                                                      [end of CHANGELOG]

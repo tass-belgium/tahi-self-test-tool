@@ -1,0 +1,239 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/spec.p2/IH_NoNextHeader.seq,v 1.6 2005/04/11 08:27:21 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+
+if ($V6evalTool::NutDef{Type} ne 'router') {
+    vLogHTML("This test is for the router only<BR>");
+    exit $V6evalTool::exitRouterOnly;
+}
+
+%pktdesc = (
+	nonext_to_link0		=> 'Send No Next Header in IPv6 Header to Link0',
+	nonext_from_link1	=> 'Recv No Next Header in IPv6 Header from Link1',
+	ns_from_link0_ll	=> 'Recv Neighbor Solicitation from Link0 (Link Local Address)',
+	na_to_link0_ll		=> 'Send Neighbor Advertisement to Link0 (Link Local Address)',
+	ns_from_link0		=> 'Recv Neighbor Solicitation from Link0 (Global Address)',
+	na_to_link0		=> 'Send Neighbor Advertisement to Link0 (Global Address)',
+	ns_from_link1_ll	=> 'Recv Neighbor Solicitation from Link1 (Link Local Address)',
+	na_to_link1_ll		=> 'Send Neighbor Advertisement to Link1 (Link Local Address)',
+	ns_from_link1		=> 'Recv Neighbor Solicitation from Link1 (Global Address)',
+	na_to_link1		=> 'Send Neighbor Advertisement to Link1 (Global Address)',
+);
+
+$IF0 = Link0;
+$IF1 = Link1;
+
+#----- start capturing
+
+vCapture($IF0);
+vCapture($IF1);
+
+#======================================================================
+# ping over router
+
+vSend($IF0, nonext_to_link0);
+
+%ret = vRecv($IF1, 5, 0, 0, ns_from_link1, ns_from_link1_ll, nonext_from_link1);
+if ($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+if ($ret{recvFrame} eq 'ns_from_link1') {
+	vSend($IF1, na_to_link1);
+
+	%ret = vRecv($IF1, 5, 0, 0, nonext_from_link1);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} eq 'ns_from_link1_ll') {
+	vSend($IF1, na_to_link1_ll);
+	%ret = vRecv($IF1, 5, 0, 0, nonext_from_link1);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} ne 'nonext_from_link1') {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+
+vLogHTML('OK');
+exit $V6evalTool::exitPass;
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  IH_NoNextHeader - check No Next Header in IPv6 Header (over router)
+
+=head1 TARGET
+
+  Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./IH_NoNextHeader.seq">IH_NoNextHeader.seq</A> [-tooloption ...] -pkt <A HREF="./IH_NoNextHeader.def">IH_NoNextHeader.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  None
+
+=head1 TEST PROCEDURE
+
+  Tester                      Target                      Tester
+              (Link0)                     (Link1)
+    |                           |                           |
+    |-------------------------->|                           |
+    |      Packet to Link0      |                           |
+    |                           |                           |
+    |                           |-------------------------->|
+    |                           |   Neighbor Solicitation   |
+    |                           |                           |
+    |                           |<--------------------------|
+    |                           |   Neighbor Advertisement  |
+    |                           |                           |
+    |                           |-------------------------->|
+    |                           |      Packet from Link1    |
+    |                           |                           |
+    |                           |                           |
+    v                           v                           v
+
+  1. Send Packet with No Next Header to Link0
+  2. Wait Packet with No Next Header from Link1 or NS from Link1
+  3. If NS received then send NA to Link1, and wait Packet with No Next Header form Link1 again
+  4. Receive Packet with No Next Header from Link1
+
+  Packet with No Next Header to Link0 Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 8
+            NextHeader         = 59 (No Next Header)
+            SourceAddress      = Tester Global Address (Link0)
+            DestinationAddress = Tester Global Address (Link1)
+
+        Payload
+            PayloadData    = {0x80,0x81,0x82,0x83,0x84,0x85,0x86,0x87}
+
+  Neighbor Solicitation packet's IP source Address selection may be:
+    - Link Local Address
+    - Global Address
+  This test IS NOT the Neighbor Discovery test, so admit both implementation.
+
+=head1 JUDGEMENT
+
+  PASS: Packet with No Next Header Received from Link1
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = 0
+            FlowLabel           = 0
+            PayloadLength       = 8
+            NextHeader          = 59 (No Next Header)
+            SourceAddress      = Tester Global Address (Link0)
+            DestinationAddress = Tester Global Address (Link1)
+
+        Payload
+            PayloadData    = {0x80,0x81,0x82,0x83,0x84,0x85,0x86,0x87}
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+# 
+# 4.7 No Next Header
+# 
+# =begin html
+# <PRE>
+#    The value 59 in the Next Header field of an IPv6 header or any
+#    extension header indicates that there is nothing following that
+#    header.  <B>If the Payload Length field of the IPv6 header indicates the
+#    presence of octets past the end of a header whose Next Header field
+#    contains 59, those octets must be ignored, and passed on unchanged if
+#    the packet is forwarded.</B>
+# </PRE>
+# 
+# =end html
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

@@ -1,0 +1,297 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/spec.p2/RH_RoutingTypeNonZero.seq,v 1.4 2005/04/11 08:27:21 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+
+if ($V6evalTool::NutDef{Type} ne 'router') {
+    vLogHTML("This test is for the router only<BR>");
+    exit $V6evalTool::exitRouterOnly;
+}
+
+%pktdesc = (
+	packet_to_link0		=> 'Send Packet to Link0 (Non-Zero Routing Type)',
+
+	na_to_link0		=> 'Send Neighbor Advertisement to Link0 (Global Address)',
+	na_to_link0_ll		=> 'Send Neighbor Advertisement to Link0 (Link Local Address)',
+
+	ns_from_link0		=> 'Recv Neighbor Solicitation from Link0 (Global Address)',
+	ns_from_link0_ll	=> 'Recv Neighbor Solicitation from Link0 (Link Local Address)',
+
+	icmp_type4_code0	=> 'Recv ICMP Error (Parameter Problem, erroneous header field encountered)',
+);
+
+$IF0 = Link0;
+
+vCapture($IF0);
+
+#======================================================================
+
+vSend($IF0, packet_to_link0);
+
+%ret = vRecv($IF0, 5, 0, 0, ns_from_link0, ns_from_link0_ll, icmp_type4_code0);
+if ($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+
+if ($ret{recvFrame} eq 'ns_from_link0') {
+	vSend($IF0, na_to_link0);
+	%ret = vRecv($IF0, 5, 0, 0, icmp_type4_code0);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} eq 'ns_from_link0_ll') {
+	vSend($IF0, na_to_link0_ll);
+	%ret = vRecv($IF0, 5, 0, 0, icmp_type4_code0);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+
+if ($ret{recvFrame} ne 'icmp_type4_code0') {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+
+vLogHTML('OK');
+exit $V6evalTool::exitPass;
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  RH_RoutingTypeNonZero - check Routing Type is not Zero
+
+=head1 TARGET
+
+  Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./RH_RoutingTypeNonZero.seq">RH_RoutingTypeNonZero.seq</A> [-tooloption ...] -pkt <A HREF="./RH_RoutingTypeNonZero.def">RH_RoutingTypeNonZero.def</A>
+    -tooloption : v6eval tool option
+  See also <A HREF="./RH.def">RH.def</A>
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  None
+
+=head1 TEST PROCEDURE
+
+  Tester                      Target                      Tester
+              (Link0)                     (Link1)
+    |                           |                           |
+    |-------------------------->|                           |
+    |   Packet to Link0         |                           |
+    |                           |     (no forwarding)       |
+    |                           |                           |
+    |<--------------------------|                           |
+    |   Neighbor Solicitation   |                           |
+    |                           |                           |
+    |-------------------------->|                           |
+    |   Neighbor Advertisement  |                           |
+    |                           |                           |
+    |<--------------------------|                           |
+    |   ICMP Error from Link0   |                           |
+    |                           |                           |
+    v                           v                           v
+
+  1. Send Packet to Link0
+  2. Wait ICMP Error from Link0 or NS from Link0
+  3. If NS received then send NA to Link0, and wait ICMP Error form Link0 again
+  4. Receive ICMP Error from Link0
+
+  Network topology
+
+          (Link0)        (Link1)
+    Tester       Target         Tester
+    Host1 ------ Router1 ------ Router2 ------ Router3 ------ Host2
+         Global 0       Global 1       Global 3       Global 5
+
+  Packet to Link0 is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 56
+            NextHeader         = 43 (Routing Header)
+            SourceAddress      = Global 0 Address (Host1)
+            DestinationAddress = Global 0 Address (Router1)
+
+        Routing Header
+            NextHeader      = 59 (No Next Header)
+            HeaderExtLength = 6 
+            RoutingType     = 1 
+            SegmentsLeft    = 3 
+            Address[1]      = Global 1 Address (Router2)
+            Address[2]      = Global 3 Address (Router3)
+            Address[3]      = Global 5 Address (Host2)
+
+=head1 JUDGEMENT
+
+  PASS: ICMP Error Received from Link0
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = 0
+            FlowLabel           = 0
+            PayloadLength       = 104
+            NextHeader          = 58 (ICMP)
+            SourceAddress      = Global 0 Address (Router1)
+            DestinationAddress = Global 0 Address (Host1)
+
+        ICMP Error
+            Type           = 4 (Parameter Problem)
+            Code           = 0 (erroneous header field encountered)
+            Checksum       = (auto)
+            Pointer        = 42 (Offset to Routing Type)
+            PayloadData    = (Sent Packet)
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+#     
+# 4.4  Routing Header
+# 
+# =begin html
+# <PRE>
+#    <B>The Routing header is used by an IPv6 source to list one or more
+#    intermediate nodes to be "visited" on the way to a packet's
+#    destination.  This function is very similar to IPv4's Loose Source
+#    and Record Route option.  The Routing header is identified by a Next
+#    Header value of 43 in the immediately preceding header, and has the
+#    following format:</B>
+# </PRE>
+# 
+# =end html
+# 
+#     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#     |  Next Header  |  Hdr Ext Len  |  Routing Type | Segments Left |
+#     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#     |                                                               |
+#     .                                                               .
+#     .                       type-specific data                      .
+#     .                                                               .
+#     |                                                               |
+#     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# 
+#    Next Header          8-bit selector.  Identifies the type of header
+#                         immediately following the Routing header.  Uses
+#                         the same values as the IPv4 Protocol field
+#                         [RFC-1700 et seq.].
+# 
+#    Hdr Ext Len          8-bit unsigned integer.  Length of the Routing
+#                         header in 8-octet units, not including the first
+#                         8 octets.
+# 
+#    Routing Type         8-bit identifier of a particular Routing header
+#                         variant.
+# 
+#    Segments Left        8-bit unsigned integer.  Number of route
+#                         segments remaining, i.e., number of explicitly
+#                         listed intermediate nodes still to be visited
+#                         before reaching the final destination.
+# 
+#    type-specific data   Variable-length field, of format determined by
+#                         the Routing Type, and of length such that the
+#                         complete Routing header is an integer multiple
+#                         of 8 octets long.
+# 
+# =begin html
+# <PRE>
+#    <B>If, while processing a received packet, a node encounters a Routing
+#    header with an unrecognized Routing Type value, the required behavior
+#    of the node depends on the value of the Segments Left field, as
+#    follows:</B>
+# <BR>
+#       If Segments Left is zero, the node must ignore the Routing header
+#       and proceed to process the next header in the packet, whose type
+#       is identified by the Next Header field in the Routing header.
+# <BR>
+#       <B>If Segments Left is non-zero, the node must discard the packet and
+#       send an ICMP Parameter Problem, Code 0, message to the packet's
+#       Source Address, pointing to the unrecognized Routing Type.</B>
+# </PRE>
+# 
+# =end html
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

@@ -1,0 +1,409 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/spec.p2/DH_PadN.seq,v 1.4 2005/04/11 08:27:19 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+
+%pktdesc = (
+	echo_request_ex	=> 'Send Echo Request (Destination Options:PadN)',
+	echo_reply	=> 'Recv Echo Reply',
+	echo_reply_ex	=> 'Recv Echo Reply (Destination Options:PadN)',
+	ns		=> 'Recv Neighbor Solicitation',
+	na		=> 'Send Neighbor Advertisement',
+);
+
+$IF = Link0;
+
+vCapture($IF);
+
+vSend($IF, echo_request_ex);
+
+%ret = vRecv($IF, 5, 0, 0, ns, echo_reply, echo_reply_ex);
+if ($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+if ($ret{recvFrame} eq 'ns') {
+	vSend($IF, na);
+
+	%ret = vRecv($IF, 5, 0, 0, echo_reply, echo_reply_ex);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} eq 'echo_reply') {
+	vLogHTML('OK');
+	exit $V6evalTool::exitPass;
+}
+if ($ret{recvFrame} eq 'echo_reply_ex') {
+	vLogHTML('OK');
+	exit $V6evalTool::exitPass;
+}
+
+vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+exit $V6evalTool::exitFail;
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  DH_PadN - check Destination Options Header (PadN)
+
+=head1 TARGET
+
+  Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./DH_PadN.seq">DH_PadN.seq</A> [-tooloption ...] -pkt <A HREF="./DH_PadN.def">DH_PadN.def</A>
+    -tooloption : v6eval tool option
+  See also <A HREF="./DH.def">DH.def</A>
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  None
+
+=head1 TEST PROCEDURE
+
+  Tester                      Target
+    |                           |
+    |-------------------------->|
+    |   Echo Request            |
+    |                           |
+    |                           |
+    |<--------------------------|
+    |   Neighbor Solicitation   |
+    |                           |
+    |                           |
+    |-------------------------->|
+    |   Neighbor Advertisement  |
+    |                           |
+    |                           | 
+    |<--------------------------|
+    |   Echo Reply              |
+    |                           |
+    |                           |
+    v                           v
+
+
+  1. Send Echo Request
+  2. Wait Echo Reply or NS
+  3. If NS received then send NA, and wait Echo Reply again
+  4. Receive Echo Reply
+
+  Echo Request Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 16
+            NextHeader         = 60 (Destination Options Header)
+            SourceAddress      = Tester Link Local Address
+            DestinationAddress = Target Link Local Address
+
+        Destination Options Header
+            NextHeader         = 58 (ICMP)
+            HeaderExtLength    = 0
+            OptionType         = 1 (PadN)
+            OptDataLength      = 4 (for 8 octets alignment)
+            pad                = {0,0,0,0}
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = {1,2,3,4,5,6,7,8}
+
+
+=head1 JUDGEMENT
+
+  PASS: Echo Reply Received
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = 0
+            FlowLabel           = 0
+            PayloadLength       = 16
+            NextHeader          = 58 (ICMP)
+            SourceAddress       = Target Link Local Address
+            Destination Address = Tester Link Local Address
+
+        ICMP Echo Reply
+            Type           = 129 (Echo Reply)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff (same as Echo Request)
+            SequenceNumber = 1 (same as Echo Request)
+            PayloadData    = {1,2,3,4,5,6,7,8} (same as Echo Request)
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+# 
+# 4.2  Options
+# 
+#    Two of the currently-defined extension headers -- the Hop-by-Hop
+#    Options header and the Destination Options header -- carry a variable
+#    number of type-length-value (TLV) encoded "options", of the following
+#    format:
+# 
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- - - - - - - - -
+#       |  Option Type  |  Opt Data Len |  Option Data
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- - - - - - - - -
+# 
+#       Option Type          8-bit identifier of the type of option.
+# 
+#       Opt Data Len         8-bit unsigned integer.  Length of the Option
+#                            Data field of this option, in octets.
+# 
+#       Option Data          Variable-length field.  Option-Type-specific
+#                            data.
+# 
+#    The sequence of options within a header must be processed strictly in
+#    the order they appear in the header; a receiver must not, for
+#    example, scan through the header looking for a particular kind of
+#    option and process that option prior to processing all preceding
+#    ones.
+# 
+#    The Option Type identifiers are internally encoded such that their
+#    highest-order two bits specify the action that must be taken if the
+#    processing IPv6 node does not recognize the Option Type:
+# 
+# =begin html
+# <PRE>
+#       <B>00 - skip over this option and continue processing the header.</B>
+# </PRE>
+# 
+# =end html
+# 
+#       01 - discard the packet.
+# 
+#       10 - discard the packet and, regardless of whether or not the
+#            packet's Destination Address was a multicast address, send an
+#            ICMP Parameter Problem, Code 2, message to the packet's
+#            Source Address, pointing to the unrecognized Option Type.
+# 
+#       11 - discard the packet and, only if the packet's Destination
+#            Address was not a multicast address, send an ICMP Parameter
+#            Problem, Code 2, message to the packet's Source Address,
+#            pointing to the unrecognized Option Type.
+# 
+#    The third-highest-order bit of the Option Type specifies whether or
+#    not the Option Data of that option can change en-route to the
+#    packet's final destination.  When an Authentication header is present
+#    in the packet, for any option whose data may change en-route, its
+#    entire Option Data field must be treated as zero-valued octets when
+#    computing or verifying the packet's authenticating value.
+# 
+#       0 - Option Data does not change en-route
+# 
+#       1 - Option Data may change en-route
+# 
+#    The three high-order bits described above are to be treated as part
+#    of the Option Type, not independent of the Option Type.  That is, a
+#    particular option is identified by a full 8-bit Option Type, not just
+#    the low-order 5 bits of an Option Type.
+# 
+#    The same Option Type numbering space is used for both the Hop-by-Hop
+#    Options header and the Destination Options header.  However, the
+#    specification of a particular option may restrict its use to only one
+#    of those two headers.
+# 
+#    Individual options may have specific alignment requirements, to
+#    ensure that multi-octet values within Option Data fields fall on
+#    natural boundaries.  The alignment requirement of an option is
+#    specified using the notation xn+y, meaning the Option Type must
+#    appear at an integer multiple of x octets from the start of the
+#    header, plus y octets.  For example:
+# 
+#       2n    means any 2-octet offset from the start of the header.
+#       8n+2  means any 8-octet offset from the start of the header,
+#             plus 2 octets.
+# 
+# =begin html
+# <PRE>
+#    There are two padding options which are used when necessary to align
+#    subsequent options and to pad out the containing header to a multiple
+#    of 8 octets in length.  <B>These padding options must be recognized by
+#    all IPv6 implementations:</B>
+# </PRE>
+# 
+# =end html
+#    Pad1 option  (alignment requirement: none)
+# 
+#       +-+-+-+-+-+-+-+-+
+#       |       0       |
+#       +-+-+-+-+-+-+-+-+
+# 
+#       NOTE! the format of the Pad1 option is a special case -- it does
+#             not have length and value fields.
+# 
+#       The Pad1 option is used to insert one octet of padding into the
+#       Options area of a header.  If more than one octet of padding is
+#       required, the PadN option, described next, should be used, rather
+#       than multiple Pad1 options.
+# 
+# =begin html
+# <PRE>
+#    <B>PadN option  (alignment requirement: none)
+# <BR>
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- - - - - - - - -
+#       |       1       |  Opt Data Len |  Option Data
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- - - - - - - - -
+# <BR>
+#       The PadN option is used to insert two or more octets of padding
+#       into the Options area of a header.  For N octets of padding, the
+#       Opt Data Len field contains the value N-2, and the Option Data
+#       consists of N-2 zero-valued octets.</B>
+# </PRE>
+# 
+# =end html
+# 
+# 
+# 4.6  Destination Options Header
+# 
+#    The Destination Options header is used to carry optional information
+#    that need be examined only by a packet's destination node(s).  The
+#    Destination Options header is identified by a Next Header value of 60
+#    in the immediately preceding header, and has the following format:
+# 
+#     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#     |  Next Header  |  Hdr Ext Len  |                               |
+#     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               +
+#     |                                                               |
+#     .                                                               .
+#     .                            Options                            .
+#     .                                                               .
+#     |                                                               |
+#     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# 
+#    Next Header          8-bit selector.  Identifies the type of header
+#                         immediately following the Destination Options
+#                         header.  Uses the same values as the IPv4
+#                         Protocol field [RFC-1700 et seq.].
+# 
+#    Hdr Ext Len          8-bit unsigned integer.  Length of the
+#                         Destination Options header in 8-octet units, not
+#                         including the first 8 octets.
+# 
+#    Options              Variable-length field, of length such that the
+#                         complete Destination Options header is an
+#                         integer multiple of 8 octets long.  Contains one
+#                         or  more TLV-encoded options, as described in
+#                         section 4.2.
+# 
+# =begin html
+# <PRE>
+#    <B>The only destination options defined in this document are the Pad1
+#    and PadN options specified in section 4.2.</B>
+# </PRE>
+# 
+# =end html
+# 
+#    Note that there are two possible ways to encode optional destination
+#    information in an IPv6 packet: either as an option in the Destination
+#    Options header, or as a separate extension header.  The Fragment
+#    header and the Authentication header are examples of the latter
+#    approach.  Which approach can be used depends on what action is
+#    desired of a destination node that does not understand the optional
+#    information:
+# 
+#       o  If the desired action is for the destination node to discard
+#          the packet and, only if the packet's Destination Address is not
+#          a multicast address, send an ICMP Unrecognized Type message to
+#          the packet's Source Address, then the information may be
+#          encoded either as a separate header or as an option in the
+#          Destination Options header whose Option Type has the value 11
+#          in its highest-order two bits.  The choice may depend on such
+#          factors as which takes fewer octets, or which yields better
+#          alignment or more efficient parsing.
+# 
+# =begin html
+# <PRE>
+#       o  <B>If any other action is desired, the information must be encoded
+#          as an option in the Destination Options header whose Option
+#          Type has the value 00, 01, or 10 in its highest-order two bits,
+#          specifying the desired action (see section 4.2).</B>
+# </PRE>
+# 
+# =end html
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

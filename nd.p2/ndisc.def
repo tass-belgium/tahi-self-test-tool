@@ -1,0 +1,300 @@
+//
+// Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+// Yokogawa Electric Corporation.
+// All rights reserved.
+// 
+// Redistribution and use of this software in source and binary
+// forms, with or without modification, are permitted provided that
+// the following conditions and disclaimer are agreed and accepted
+// by the user:
+// 
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in
+//    the documentation and/or other materials provided with
+//    the distribution.
+// 
+// 3. Neither the names of the copyrighters, the name of the project
+//    which is related to this software (hereinafter referred to as
+//    "project") nor the names of the contributors may be used to
+//    endorse or promote products derived from this software without
+//    specific prior written permission.
+// 
+// 4. No merchantable use may be permitted without prior written
+//    notification to the copyrighters.
+// 
+// 5. The copyrighters, the project and the contributors may prohibit
+//    the use of this software at any time.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+// CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+// BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+// FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+// COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+// IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+//
+// $TAHI: ct/nd.p2/ndisc.def,v 1.9 2010/03/29 02:15:48 akisada Exp $
+//
+////////////////////////////////////////////////////////////////
+
+#ifndef HAVE_NDISC_DEF
+#define HAVE_NDISC_DEF
+
+#define IGN_UNI_NA_TLL
+#define REACHABLE_TIME
+#define REBOOT_TIMEOUT
+#define RETRANS_TIMER
+#define WAIT_QUEUE_LMT
+
+#ifndef LINK0_PREFIX
+#define LINK0_PREFIX	_GLOBAL0_UCAST_PRFX
+#endif	// LINK0_PREFIX
+
+#ifndef LINK0_PREFIXLEN
+#define LINK0_PREFIXLEN	_GLOBAL0_UCAST_PRFXLEN
+#endif	// LINK0_PREFIXLEN
+
+#ifndef LINK1_PREFIX
+#define LINK1_PREFIX	_GLOBAL1_UCAST_PRFX
+#endif	// LINK1_PREFIX
+
+#ifndef LINK1_PREFIXLEN
+#define LINK1_PREFIXLEN	_GLOBAL1_UCAST_PRFXLEN
+#endif	// LINK1_PREFIXLEN
+
+#ifndef R0_GLOBAL
+#define R0_GLOBAL	_GLOBAL0A0N_UCAST_ADDR
+#endif	// R0_GLOBAL
+
+#ifndef R0_LINKLOCAL
+#define R0_LINKLOCAL	_LLOCAL0A0N_UCAST_ADDR
+#endif	// R0_LINKLOCAL
+
+#ifndef R0_MAC
+#define R0_MAC		A0N_MAC_ADDR
+#endif	// R0_MAC
+
+#ifndef H0_GLOBAL
+#define H0_GLOBAL	_GLOBAL0A0N_UCAST_ADDR
+#endif	// H0_GLOBAL
+
+#ifndef H0_GLOBAL_LINK1
+#define H0_GLOBAL_LINK1	_GLOBAL1A0N_UCAST_ADDR
+#endif	// H0_GLOBAL_LINK1
+
+#ifndef H0_LINKLOCAL
+#define H0_LINKLOCAL	_LLOCAL0A0N_UCAST_ADDR
+#endif	// H0_LINKLOCAL
+
+#ifndef H0_MAC
+#define H0_MAC		A0N_MAC_ADDR
+#endif	// H0_MAC
+
+#ifndef H1_GLOBAL
+#define H1_GLOBAL	_GLOBAL0A1N_UCAST_ADDR
+#endif	// H1_GLOBAL
+
+#ifndef H1_LINKLOCAL
+#define H1_LINKLOCAL	_LLOCAL0A1N_UCAST_ADDR
+#endif	// H1_LINKLOCAL
+
+#ifndef H1_MAC
+#define H1_MAC		A1N_MAC_ADDR
+#endif	// H1_MAC
+
+_HETHER_define(_HETHER_r02allnodes, ether(R0_MAC),
+	v62ethermulti(v6(_ALLNODES_MCAST_ADDR)))
+
+_HETHER_define(_HETHER_any2any,	any,	any)
+_HETHER_define(_HETHER_h02nut,	ether(H0_MAC),	nutether())
+_HETHER_define(_HETHER_r02nut,	ether(R0_MAC),	nutether())
+_HETHER_define(_HETHER_nut2r0,	nutether(),	ether(R0_MAC))
+_HETHER_define(_HETHER_h02nutsolnode, ether(H0_MAC),
+	_ETHER_SOLNODE_MCAST(nutv6()))
+_HETHER_define(_HETHER_nut2h0,        nutether(),    ether(H0_MAC))
+_HETHER_define(_HETHER_nut2h0solnode, nutether(),
+	_ETHER_SOLNODE_MCAST(v6(H0_LINKLOCAL)))
+_HETHER_define(_HETHER_h02allnodes, ether(H0_MAC),
+	v62ethermulti(v6(_ALLNODES_MCAST_ADDR)))
+_HETHER_define(_HETHER_h02allrouters, ether(H0_MAC),
+	v62ethermulti(v6(_ALLROUTERS_MCAST_ADDR)))
+
+_HETHER_define(_HETHER_h12nut,        ether(H1_MAC), nutether())
+_HETHER_define(_HETHER_h12nutsolnode, ether(H1_MAC),
+	_ETHER_SOLNODE_MCAST(nutv6()))
+_HETHER_define(_HETHER_nut2h1, nutether(),    ether(H1_MAC))
+_HETHER_define(_HETHER_nut2h1solnode, nutether(),
+	_ETHER_SOLNODE_MCAST(v6(H1_LINKLOCAL)))
+_HETHER_define(_HETHER_h12allnodes, ether(H1_MAC),
+	v62ethermulti(v6(_ALLNODES_MCAST_ADDR)))
+
+Opt_ICMPv6_SLL opt_sll_r0 {
+	LinkLayerAddress	= ether(R0_MAC);
+}
+
+Opt_ICMPv6_SLL opt_sll_h0 {
+	LinkLayerAddress	= ether(H0_MAC);
+}
+
+Opt_ICMPv6_SLL opt_sll_h1 {
+	LinkLayerAddress	= ether(H1_MAC);
+}
+
+Opt_ICMPv6_TLL opt_tll_r0 {
+	LinkLayerAddress	= ether(R0_MAC);
+}
+
+Opt_ICMPv6_TLL opt_tll_h0 {
+	LinkLayerAddress	= ether(H0_MAC);
+}
+
+Opt_ICMPv6_TLL opt_tll_h1 {
+	LinkLayerAddress	= ether(H1_MAC);
+}
+
+//
+// NS (unicast) w/ SLL: TN -> NUT
+//
+////////////////////////////////
+
+FEM_icmp6_ns(
+	ndisc_cleanup_ns_tn,
+	_HETHER_tn2nut,
+	{
+		HopLimit	= 255;
+		_SRC(tnv6());
+		_DST(nutv6());
+	},
+	{
+		TargetAddress	= nutv6();
+		option		= _SLLOPT_tn;
+	}
+)
+
+//
+// NS (unicast) w/ SLL: TN -> NUT
+//
+////////////////////////////////
+
+FEM_icmp6_na(
+	ndisc_cleanup_na_alt,
+	_HETHER_h02allnodes,
+	{
+		HopLimit	= 255;
+		_SRC(tnv6());
+		_DST(v6(_ALLNODES_MCAST_ADDR));
+	},
+	{
+		RFlag		= 1;
+		SFlag		= 0;
+		OFlag		= 1;
+		TargetAddress	= tnv6();
+		option		= opt_tll_h0;
+	}
+)
+
+FEM_icmp6_echo_request(
+	ndisc_cleanup_echo_alt,
+	_HETHER_h02nut,
+	{
+		_SRC(tnv6());
+		_DST(nutv6());
+	},
+	{
+		payload	= payload8_alt;
+	}
+)
+
+Payload payload8_alt {
+	data	= hexstr("0123456789abcdef", 8);
+}
+
+FEM_icmp6_ns(
+	ndisc_cleanup_ns,
+	_HETHER_h02nut,
+	{
+		HopLimit	= 255;
+		_SRC(tnv6());
+		_DST(nutv6());
+	},
+	{
+		TargetAddress	= nutv6();
+		option		= opt_sll_h0;
+	}
+)
+
+FEM_icmp6_ns(
+	ndisc_cleanup_ns_global,
+	_HETHER_h02nut,
+	{
+		HopLimit	= 255;
+		_SRC(tn2v6(LINK0_PREFIX, LINK0_PREFIXLEN));
+		_DST(nut2v6(LINK0_PREFIX, LINK0_PREFIXLEN));
+	},
+	{
+		TargetAddress	= nut2v6(LINK0_PREFIX, LINK0_PREFIXLEN);
+		option		= opt_sll_h0;
+	}
+)
+
+
+
+//
+// NS (unicast) w/ SLL: H0 -> NUT
+//
+////////////////////////////////
+
+FEM_icmp6_ns(
+	ndisc_cleanup_ns_x,
+	_HETHER_h12nut,
+	{
+		HopLimit	= 255;
+		_SRC(v6(H0_LINKLOCAL));
+		_DST(nutv6());
+	},
+	{
+		TargetAddress	= nutv6();
+		option		= opt_sll_h1;
+	}
+)
+
+
+FEM_icmp6_na(
+	na_any2any,
+	_HETHER_any2any,
+	{
+		_SRC(any);
+		_DST(any);
+	},
+	{
+		Code	= stop;
+	}
+)
+
+FEM_icmp6_ns(
+	ns_any2any,
+	_HETHER_any2any,
+	{
+		_SRC(any);
+		_DST(any);
+	},
+	{
+		Code	= stop;
+	}
+)
+
+#include "ndisc_echo.def"
+#include "ndisc_rs.def"
+#include "ndisc_ra.def"
+#include "ndisc_ns.def"
+#include "ndisc_na.def"
+#include "ndisc_common.def"
+#endif	// HAVE_NDISC_DEF

@@ -1,0 +1,195 @@
+#!/usr/bin/perl
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: IP_NH_NoneEN.seq,v 1.7 2008/07/31 02:40:32 hide Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+use CommonSPEC;
+
+$pktdesc{'echo_request59'}	= 'Send Echo Request (Next Header is 59(None))';
+$pktdesc{'echo_reply'}		= 'Recv Echo Reply';
+$pktdesc{'icmperr'}		= 'Recv ICMP Error message';
+
+$endStatus = $V6evalTool::exitPass;
+$IF = 'Link0';
+
+vCapture($IF);
+
+#----- test
+vSend($IF, 'echo_request59');
+%ret = nd_vRecv_EN($IF, $CommonSPEC::wait_reply, 0, 0, 'echo_reply', 'icmperr');
+
+if ($ret{'status'} == 0) {
+	if ($ret{'recvFrame'} eq 'echo_reply') {
+		vLogHTML('Received invalid Echo Reply<BR>');
+	} elsif ($ret{'recvFrame'} eq 'icmperr') {
+		vLogHTML('Received invalid ICMP Error message<BR>');
+	}
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+} else {
+	vLogHTML('OK<BR>');
+}
+#----- end test
+
+$ret = cleanup($IF);
+vStop($IF);
+if ($ret == $CommonSPEC::Success) {
+	exit($endStatus);
+} else {
+	exit($V6evalTool::exitFatal);
+}
+
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  IP_NH_NoneEN - No Next Header after IPv6 Header (NUT Receives No Next Header)
+
+=head1 TARGET
+
+  Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./IP_NH_NoneEN.seq">IP_NH_NoneEN.seq</A> [-tooloption ...] -pkt <A HREF="./IP_NH_NoneEN.def">IP_NH_NoneEN.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  None
+
+=head1 TEST PROCEDURE
+
+Verify proper behavior of a node when it encounters a Next Header value of 56(no next header).
+
+   TN                          NUT
+    |                           |
+    |-------------------------->|
+    |   Echo Request(invalid)   |
+    |                           |
+    |                           |
+    v                           v
+
+
+  1. TN transmits an Echo Request which contains an IPv6 Header with a Next Header of 59.
+  2. Observe the NUT.
+
+  Echo Request Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 24
+            NextHeader         = 59 (None)
+            SourceAddress      = TN Link Local Address
+            DestinationAddress = NUT Link Local Address
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = {1, 2, 3, 4, 5, 6, 7, 8}
+
+
+=head1 JUDGEMENT
+
+  PASS: The NUT must not send any packets in response to the Echo Request.
+
+=head1 CLEANUP
+
+Common Test Cleanup
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+# 
+# 4.7.  No Next Header
+# 
+# The value 59 in the Next Header field of an IPv6 header or any extension
+# header indicates that there is nothing following that header.
+# If the Payload Length field of the IPv6 header indicates the presence
+# of octets past the end of a header whose Next Header field contains 59,
+# those octets must be ignored, and passed on unchanged if the packet
+# is forwarded.
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

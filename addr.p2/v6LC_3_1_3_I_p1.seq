@@ -1,0 +1,374 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+# $TINY: LLA_DAD_NSPostDAD_SameTgt.seq,v 1.6 2002/03/05 03:04:56 masaxmasa Exp $
+# 
+
+########################################################################
+BEGIN { $V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $ '; }
+use V6evalTool;
+use SAA;
+
+#------------------------------------------------------
+#----- get sequence arguments
+#------------------------------------------------------
+$howto_initNUT="none";
+$send = "ok";
+foreach (@ARGV) {
+# How to configure address of NUT?
+# sample: boot, ra, manual+_GLOBAL0A0N_UCAST
+    /^addrconf=(\S+)/ && do {$SAA::howto_addrconf=$1; next; };
+
+# How to initialize NUT?
+# sample: none, DADSuccess_boot, DADFail_boot
+    /^init=(\S+)/     && do {$howto_initNUT=$1; next; };
+
+# "none" if send no pakcet to NUT in state DADPostSendNS
+# sample: ok, none
+    /^send=(\S+)/     && do {$send=$1; next; };
+
+# sequence debug options
+# sample: qR
+    /^sd=(\S+)/       && do {$seqdebugopt=$1; next; };
+    seqERROR("Unknown sequence option '$_'");
+}
+#------------------------------------------------------
+
+#----- test condition
+$IF=Link0;                 # network interface
+my $IF1 = 'Link1';	# network interface
+
+$max_retry_count = 10;     # retry if NUT state becomes DADPostSendNS
+$max_retry_count = 2 if $SAA::sd =~ /q/;    # quick retry
+$send_interval  = 1;
+	       # 1[sec] time between DAD NS and DAD NS, send to NUT
+               #     (RandomDelay is 0-1sec  e.g. default RetransTimer 1000msec)
+
+
+##########################################################
+#----- Check Target Type
+
+$type=$V6evalTool::NutDef{Type};
+if($type eq host) {
+    vCPP('-DRFLAG=0');
+}
+if($type eq router) {
+    vCPP('-DRFLAG=1');
+}
+if($type eq special) {
+    vCPP('-DRFLAG=any');
+}
+
+##########################################################
+#----- Preparetion
+vCapture($IF);
+seqPrepareLLA($IF, $V6evalTool::NutDef{System});
+
+#----- initialize NUT
+vLog("*** Target initialization phase ***");
+if($V6evalTool::NutDef{System} ne "manual"){ vSleep($SAA::test_interval); }
+$rret=vRemote("reboot_async.rmt","","timeout=$SAA::wait_rebootcmd");
+vLog("reboot_async.rmt returned status $rret");
+
+
+#----- start Capturing
+vLog("*** Target testing phase ***");
+vClear($IF);
+
+#----- Wait DAD NS from NUT or timeout
+vLog("TN wait DAD NS(dadns_from_NUT) from NUT for $SAA::wait_dadns{$SAA::howto_addrconf} [sec],");
+
+%ret=vRecv($IF,$SAA::wait_dadns{$SAA::howto_addrconf},0,$count,DADNS_from_NUT);
+
+if ($ret{status} == 0){
+    %retSend=vSend($IF, DADNS_from_TN_Reserved);
+
+    #----- check if NUT's address is configured
+    vSleep($SAA::wait_addrconf);
+    if (seqCheckNUTAddrConfigured($IF) eq TRUE) {
+	vLog("NUT assigned the address to the interface.");
+	if ($SAA::DupAddrDetectTransmits == 0) {
+	    vLog("NUT transmit DAD NS though DupAddrDetectTransmits == 0");
+	    seqNG();
+	}else{
+	    seqNG();
+	}
+    }
+
+    if (seqCheckNUTAddrConfiguredUcast($IF) eq TRUE) {
+	vLog("NUT assigned the address to the interface.");
+	if ($SAA::DupAddrDetectTransmits == 0) {
+	    vLog("NUT transmit DAD NS though DupAddrDetectTransmits == 0");
+	    seqNG();
+	}else{
+	    seqNG();
+	}
+    }else{
+	vLog("NUT seems to detect Address Duplication");
+	seqOK();
+    }
+} else{
+    vLog("TN wait DAD NS from NUT for $SAA::wait_dadns{$SAA::howto_addrconf}, but NUT had not transmit DAD NS");
+    seqNG();
+}
+##########################################################
+
+
+#end
+########################################################################
+__END__
+
+=head1 NAME
+
+LLA_DAD_NSPostDAD_Reserved - check the process when NUT receives DAD NS with Reserved field 0xFFFFFFFF while DAD process(after transmitting DAD NS).
+
+=head1 TARGET
+
+All Node
+
+=head1 SYNOPSIS
+
+LLA_DAD_NSPostDAD_Reserved.seq [-tooloption ...] -pkt <packetdef> [addrconf=<addrconfname>] 
+
+  -tooloption   : v6eval tool option
+  <packetdef>   : packet definition file (v6eval tool option)
+  <addrconfname>: how to configure address on NUT; boot/reboot
+
+=begin html
+<PRE>
+ detail of v6eval tool option: see perldoc V6evalTool.pm, perldoc V6evalRemote.pm
+</PRE>
+
+=end html
+
+
+=head1 INITIALIZATION
+
+=begin html
+<PRE>
+ Reboot NUT or Initialize interface of NUT or Initialize IPv6 stack of NUT.
+</PRE>
+
+=end html
+
+=head1 TEST PROCEDURE
+
+=over 1
+
+=item Test for Unicast address configuration
+
+The following tests are prepared in this test package. See INDEX file.
+
+B<Test for all node>
+
+   When NUT performs DAD for its Link-local unicast address made by stateless
+   address autoconfiguration, NUT receives DAD NS which contains same target as
+   NUT's tentative Link-local address and Reserved Field==0xFFFFFFFF after 
+   transimitting DAD NS.
+
+B<Test sequence>
+
+  TN                            NUT
+  ---------------------------------
+  Initialize NUT
+
+  Configure address of NUT (reboot or interface initialization etc...)
+
+  TN wait the DAD NS sent from NUT
+  <=== Judgement #1: DAD NS =======
+        name: DADNS_from_NUT
+
+  ==== Action #1: DAD NS =========>
+        name: DADNS_from_TN_Reserved
+
+  Wait for 5+DupAddrDetectTransmits*(RetransTimer/1000)[sec]
+
+  Check if NUT's address is configured
+  ==== Action #2: SOL NS =========>
+        name: SOLNS_from_TN_SameTgt
+
+  X<== Judgement #2: SOL NA =======
+        name: NA_from_NUT, NA_from_NUT_woTLL
+
+
+=back 1
+
+=head1 JUDGEMENT
+
+=over 1
+
+=item Test for Link-local Unicast address autoconfiguration
+
+B<Test for all NODE>
+
+B<NUT performs Stateless Address Autoconfiguration(Link-local) on its interface>
+
+   Judgement #1. NUT MUST transmit DAD NS for its autoconfigured Link-local address.
+        name: DADNS_from_NUT
+	src: ::0
+	dst: solnode[NUT's tentative Link-local]
+        TargetAddress: NUT's tentative Link-local
+
+   Action #1. TN transmits DAD NS which contains Reserved field 0xFFFFFFFF.
+        name: DADNS_from_TN_Reserved
+	src: ::0
+	dst: solnode[NUT's tentative Link-local]
+        Reserved: 0xFFFFFFFF
+        TargetAddress: NUT's tentative Link-local
+
+   Action #2. TN transmits SOL NS to check if NUT's address is configured.
+        name: SOLNS_from_TN_SameTgt
+        src: TN's Link-local
+	dst: solnode[NUT's Link-local]
+        TargetAddress: NUT's Link-local
+
+   Judgement #2. NUT MUST NOT transmit SOL NA for its autoconfigured  Link-local address.
+        name: NA_from_NUT, NA_from_NUT_woTLL
+	src: NUT's Link-local
+	dst: TN's Link-local
+        TargetAddress: NUT's Link-local
+        RFlag: 0 ( if NUT is a Router then 1)
+        SFlag: 1
+        OFlag: 1
+	TLLOPT: NUT's MAC address
+
+=back 1
+
+=cut
+
+# =head1 REFERENCE
+# 
+# =begin html
+# <PRE>
+# RFC2462
+# <HR>
+#    (omit)
+# <BR>
+# 5.4.1.  Message Validation
+# <BR>
+# <A NAME="REF"><B>
+#    A node MUST silently discard any Neighbor Solicitation or
+#    Advertisement message that does not pass the validity checks
+#    specified in [DISCOVERY].</B> A solicitation that passes these validity
+#    checks is called a valid solicitation or valid advertisement.
+# <BR>
+#    (omit)
+# </PRE>
+# <BR>
+# <HR>
+# <PRE>
+# RFC2461
+# <HR>
+#    (omit)
+# <BR>
+# 7.1.1.  Validation of Neighbor Solicitations
+# <BR>
+#    A node MUST silently discard any received Neighbor Solicitation
+#    messages that do not satisfy all of the following validity checks:
+# <BR><B>
+#       - The IP Hop Limit field has a value of 255, i.e., the packet
+#         could not possibly have been forwarded by a router.
+# </B>
+# <BR>
+#       - If the message includes an IP Authentication Header, the message
+#         authenticates correctly.
+# <BR>
+#       - ICMP Checksum is valid.
+# <BR>
+#       - ICMP Code is 0.
+# <BR>
+#       - ICMP length (derived from the IP length) is 24 or more octets.
+# <BR>
+#       - Target Address is not a multicast address.
+# <BR>
+#       - All included options have a length that is greater than zero.
+# <BR>
+#       - If the IP source address is the unspecified address, the IP
+#         destination address is a solicited-node multicast address.
+# <BR>
+#       - If the IP source address is the unspecified address, there is no
+#         source link-layer address option in the message.
+# <BR>
+#    The contents of the Reserved field, and of any unrecognized options,
+#    MUST be ignored.  Future, backward-compatible changes to the protocol
+#    may specify the contents of the Reserved field or add new options;
+#    backward-incompatible changes may use different Code values.
+# <BR>
+#    The contents of any defined options that are not specified to be used
+#    with Neighbor Solicitation messages MUST be ignored and the packet
+#    processed as normal.  The only defined option that may appear is the
+#    Source Link-Layer Address option.
+# <BR>
+#    A Neighbor Solicitation that passes the validity checks is called a
+#    "valid solicitation".
+# <BR>
+#    (omit)
+# </PRE>
+# 
+# =end html
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 4862 - IPv6 Stateless Address Autoconfiguration
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+=begin html
+<PRE>
+ detail of v6eval tool option: see perldoc V6evalTool.pm, perldoc V6evalRemote.pm
+</PRE>
+
+=end html
+
+=cut
+

@@ -1,0 +1,512 @@
+#!/usr/bin/perl
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: RAwithMTUincrease.seq,v 1.4 2005/04/11 09:05:56 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+use CommonPMTU;
+
+if ($V6evalTool::NutDef{'Type'} ne 'host') {
+    vLogHTML("This test is only for the host<BR>");
+    exit($V6evalTool::exitHostOnly);
+}
+
+$pktdesc{'ra1304all'}		= 'Send Router Advertisement with Prefix and MTU option (MTU is 1304 octets)';
+$pktdesc{'echo_request1500'}	= 'Send Echo Request (Packet size is 1500)';
+$pktdesc{'echo_reply1500'}	= 'Recv Echo Reply (Packet size is 1500)';
+$pktdesc{'echo_request1304_1'}	= 'Send Echo Request (Packet size is 1304, 1st fragment)';
+$pktdesc{'echo_request1304_2'}	= 'Send Echo Request (Packet size is 1304, 2nd fragment)';
+$pktdesc{'ra1500'}		= 'Send Router Advertisement with MTU option (1500 octets)';
+
+$endStatus = $V6evalTool::exitPass;
+$IF = 'Link0';
+
+#----- create Fragment ID
+$id = time & 0x00000fff;
+$fid = sprintf("0x0%07x", $id);
+#$rid = sprintf("0x0%03x", $id);
+#$sno = 0;
+
+#vCPP("-DSFRAG_ID=$fid -DREQ_ID=$rid -DSEQ_NO=$sno");
+vCPP("-DSFRAG_ID=$fid");
+
+
+vCapture($IF);
+#======================================================================
+#if (setup11($IF) != $CommonPMTU::Success) {
+#	$ret = cleanup($IF);
+#	if ($ret == $CommonPMTU::Success) {
+#		exit($V6evalTool::exitFail);
+#	} else {
+#		exit($V6evalTool::exitFatal);
+#	}
+#}
+#======================================================================
+#----- test
+vSend($IF, 'ra1304all');
+
+
+#----- create fragment pkt.def
+
+$original_name = "echo_reply1500"; #must same echo reply packet
+$MTU_value = 1304; #MTU value, fixed
+$PKT_size = 1500; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8;
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_HETHER_nut2tn';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'TN2_GL2_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+
+#write def file
+if(writefragdef($def_file, $original_name, $MTU_value,$PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF -DFRAG_ID=any");
+
+
+vSend($IF, 'echo_request1304_1');
+vSend($IF, 'echo_request1304_2');
+
+
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0,@CommonPMTU::fragment_1st_name);
+
+if ($ret{'status'} == 0) {
+	vLogHTML('OK. recive 1st fragment.<BR>');
+	$pkt_name = $ret{'recvFrame'};
+	$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+	$size_2nd_frag = $1-$2-40;
+	$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+	
+	%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+	if ($ret{'status'} == 0) {
+		vLogHTML('OK. recive 2nd fragment.<BR>');
+		
+	}
+	else {
+		vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+		$endStatus = $V6evalTool::exitFail;
+	}
+	
+	
+}else {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+
+
+vSend($IF, 'ra1500');
+
+
+vSend($IF, 'echo_request1500');
+
+
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0,@CommonPMTU::fragment_1st_name);
+
+if ($ret{'status'} == 0) {
+	vLogHTML('OK. recive 1st fragment.<BR>');
+	$pkt_name = $ret{'recvFrame'};
+	$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+	$size_2nd_frag = $1-$2-40;
+	$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+	
+	%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+	if ($ret{'status'} == 0) {
+		vLogHTML('OK. recive 2nd fragment.<BR>');
+		
+	}
+	else {
+		vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+		$endStatus = $V6evalTool::exitFail;
+	}
+	
+	
+}else {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+
+unlink($def_file);
+
+#----- end test
+
+$ret = cleanup($IF);
+vStop($IF);
+if ($ret == $CommonPMTU::Success) {
+	exit($endStatus);
+} else {
+	exit($V6evalTool::exitFatal);
+}
+
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  RAwithMTUincrease - Verify that a host properly processes a Router 
+                      Advertisement with an MTU option
+
+=head1 TARGET
+
+  Host
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./RAwithMTUincrease.seq">RAwithMTUincrease.seq</A> [-tooloption ...] -pkt <A HREF="./RAwithMTUincrease.def">RAwithMTUincrease.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  	TR1 send a Router Advertisment.
+	And make state of Neighbor Cashe Entry for TN's addresses reachable.
+
+=head1 TEST PROCEDURE
+
+
+   TN2                    TR1                    NUT
+    |                      |                      |
+    |                      +--------------------->|
+    |                      |1.Router Advertisemnt |
+    |                      |  (MTU 1304)          |
+    |                      |                      |
+    |-------------------------------------------->|
+    | 2.Fragmented Echo    |                      |
+    |   Request            |                      |
+    |   (1st + 2nd = 1500) |                      |
+    |<--------------------------------------------|
+    | 3.Fragment Echo Reply|                      |
+    |   (1st +2nd = 1500)  |                      |
+    |                      |                      |
+    |                      +--------------------->|
+    |                      |4.Router Advertisemnt |
+    |                      |  (MTU 1500)          |
+    |                      |                      |
+    |-------------------------------------------->|
+    | 4.Fragmented Echo    |                      |
+    |   Request            |                      |
+    |   (1st + 2nd = 1500) |                      |
+    |<--------------------------------------------|
+    | 5.Fragment Echo Reply|                      |
+    |   (1st +2nd = 1500)  |                      |
+    |                      |                      |
+    v                      v                      v
+
+
+  1. Send Router Advertisement (MTU is 1304)
+  2. Send fragmented Echo Request (1st + 2nd fragment = 1500 octets)
+  3. Receive Echo Reply (1st + 2nd fragment = 1500 octets) <<Check 1>>
+  4. Send Router Advertisement (MTU is 1500)
+  5. Send Echo Request (1st + 2nd fragment = 1500 octets)
+  6. Receive fragmented Echo Reply (1st + 2nd fragment = 1500 octets) <<Check 2>>
+
+  Echo Request Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 1460
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = TN2's Global Address
+            DestinationAddress = NUT's Global Address
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = (1452 octets)
+
+  Router Advertisement is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 24
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = TR1's Global Address
+            DestinationAddress = NUT's Global Address
+
+        ICMP Router Advertisement
+            Type           = 134 (Router Advertisement)
+            Code           = 0
+            Checksum       = (auto)
+            CurHopLimit    = 0
+            MFlag          = 0
+            OFlag          = 0
+            HFlag          = 0
+            Preference     = 0
+            Reserved       = 0
+            LifeTime       = 20
+            ReachableTime  = 10000
+            RetransTimer   = 1000
+
+        Option ICMP MTU
+            Type           = 5 (Router Advertisement)
+            Length         = 1
+            Reserved       = 0
+            MTU            = 1280
+
+=head1 JUDGEMENT
+
+  PASS: <<Check 1,2>> Fragmented Echo Reply Received. 1st and 2nd fragment no larger than 1280 octets.
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = 0
+            FlowLabel           = 0
+            PayloadLength       = 1460
+            NextHeader          = 58 (ICMPv6)
+            SourceAddress       = NUT's Global Address
+            Destination Address = TN2's Global Address
+
+        ICMP Echo Reply
+            Type           = 129 (Echo Reply)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff (same as Echo Request)
+            SequenceNumber = 1 (same as Echo Request)
+            PayloadData    = (1452 octets) (same as Echo Request)
+
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2461
+# 
+# 4.2.  Router Advertisement Message Format
+# 
+#    Routers send out Router Advertisement message periodically, or in
+#    response to a Router Solicitation.
+# 
+#       0                   1                   2                   3
+#       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+#      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#      |     Type      |     Code      |          Checksum             |
+#      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#      | Cur Hop Limit |M|O|  Reserved |       Router Lifetime         |
+#      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#      |                         Reachable Time                        |
+#      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#      |                          Retrans Timer                        |
+#      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#      |   Options ...
+#      +-+-+-+-+-+-+-+-+-+-+-+-
+# 
+#    IP Fields:
+# 
+#       Source Address
+#                      MUST be the link-local address assigned to the
+#                      interface from which this message is sent.
+# 
+#       Destination Address
+#                      Typically the Source Address of an invoking Router
+#                      Solicitation or the all-nodes multicast address.
+# 
+#       Hop Limit      255
+# 
+#       Authentication Header
+#                      If a Security Association for the IP Authentication
+#                      Header exists between the sender and the
+#                      destination address, then the sender SHOULD include
+#                      this header.
+# 
+#    ICMP Fields:
+# 
+#       Type           134
+# 
+#       Code           0
+# 
+#       Checksum       The ICMP checksum.  See [ICMPv6].
+# 
+#       Cur Hop Limit  8-bit unsigned integer.  The default value that
+#                      should be placed in the Hop Count field of the IP
+#                      header for outgoing IP packets.  A value of zero
+#                      means unspecified (by this router).
+# 
+#       M              1-bit "Managed address configuration" flag.  When
+#                      set, hosts use the administered (stateful) protocol
+#                      for address autoconfiguration in addition to any
+#                      addresses autoconfigured using stateless address
+#                      autoconfiguration.  The use of this flag is
+#                      described in [ADDRCONF].
+# 
+#       O              1-bit "Other stateful configuration" flag.  When
+#                      set, hosts use the administered (stateful) protocol
+#                      for autoconfiguration of other (non-address)
+#                      information.  The use of this flag is described in
+#                      [ADDRCONF].
+# 
+#       Reserved       A 6-bit unused field.  It MUST be initialized to
+#                      zero by the sender and MUST be ignored by the
+#                      receiver.
+# 
+#       Router Lifetime
+#                      16-bit unsigned integer.  The lifetime associated
+#                      with the default router in units of seconds.  The
+#                      maximum value corresponds to 18.2 hours.  A
+#                      Lifetime of 0 indicates that the router is not a
+#                      default router and SHOULD NOT appear on the default
+#                      router list.  The Router Lifetime applies only to
+#                      the router's usefulness as a default router; it
+#                      does not apply to information contained in other
+#                      message fields or options.  Options that need time
+#                      limits for their information include their own
+#                      lifetime fields.
+# 
+#       Reachable Time 32-bit unsigned integer.  The time, in
+#                      milliseconds, that a node assumes a neighbor is
+#                      reachable after having received a reachability
+#                      confirmation.  Used by the Neighbor Unreachability
+#                      Detection algorithm (see Section 7.3).  A value of
+#                      zero means unspecified (by this router).
+# 
+#       Retrans Timer  32-bit unsigned integer.  The time, in
+#                      milliseconds, between retransmitted Neighbor
+#                      Solicitation messages.  Used by address resolution
+#                      and the Neighbor Unreachability Detection algorithm
+#                      (see Sections 7.2 and 7.3).  A value of zero means
+#                      unspecified (by this router).
+# 
+#    Possible options:
+# 
+#       Source link-layer address
+#                      The link-layer address of the interface from which
+#                      the Router Advertisement is sent.  Only used on
+#                      link layers that have addresses.  A router MAY omit
+#                      this option in order to enable inbound load sharing
+#                      across multiple link-layer addresses.
+# 
+#       MTU            SHOULD be sent on links that have a variable MTU
+#                      (as specified in the document that describes how to
+#                      run IP over the particular link type).  MAY be sent
+#                      on other links.
+# 
+#       Prefix Information
+#                      These options specify the prefixes that are on-link
+#                      and/or are used for address autoconfiguration.  A
+#                      router SHOULD include all its on-link prefixes
+#                      (except the link-local prefix) so that multihomed
+#                      hosts have complete prefix information about on-
+#                      link destinations for the links to which they
+#                      attach.  If complete information is lacking, a
+#                      multihomed host may not be able to choose the
+#                      correct outgoing interface when sending traffic to
+#                      its neighbors.
+# 
+#       Future versions of this protocol may define new option types.
+#       Receivers MUST silently ignore any options they do not recognize
+#       and continue processing the message.
+# 
+#    (omit)
+# 
+# 6.3.4.  Processing Received Router Advertisements
+# 
+#    When multiple routers are present, the information advertised
+#    collectively by all routers may be a superset of the information
+#    contained in a single Router Advertisement.  Moreover, information
+#    may also be obtained through other dynamic means, such as stateful
+#    autoconfiguration.  Hosts accept the union of all received
+#    information; the receipt of a Router Advertisement MUST NOT
+#    invalidate all information received in a previous advertisement or
+#    from another source.  However, when received information for a
+#    specific parameter (e.g., Link MTU) or option (e.g., Lifetime on a
+#    specific Prefix) differs from information received earlier, and the
+#    parameter/option can only have one value, the most recently-received
+#    information is considered authoritative.
+# 
+#    (omit)
+# 
+#    If the MTU option is present, hosts SHOULD copy the option's value
+#    into LinkMTU so long as the value is greater than or equal to the
+#    minimum link MTU [IPv6] and does not exceed the default LinkMTU value
+#    specified in the link type specific document (e.g., [IPv6-ETHER]).
+# 
+#    (omit)
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 1981 - Path MTU Discovery for IPv6
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

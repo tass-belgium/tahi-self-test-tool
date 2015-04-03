@@ -1,0 +1,292 @@
+#!/usr/bin/perl
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: EX_HdrProcessingOrder_HFD_10.seq,v 1.7 2008/07/31 02:40:32 hide Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+use CommonSPEC;
+
+$pktdesc{'echo_request_HFD_10'}	= 'Send Echo Request (Frg.hdr precedes Dst.hdr, Error from Dst.hdr)';
+$pktdesc{'icmperr'}		= 'Recv ICMP Error (Parameter Problem, unrecognized IPv6 option encountered)';
+
+$endStatus = $V6evalTool::exitPass;
+$IF = 'Link0';
+
+vCapture($IF);
+
+#----- test
+vSend($IF, 'echo_request_HFD_10');
+%ret = nd_vRecv_EN($IF, $CommonSPEC::wait_reply, 0, 0, 'icmperr_with_pointer_0x3a', 'icmperr_with_pointer_0x32');
+
+if ($ret{'status'} == 0) {
+	vLogHTML('OK<BR>');
+} else {
+	vLogHTML('Cannot receive ICMP Error message<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+#----- end test
+
+$ret = cleanup($IF);
+vStop($IF);
+if ($ret == $CommonSPEC::Success) {
+	exit($endStatus);
+} else {
+	exit($V6evalTool::exitFatal);
+}
+
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  EX_HdrProcessingOrder_HFD_10 - Extension Header Processing Order 
+                                 (Fragment Header precedes Destination Options Header, 
+                                 Error from Destination Options)
+
+=head1 TARGET
+
+  Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./EX_HdrProcessingOrder_HFD_10.seq">EX_HdrProcessingOrder_HFD_10.seq</A> [-tooloption ...] -pkt <A HREF="./EX_HdrProcessingOrder_HFD_10.def">EX_HdrProcessingOrder_HFD_10.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  None
+
+=head1 TEST PROCEDURE
+
+Verify that a node properly processes the headers of an IPv6 packet in the correct order.
+
+   TN                          NUT
+    |                           |
+    |-------------------------->|
+    |   Test Packet             |
+    |                           |
+    |                           |
+    |<--------------------------|
+    |   ICMP Error              |
+    |                           |
+    v                           v
+
+  1. TN transmits Test Packet, an Echo Request that has a Hop-by-Hop Options header, 
+     Fragment header, and Destination Options header in that order.
+     The IPv6 header has a Payload Length that is not a multiple of 8 octets, 
+     and the Fragment header does not have the M-bit set.
+     The Destination Options header has an unknown Option Type 135.
+  2. Observe the packets transmitted by the NUT.
+
+  Test Packet Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 37
+            NextHeader         = 0 (Hop-by-Hop Options Header)
+            SourceAddress      = TN Link Local Address
+            DestinationAddress = NUT Link Local Address
+
+        Hop-by-Hop Options Header
+            NextHeader         = 44 (Fragment Header)
+            HeaderExtLength    = 0
+            OptionType         = 1 (PadN)
+            OptDataLength      = 4
+            pad                = {0, 0, 0, 0}
+
+        Fragment Header
+            NextHeader         = 60 (Destination Options Header)
+            FragmentOffset     = 0
+            MFlag              = 0
+            FragmentID         = 104
+
+        Destination Options Header
+            NextHeader         = 58 (ICMPv6)
+            HeaderExtLength    = 0
+            OptionType         = 0x87 (unknown, msb:10)
+            OptDataLength      = 4 (for 8 octets alignment)
+            data               = {0, 0, 0, 0}
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = {1, 2, 3, 4, 5}
+
+=head1 JUDGEMENT
+
+  PASS: The NUT must send an ICMPv6 Parameter Problem message to TN.
+        The Code field must be 2(unrecognized IPv6 Option encountered).
+        If the IPv6 Parameter Problem message includes a Fragment Header, 
+        the Pointer field must be 0x3A(offset of the Option type field in the Destination Options header).
+        If the IPv6 Parameter Problem message does not include a Fragment Header, 
+        the Pointer field must be 0x32(offset of the Option type field in the Destination Options header).
+        The NUT must discard the Echo Request from TN.
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = 0
+            FlowLabel           = 0
+            PayloadLength       = 85
+            NextHeader          = 58 (ICMPv6)
+            SourceAddress       = NUT Link Local Address
+            Destination Address = TN Link Local Address
+
+        ICMP Error
+            Type           = 4 (Parameter Problem)
+            Code           = 2 (unrecognized IPv6 option encountered)
+            Checksum       = (auto)
+            Pointer        = 50 or 58 (Offset to Option Type field in Destination Options Header)
+                                      (if this value is 50, the fragment header in Echo request is discarded by reassembly.)
+            PayloadData    = (Sent Packet)
+
+=head1 CLEANUP
+
+Common Test Cleanup
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+# 
+# 4.1  Extension Header Order
+# 
+#    When more than one extension header is used in the same packet, it is
+#    recommended that those headers appear in the following order:
+# 
+#            IPv6 header
+#            Hop-by-Hop Options header
+#            Destination Options header (note 1)
+#            Routing header
+#            Fragment header
+#            Authentication header (note 2)
+#            Encapsulating Security Payload header (note 2)
+#            Destination Options header (note 3)
+#            upper-layer header
+# 
+#            note 1: for options to be processed by the first destination
+#                    that appears in the IPv6 Destination Address field
+#                    plus subsequent destinations listed in the Routing
+#                    header.
+# 
+#            note 2: additional recommendations regarding the relative
+#                    order of the Authentication and Encapsulating
+#                    Security Payload headers are given in [RFC-2406].
+# 
+#            note 3: for options to be processed only by the final
+#                    destination of the packet.
+# 
+# 4.2  Options
+# 
+#    The Option Type identifiers are internally encoded such that their
+#    highest-order two bits specify the action that must be taken if the
+#    processing IPv6 node does not recognize the Option Type:
+# 
+#       00 - skip over this option and continue processing the header.
+# 
+#       01 - discard the packet.
+# 
+# =begin html
+# <PRE>
+#       <B>10 - discard the packet and, regardless of whether or not the
+#            packet's Destination Address was a multicast address, send an
+#            ICMP Parameter Problem, Code 2, message to the packet's
+#            Source Address, pointing to the unrecognized Option Type.</B>
+# </PRE>
+# 
+# =end html
+# 
+#       11 - discard the packet and, only if the packet's Destination
+#            Address was not a multicast address, send an ICMP Parameter
+#            Problem, Code 2, message to the packet's Source Address,
+#            pointing to the unrecognized Option Type.
+# 
+# 4.5  Fragment Header
+# 
+#       If the length of a fragment, as derived from the fragment packet's
+#       Payload Length field, is not a multiple of 8 octets and the M flag
+#       of that fragment is 1, then that fragment must be discarded and an
+#       ICMP Parameter Problem, Code 0, message should be sent to the
+#       source of the fragment, pointing to the Payload Length field of
+#       the fragment packet.
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

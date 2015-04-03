@@ -1,0 +1,287 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/icmp.p2/Echo_Request_Link-Local.seq,v 1.10 2010/03/24 08:23:16 akisada Exp $
+#----------------------------------------------------------------------
+
+BEGIN { $V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $'; }
+use V6evalTool;
+use icmp;
+use lib '../';
+use AdvancedFunctionality;
+
+if (!$AdvancedFunctionality::TRANSMITTING_EREQ) {
+	exit($V6evalTool::exitSkip);
+}
+
+$IF = Link0;
+
+%pktdesc = (
+    echo_request_link_local_nut	=> 'Receive Echo Request (Link-local address)',
+);
+
+#----------------------------------------------------------------------
+# Initialization
+#----------------------------------------------------------------------
+vLogHTML("<FONT SIZE=\"+1\">Initialization</FONT><BR>");
+
+vCapture($IF);
+
+$ret = setup();
+if ($ret == $icmp::subFail){
+	goto error;
+}
+
+#-----------------------------------------------------------------------
+# Test
+#-----------------------------------------------------------------------
+vLogHTML("<FONT SIZE=\"+1\">Test</FONT><BR>");
+
+$NUTif = $V6evalTool::NutDef{Link0_device};
+$TN_LINK0_MAC_ADDRESS=$V6evalTool::TnDef{Link0_addr};
+$TN_LINK0_LINKLOCAL_ADDRESS=vMAC2LLAddr($TN_LINK0_MAC_ADDRESS);
+
+vLog("Remote Echo Requests of NUT. ");
+$rvalue = vRemote("ping6.rmt","","if=$NUTif addr=$TN_LINK0_LINKLOCAL_ADDRESS");
+
+%ret = icmp_vRecv($IF, $icmp::wait_reply, 0, 0, echo_request_link_local_nut);
+
+vLog("ping6.rmt returned status $rvalue") if $debug > 0;
+
+if ($rvalue > 0) {
+    vLog("vRemote ping6.rmt exit $rvalue");
+    goto error;
+}
+
+
+if ($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">TN can not receive ICMPv6 echo request from NUT</FONT><BR>');
+	goto error;
+}
+elsif ($ret{recvFrame} eq 'echo_request_link_local_nut') {
+	vLog("TN can receive ICMPv6 echo request from NUT");
+	vLog("OK");
+	cleanup();
+	vStop($IF);
+	exit($V6evalTool::exitPass);
+}
+else {
+	vLogHTML('<FONT COLOR="#FF0000">TN receive unexpected packets from NUT</FONT><BR>');
+	goto error;
+}
+
+
+error:
+
+vLogHTML('<FONT COLOR="#FF0000">FAIL</FONT><BR>');	
+cleanup();
+vStop($IF);
+exit($V6evalTool::exitFail);
+
+
+#----------------------------------------------------------------------
+
+__END__
+
+=head1 NAME
+
+	Echo_Request_Link-Local.seq - Transmitting Echo Requests
+
+=head1 TARGET
+
+	Host/Router
+
+=head1 SYNOPSIS
+
+	Echo_Request_Link-Local.seq [-tooloption ...] -p Echo_Request_Link-Local.def
+
+=head1 INITIALIZATION
+
+	Common Test Setup 1.1
+
+=head1 TEST PROCEDURE
+
+	Verify that a node properly transmits ICMPv6 Echo Request. 
+	
+
+	TN			NUT
+
+	---------------------------
+
+	1.	
+	<< JUDGEMENT >>
+	 <=== ICMPv6 Echo Request ===
+			src address : NUT link local address
+			dst address : TN link local address        
+
+=head1 JUDGEMENT
+
+    << PASS >>
+    The NUT must send an Echo Request to TN.
+    The Destination Address of the Packet must be same as TN's Link-Local address.
+    The checksum must be valid.
+    The Type field must be equal to 128 and the Code field must be equal to 0.
+
+
+=head1 CLEANUP
+
+Common Test Cleanup
+
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2463
+# 
+# 2.2 Message Source Address Determination
+# 
+#    A node that sends an ICMPv6 message has to determine both the Source
+#    and Destination IPv6 Addresses in the IPv6 header before calculating
+#    the checksum.  If the node has more than one unicast address, it must
+#    choose the Source Address of the message as follows:
+# 
+#     (a) If the message is a response to a message sent to one of the
+#         node's unicast addresses, the Source Address of the reply must
+#         be that same address.
+# 
+#     (b) If the message is a response to a message sent to a multicast or
+#         anycast group in which the node is a member, the Source Address
+#         of the reply must be a unicast address belonging to the
+#         interface on which the multicast or anycast packet was received.
+# 
+#     (c) If the message is a response to a message sent to an address
+#         that does not belong to the node, the Source Address should be
+#         that unicast address belonging to the node that will be most
+#         helpful in diagnosing the error. For example, if the message is
+#         a response to a packet forwarding action that cannot complete
+#         successfully, the Source Address should be a unicast address
+#         belonging to the interface on which the packet forwarding
+#         failed.
+# 
+#     (d) Otherwise, the node's routing table must be examined to
+#         determine which interface will be used to transmit the message
+#         to its destination, and a unicast address belonging to that
+#         interface must be used as the Source Address of the message.
+# 
+# 
+# 4.1 Echo Request Message
+# 
+#        0                   1                   2                   3
+#        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#       |     Type      |     Code      |          Checksum             |
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#       |           Identifier          |        Sequence Number        |
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#       |     Data ...
+#       +-+-+-+-+-
+# 
+#    IPv6 Fields:
+# 
+# =begin html
+# <pre>
+#    <b>Destination Address</b><br>
+#                   <b>Any legal IPv6 address.</b>
+# </pre>
+# 
+# =end html
+# 
+#    ICMPv6 Fields:
+# 
+# =begin html
+# <pre>
+#    <b>Type           128</b>
+# </pre>
+# 
+# =end html
+# 
+# =begin html
+# <pre>
+#    <b>Code           0</b>
+# </pre>
+# 
+# =end html
+# 
+#    Identifier     An identifier to aid in matching Echo Replies
+#                   to this Echo Request.  May be zero.
+# 
+#    Sequence Number
+#                   A sequence number to aid in matching Echo Replies
+#                   to this Echo Request.  May be zero.
+# 
+#    Data           Zero or more octets of arbitrary data.
+# 
+#    Description
+#  
+#    Every node MUST implement an ICMPv6 Echo responder function that
+#    receives Echo Requests and sends corresponding Echo Replies.  A node
+#    SHOULD also implement an application-layer interface for sending Echo
+#    Requests and receiving Echo Replies, for diagnostic purposes.
+# 
+#    Upper layer notification
+# 
+#    Echo Request messages MAY be passed to processes receiving ICMP
+#    messages.
+# 
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 4443 - ICMPv6 (ICMP for IPv6)
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+	  perldoc V6evalTool
+
+=cut

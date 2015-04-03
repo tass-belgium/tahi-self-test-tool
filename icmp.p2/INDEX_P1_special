@@ -1,0 +1,135 @@
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# INDEX file for IPv6 ready Logo PhaseII
+#
+# $Name: V6LC_5_0_0 $
+#
+# $TAHI: ct/icmp.p2/INDEX_P1_special,v 1.3 2008/03/27 05:41:15 akisada Exp $
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.5.1.1 Transmitting Echo Requests                                #
+#----------------------------------------------------------------------#
+&print:<B>Test v6LC.5.1.1: Transmitting Echo Requests</B>
+&#./Echo_Request_Link-Local.seq:./Echo_Request_Link-Local.def:::Transmitting Echo Requests:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.5.1.2 Replying to Echo Requests                                 #
+#----------------------------------------------------------------------#
+&print:<B>Test v6LC.5.1.2: Replying to Echo Requests</B>
+./Echo_Link-Local.seq:./Echo_Link-Local.def:::Part A&#58; Request sent to Link-Local address:1
+./Echo_Global.seq:./Echo_Global.def:::Part B&#58; Request sent to global address:1
+&#./Echo_Multicast.seq:./Echo_Multicast.def:::Part C&#58; Request sent to multicast address - All Nodes Addresses:1
+./Echo_Unspecified.seq:./Echo_Unspecified.def:::Part E&#58; Request sent to unspecified address:1
+./Echo_Loopback.seq:./Echo_Loopback.def:::Part F&#58; Request sent to loopback address:1
+./Echo_Sitelocal.seq:./Echo_Sitelocal.def:::Part G&#58; Request sent to Site-Local address:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.5.1.3 Destination Unreachable Message Generation                #
+#----------------------------------------------------------------------#
+&print:<B>Test v6LC.5.1.3: Destination Unreachable Message Generation</B>
+&#./Dst_Unreach_4_Link-Local.seq:./Dst_Unreach_4_Link-Local.def:::Part C&#58; Port Unreachable - Link-Local Address - All Nodes:1
+&#./Dst_Unreach_4_Global.seq:./Dst_Unreach_4_Global.def:::Part D&#58; Port Unreachable - Global Address - All Nodes:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.5.1.6 Erroneous Header Field (Parameter Problem Generation)     #
+#----------------------------------------------------------------------#
+&print:<B>Test v6LC.5.1.6: Erroneous Header Field (Parameter Problem Generation)</B>
+&#./FH_Pre.seq:/dev/null:::--- Fragment Test Preparation:1
+&#./P_Problem_Err_Header_Field.seq:./P_Problem_Err_Header_Field.def:::Erroneous Header Field (Parameter Problem Generation):1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.5.1.7 Unrecognized Next Header (Parameter Problem Generation)   #
+#----------------------------------------------------------------------#
+&print:<B>Test v6LC.5.1.7: Unrecognized Next Header (Parameter Problem Generation)</B>
+&#./P_Problem_Global.seq:./P_Problem_Global.def:::Unrecognized Next Header (Parameter Problem Generation):1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.5.1.8 Unknown Informational Message Type                        #
+#----------------------------------------------------------------------#
+&print:<B>Test v6LC.5.1.8: Unknown Informational Message Type</B>
+./Unknown_Infomsg.seq:./Unknown_Infomsg.def:::Unknown Informational Message Type:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.5.1.10 Error Condition With Multicast Destination               #
+#----------------------------------------------------------------------#
+&print:<B>Test v6LC.5.1.10: Error Condition With Multicast Destination</B>
+&#./To_Multi_Dst_Unreach_4.seq:./To_Multi_Dst_Unreach_4.def:::Part A&#58; UDP Port Unreachable:1
+./FH_Pre.seq:/dev/null:::--- Fragment Test Preparation:1
+./To_Multi_Time_Exc.seq:./To_Multi_Time_Exc.def:::Part B&#58; Echo Request Reassembly Timeout:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.5.1.11 Error Condition With Non-Unique Source - Unspecified     #
+#----------------------------------------------------------------------#
+&print:<B>Test v6LC.5.1.11: Error Condition With Non-Unique Source - Unspecified</B>
+&#./Err_Condition_Port_Unreachable.seq:./Err_Condition_Port_UnspecAddr.def:::Part A&#58; UDP Port Unreachable (Routers and Hosts):1
+&#./FH_Pre.seq:/dev/null:::--- Fragment Test Preparation:1
+&#./Err_Condition_Time_Exc.seq:./Err_Condition_Time_Exc_UnspecAddr.def:::Part C&#58; Echo Request Reassembly Timeout (Routers and Hosts):1
+&#./Err_Condition_Unknown_Option.seq:./Err_Condition_Unknown_Option_UnspecAddr.def:::Part D&#58; Echo Request with Unknown Option in Destination Options (Routers and Hosts):1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.5.1.12 Error Condition With Non-Unique Source - Multicast       #
+#----------------------------------------------------------------------#
+&print:<B>Test v6LC.5.1.12: Error Condition With Non-Unique Source - Multicast</B>
+&#./Err_Condition_Port_Unreachable.seq:./Err_Condition_Port_GMaddr.def:::Part A&#58; UDP Port Unreachable (Routers and Hosts):1
+&#./FH_Pre.seq:/dev/null:::--- Fragment Test Preparation:1
+&#./Err_Condition_Time_Exc.seq:./Err_Condition_Time_Exc_GMaddr.def:::Part C&#58; Echo Request Reassembly Timeout (Routers and Hosts):1
+&#./Err_Condition_Unknown_Option.seq:./Err_Condition_Unknown_Option_GMaddr.def:::Part D&#58; Echo Request with Unknown Option in Destination Options (Routers and Hosts):1

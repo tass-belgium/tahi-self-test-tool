@@ -1,0 +1,27 @@
+Terminology
+<UL>
+  DAD: Duplicate Address Detection<BR>
+  LLA: Link-Local Address<BR>
+  MTU: Maximum Transmission Unit<BR>
+  NA: Neighbor Advertisement<BR>
+  NS: Neighbor Solicitation<BR>
+  NUT: Node Under Test<BR>
+  PLT: Preferred Lifetime<BR>
+  RA: Router Advertisement<BR>
+  RS: Router Solicitation<BR>
+  SLL: Source Link Layer<BR>
+  SLT: Stored Lifetime<BR>
+  TN: Testing Node<BR>
+  Target: Target Address in Neighbor Solicitation<BR>
+  VLT: Valid Lifetime<BR>
+</UL>
+<BR>
+<HR>	
+Index
+<UL>
+  <LI><A HREF="../spec.p2/index.html">Section 1: RFC 2460 - IPv6 Specification</A>
+  <LI><A HREF="../nd.p2/index.html">Section 2: RFC 4861 - Neighbor Discovery for IPv6</A>
+  <LI>Section 3: RFC 4862 - IPv6 Stateless Address Autoconfiguration
+  <LI><A HREF="../pmtu.p2/index.html">Section 4: RFC 1981 - Path MTU Discovery for IPv6</A>
+  <LI><A HREF="../icmp.p2/index.html">Section 5: RFC 4443 - ICMPv6</A>
+</UL>

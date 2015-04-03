@@ -1,0 +1,354 @@
+#!/usr/bin/perl
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: confirmPing1500.seq,v 1.7 2008/07/31 03:02:06 hide Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+use CommonPMTU;
+
+$pktdesc{'echo_request1500'}	= "Send Echo Request (Packet size is $CommonPMTU::default_mtu (Media Type Default))";
+$pktdesc{'echo_reply1500'}	= 'Recv Echo Reply';
+
+$endStatus = $V6evalTool::exitPass;
+$IF = 'Link0';
+
+$mtu_diff_min = $CommonPMTU::default_mtu - 1280;
+vCPP("-DMTU_DIFF_MIN=$mtu_diff_min");
+vCapture($IF);
+#======================================================================
+if (setup11($IF) != $CommonPMTU::Success) {
+	$ret = cleanup($IF);
+	if ($ret == $CommonPMTU::Success) {
+		exit($V6evalTool::exitFail);
+	} else {
+		exit($V6evalTool::exitFatal);
+	}
+}
+#======================================================================
+
+#----- create fragment pkt.def
+
+$original_name = "echo_reply1500"; #must same echo reply packet
+$MTU_value = 1500; #MTU value, fixed
+$PKT_size = 1500; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8;
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_HETHER_nut2tn';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'TN2_GL2_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+
+#write def file
+if(writefragdef($def_file, $original_name, $MTU_value,$PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF -DFRAG_ID=any");
+
+#----- test
+
+vSend($IF, 'echo_request1500');
+
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, 'echo_reply1500',@CommonPMTU::fragment_1st_name);
+
+if ($ret{'status'} == 0) {
+	if($ret{'recvFrame'} eq 'echo_reply1500'){
+		vLogHTML('OK<BR>');
+	}
+	else{
+		vLogHTML('OK. recive 1st fragment.<BR>');
+		$pkt_name = $ret{'recvFrame'};
+		$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+		$size_2nd_frag = $1-$2-40;
+		$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+
+		%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+		if ($ret{'status'} == 0) {
+			vLogHTML('OK. recive 2nd fragment.<BR>');
+			
+		}
+		else {
+			vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+			$endStatus = $V6evalTool::exitFail;
+		}
+	}
+	
+	
+}else {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+
+unlink($def_file);
+
+#----- end test
+
+$ret = cleanup($IF);
+vStop($IF);
+if ($ret == $CommonPMTU::Success) {
+	exit($endStatus);
+} else {
+	exit($V6evalTool::exitFatal);
+}
+
+
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  confirmPing1500 - ICMPv6 Echo Request 1500 octets
+
+=head1 TARGET
+
+  Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./configmPing1500.seq">configmPing1500.seq</A> [-tooloption ...] -pkt <A HREF="./configmPing1500.def">configmPing1500.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+	Common Test Setup 1.1
+
+=head1 TEST PROCEDURE
+
+Verify that a node can reply to variable sized ICMP Echo Requests.
+
+
+   TN2                    TR1                    NUT
+    |                      |                      |
+    |-------------------------------------------->|
+    |   1.Echo Request     |                      |
+    |   (1500 octets)      |                      |
+    |                      |                      |
+    |<--------------------------------------------|
+    |   2.Echo Reply       |                      |
+    |   (1500 octets)      |                      |
+    |                      |                      |
+    v                      v                      v
+
+
+  1. Send Echo Request
+  2. Receive Echo Reply
+     <<Check 1>>
+
+  Echo Request Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 1460
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = TN2's Global Address
+            DestinationAddress = NUT's Global Address
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = (PayloadLength - 8 octets)
+
+
+=head1 JUDGEMENT
+
+  PASS: The NUT sent an Echo Reply to TR1 1500 octets in packet size.
+
+       <<Check 1>> Echo Reply or Fragment Echo Reply Received
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = 0
+            FlowLabel           = 0
+            PayloadLength      = 1460
+            NextHeader          = 58 (ICMPv6)
+            SourceAddress       = NUT's Global Address
+            Destination Address = TN2's Global Address
+
+        ICMP Echo Reply
+            Type           = 129 (Echo Reply)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff (same as Echo Request)
+            SequenceNumber = 1 (same as Echo Request)
+            PayloadData    = (PayloadLength - 8 octets) (same as Echo Request)
+
+=head1 CLEANUP
+
+Common Test Cleanup
+
+=cut
+
+# =head1 REFERENCE
+# 
+# 
+# RFC 2463 
+# 
+#    (omit)
+# 
+# 2.2 Message Source Address Determination
+# 
+#    A node that sends an ICMPv6 message has to determine both the Source
+#    and Destination IPv6 Addresses in the IPv6 header before calculating
+#    the checksum.  If the node has more than one unicast address, it must
+#    choose the Source Address of the message as follows:
+# 
+#     (a) If the message is a response to a message sent to one of the
+#         node's unicast addresses, the Source Address of the reply must
+#         be that same address.
+# 
+#     (b) If the message is a response to a message sent to a multicast or
+#         anycast group in which the node is a member, the Source Address
+#         of the reply must be a unicast address belonging to the
+#         interface on which the multicast or anycast packet was received.
+# 
+#     (c) If the message is a response to a message sent to an address
+#         that does not belong to the node, the Source Address should be
+#         that unicast address belonging to the node that will be most
+#         helpful in diagnosing the error. For example, if the message is
+#         a response to a packet forwarding action that cannot complete
+#         successfully, the Source Address should be a unicast address
+#         belonging to the interface on which the packet forwarding
+#         failed.
+# 
+#     (d) Otherwise, the node's routing table must be examined to
+#         determine which interface will be used to transmit the message
+#         to its destination, and a unicast address belonging to that
+#         interface must be used as the Source Address of the message.
+# 
+#    (omit)
+# 
+# 4.1 Echo Request Message
+# 
+#        0                   1                   2                   3
+#        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#       |     Type      |     Code      |          Checksum             |
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#       |           Identifier          |        Sequence Number        |
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#       |     Data ...
+#       +-+-+-+-+-
+# 
+#    IPv6 Fields:
+# 
+#    Destination Address
+# 
+#                   Any legal IPv6 address.
+# 
+#    ICMPv6 Fields:
+# 
+#    Type           128
+# 
+#    Code           0
+# 
+#    Identifier     An identifier to aid in matching Echo Replies
+#                   to this Echo Request.  May be zero.
+# 
+#    Sequence Number
+# 
+#                   A sequence number to aid in matching Echo Replies
+#                   to this Echo Request.  May be zero.
+# 
+#    Data           Zero or more octets of arbitrary data.
+# 
+#    Description
+# 
+#    Every node MUST implement an ICMPv6 Echo responder function that
+#    receives Echo Requests and sends corresponding Echo Replies.  A node
+#    SHOULD also implement an application-layer interface for sending Echo
+#    Requests and receiving Echo Replies, for diagnostic purposes.
+# 
+#    Upper layer notification
+# 
+#    Echo Request messages MAY be passed to processes receiving ICMP
+#    messages.
+# 
+#    (omit)
+# 
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 1981 - Path MTU Discovery for IPv6
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

@@ -1,0 +1,156 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/nd.p2/V6LC_2_2_2_A.seq,v 1.7 2009/12/28 05:55:17 akisada Exp $
+#
+########################################################################
+
+use rdisc;
+
+BEGIN {}
+END   {}
+
+if($V6evalTool::NutDef{'Type'} ne 'host') {
+	exitRouterOnly($Link0);
+	#NOTREACHED
+}
+
+vCapture($Link0);
+
+$pktdesc{'local_ra'}
+	= '    Send RA w/o SLL: '.
+		'TR1 (link-local) -&gt; all-nodes multicast address';
+
+unless(v6LC_2_2_2_A($Link0)) {
+        exitFail($Link0);
+        #NOTREACHED
+}
+
+exitPass($Link0);
+#NOTREACHED
+
+
+
+#
+# perldoc
+#
+########################################################################
+__END__
+
+=head1 NAME
+
+  Test v6LC.2.2.2 - Router Solicitations, Solicited Router Advertisement (Hosts Only)
+  Part A: Valid Router Advertisement, No Source Link-layer Address Option
+
+=head1 Purpose
+
+  Verify that a host sends valid Router Solicitations at the appropriate time.
+
+=head1 References
+
+  * [ND]  Section 6.3.7
+
+=head1 Resource Requirements
+
+  * Packet generator
+  * Monitor to capture packets
+
+=head1 Test Setup
+
+  No Common Test Setup is performed. The Common Test Cleanup procedure is
+  performed after each part.
+
+=begin html
+
+<BLOCKQUOTE>
+<TABLE BORDER>
+<Caption>Router Advertisement A</Caption>
+<TR>
+<TD>
+	IPv6 Header<br>
+	Next Header: 58<br>
+	Hop Limit: [See below]<br>
+	Source Address: [See below]<br>
+	Destination Address: All-Node Multicast address
+</TD>
+</TR>
+<TR>
+<TD>
+	Router Advertisement<br>
+	ICMP Code: [See below]<br>
+	ICMP Checksum: [See below]<br>
+	Source Link-layer Address Option: [See below]
+</TD>
+</TR>
+</TABLE>
+</BLOCKQUOTE>
+
+=end html
+
+
+=head1 Procedure
+
+  Part A: Valid Router Advertisement, No Source Link-layer Address Option
+   1. Reboot the HUT.
+   2. Wait until the HUT transmits a Router Solicitation.
+   3. TR1 transmits Router Advertisement A without a Source Link-layer Address Option. The Source
+      Address is the link-local address of TR1. The Hop Limit is 255. The ICMP Code is 0. The
+      ICMP Checksum is valid.
+   4. Wait RTR_SOLICITATION_INTERVAL+MAX_RTR_SOLICITATION_DELAY
+   5. Observe packets transmitted from the HUT.
+
+=head1 Observable Results
+
+  Parts A-B
+   The HUT should transmit only one Router Solicitation. The Router Solicitation should be
+   sent from either the link-local address of the HUT or the unspecified address. The destination
+   address should be the All-Routers multicast address. The Router Solicitation may or may not
+   include a Source Link-layer Address option.
+
+=head1 Possible Problems
+
+  * None. 
+
+=cut
+

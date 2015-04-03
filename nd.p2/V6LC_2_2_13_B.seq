@@ -1,0 +1,179 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/nd.p2/V6LC_2_2_13_B.seq,v 1.11 2009/12/28 05:55:17 akisada Exp $
+#
+########################################################################
+
+use rdisc;
+
+BEGIN {}
+END   {}
+
+if($V6evalTool::NutDef{'Type'} ne 'host') {
+	exitRouterOnly($Link0);
+	#NOTREACHED
+}
+
+vCapture($Link0);
+
+unless(commonSetup_1_2($Link0)) {
+	exitInitFail($Link0);
+	#NOTREACHED
+}
+
+$pktdesc{'local_ra_tr1'}
+	= '    Send RA (rltime=0) w/o SLL: '.
+		'TR1 (link-local) -&gt; all-nodes multicast address';
+$pktdesc{'local_ra_tr2'}
+	= '    Send RA (rltime=0) w/o SLL: '.
+		'TR2 (link-local) -&gt; all-nodes multicast address';
+
+unless(v6LC_2_2_13_B($Link0)) {
+        exitFail($Link0);
+        #NOTREACHED
+}
+
+exitPass($Link0);
+#NOTREACHED
+
+
+
+#
+# perldoc
+#
+########################################################################
+__END__
+
+=head1 NAME
+
+  Test v6LC.2.2.14 - Router Advertisement Processing, Router Lifetime (Hosts Only)
+  Part B: Router Lifetime Set to Zero
+
+=head1 Purpose
+
+  Verify that a host properly processes a Router Advertisement and the Router Lifetime field
+  within it.
+
+=head1 References
+
+  * [ND]  Section 6.3.4
+
+=head1 Resource Requirements
+
+  * Packet generator
+  * Monitor to capture packets
+
+=head1 Test Setup
+
+  For Part A, Common Test Setup 1.1 is performed. For Parts B and C, Common Test
+  Setup 1.2 is performed. The Common Test Cleanup procedure is performed after each part.
+
+=begin html
+
+<BLOCKQUOTE>
+
+<TABLE BORDER>
+<Caption>Router Advertisement</Caption>
+<TR>
+<TD>
+        IPv6 Header<br>
+        Next Header: 58<br>
+        Source Address: TR1's Link-local Address<br>
+	Destination Address: All-Nodes Multicast Address
+</TD>
+</TR>
+<TR>
+<TD>
+	Router Advertisement<br>
+	Router Lifetime: 20 seconds<br>
+	Reachable Time: 600 seconds<br>
+	Retransmit Interval: 1 second<br>
+</TD>
+</TR>
+<TR>
+<TD>
+	Prefix Option<br>
+	Valid Lifetime: 100 seconds<br>
+	Preferred Lifetime: 20 seconds<br>
+	Prefix: TR1's Global Prefix<br>
+</TR>
+</TD>
+</TABLE>
+
+</BLOCKQUOTE>
+
+=end html
+
+=head1 Procedure
+
+  Part B: Router Lifetime Set to Zero
+   7. TN2 transmits a global Echo Request to the HUT.
+   8. Observe the packets transmitted by the HUT.
+   9. TR1 transmits a Router Advertisement with Router Lifetime set to zero.
+  10. TN2 transmits a global Echo Request to the HUT.
+  11. Observe the packets transmitted by the HUT.
+  12. TR2 transmits a Router Advertisement with Router Lifetime set to zero.
+  13. TN2 transmits a global Echo Request to the HUT.
+  14. Observe the packets transmitted by the HUT.
+
+=head1 Observable Results
+
+  Part B
+   Step 8:
+   The HUT should use TR1 or TR2 as a first hop.
+
+   Step 11:
+   The HUT should use TR2 as a first hop.
+
+   Step 14:
+   The HUT MUST not transmit an Echo Reply or transmit multicast NS's with a
+   target address set to TR1's or TR2's link-local address.
+
+=head1 Possible Problems
+
+  * None. 
+
+=cut
+

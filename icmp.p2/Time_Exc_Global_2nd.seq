@@ -1,0 +1,270 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/icmp.p2/Time_Exc_Global_2nd.seq,v 1.5 2008/07/25 04:57:21 hide Exp $
+#----------------------------------------------------------------------
+
+BEGIN { $V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $'; }
+use V6evalTool;
+use icmp;
+
+$IF = Link0;
+
+%pktdesc = (
+    echo_request_1st_global	=> 'Send 1st Fragmented Echo Request (Global address)',
+    echo_request_2nd_global	=> 'Send 2nd Fragmented Echo Request (Global address)',
+    echo_reply_global_1024	=> 'Receive Echo Reply (Global address)',
+    echo_request_2st		=> 'Send 2st Fragmented Echo Request (Global address)',
+    time_exceeded		=> 'Receive Time Exceeded (fragment reassembly)',
+);
+
+#----------------------------------------------------------------------
+# Initialization
+#----------------------------------------------------------------------
+
+vLogHTML("<FONT SIZE=\"+1\">Initialization</FONT><BR>");
+
+vCapture($IF);
+
+$ret = setup("default_RA");
+if ($ret == $icmp::subFail){
+	goto error;
+}
+
+#----------------------------------------------------------------------
+# Check fragment reassembly.
+#----------------------------------------------------------------------
+
+vLogHTML('<B>Begin check fragment reassembly</B>');
+
+vSend($IF, echo_request_1st_global);
+vSend($IF, echo_request_2nd_global);
+
+#%ret = vRecv($IF, $icmp::wait_reply, 0, 0, echo_reply_global_1024);
+%ret = icmp_vRecv($IF, $icmp::wait_reply, 0, 0, echo_reply_global_1024);
+if ($ret{status} == 0 && $ret{recvFrame} eq 'echo_reply_global_1024') {
+	vLogHTML('OK<BR>');
+}
+else {
+	vLogHTML('<FONT COLOR="#FF0000">Not replied.</FONT><BR>');
+	goto error;
+};
+vLogHTML('<B>End check</B><P>');
+
+#----------------------------------------------------------------------
+# Test
+#----------------------------------------------------------------------
+
+vLogHTML("<FONT SIZE=\"+1\">Test</FONT><BR>");
+
+vSend($IF, echo_request_2st);
+
+#%ret = vRecv($IF, $icmp::wait_time_exc, 0, 0, time_exceeded, ns_global, ns_global_sll);
+%ret = icmp_vRecv($IF, $icmp::wait_time_exc, 0, 0, time_exceeded);
+
+if ($ret{status} != 0) {
+	vLog("TN can not receive ICMPv6 error message from NUT");	
+	vLog("OK");	
+	cleanup();
+	vStop($IF);
+	exit($V6evalTool::exitPass);
+}
+elsif ($ret{recvFrame} eq 'time_exceeded') {
+	vLogHTML('<FONT COLOR="#FF0000">TN can receive ICMPv6 Time Exceeded message from NUT</FONT><BR>');
+	goto error;
+}
+else {
+	vLogHTML('<FONT COLOR="#FF0000">TN receive unexpected packets from NUT</FONT><BR>');
+	goto error;
+}   
+
+error:
+
+vLogHTML('<FONT COLOR="#FF0000">FAIL</FONT><BR>');
+cleanup();
+vStop($IF);
+exit($V6evalTool::exitFail);
+
+#----------------------------------------------------------------------
+
+__END__
+
+=head1 NAME
+
+	Time_Exc_Global_2nd.seq - check Time Exceeded 1 (global address)
+
+=head1 TARGET
+
+	Host/Router
+
+=head1 SYNOPSIS
+
+	Time_Exc_Global_2nd.seq [-tooloption ...] -p Time_Exc_Global.def
+
+=head1 INITIALIZATION
+
+	Before starting test, check NUT's fragment reassembly function.
+	If the NUT is a host, send a Router Advertisment.
+	If the NUT is a router, configure a default route with TN as the next hop.
+	And make state of Neighbor Cashe Entry for TN's addresses reachable.
+
+=head1 TEST PROCEDURE
+
+	This test verifies that NUT sends valid ICMPv6 Time Exceeded (code 1)
+	in response to a packet which can not be reassemble.
+	And this test verifies that the message processing rule ,
+	
+	If the message is a response to a message sent to one of the
+	node's unicast addresses, the Source Address of the reply must
+	be that same address.
+
+
+	TN			NUT
+
+	---------------------------
+
+	1.
+	 === fragmented (2nd) packet  ===>
+		src address : TN global address
+		dst address : NUT global address             
+	
+	2.
+	<< JUDGEMENT >>
+
+	 <=== No pakcet ===
+                or
+	 <=== ICMPv6  Time Exceeded ===
+		src address : NUT global address
+		dst address : TN global address             
+             Code is 1
+
+=head1 JUDGEMENT
+
+	<< PASS >>	
+		NUT do not send ICMPv6 Time Exceeded.
+	   
+	<< FAIL >>	
+		NUT send ICMPv6 Time Exceeded.
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2463
+# 3.3 Time Exceeded Message
+# 
+#        0                   1                   2                   3
+#        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#       |     Type      |     Code      |          Checksum             |
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#       |                             Unused                            |
+#       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#       |                    As much of invoking packet                 |
+#       +               as will fit without the ICMPv6 packet           +
+#       |               exceeding the minimum IPv6 MTU [IPv6]           |
+# 
+#    IPv6 Fields:
+# 
+# =begin html
+# <pre>
+#    <b>Destination Address</b>
+#                   <b>Copied from the Source Address field of the invoking
+#                   packet.</b>
+# </pre>
+# 
+# =end html
+# 
+#    ICMPv6 Fields:
+# 
+# =begin html
+# <pre>
+#    <b>Type           3</b>
+# </pre>
+# 
+# =end html
+# 
+# =begin html
+# <pre>
+#    <b>Code</b>           0 - hop limit exceeded in transit<br>
+#                   <b>1 - fragment reassembly time exceeded</b>
+# </pre>
+# 
+# =end html
+# 
+#    Unused         This field is unused for all code values.
+#                   It must be initialized to zero by the sender
+#                   and ignored by the receiver.
+# 
+#    Description
+# 
+#    If a router receives a packet with a Hop Limit of zero, or a router
+#    decrements a packet's Hop Limit to zero, it MUST discard the packet
+#    and send an ICMPv6 Time Exceeded message with Code 0 to the source of
+#    the packet.  This indicates either a routing loop or too small an
+#    initial Hop Limit value.
+# 
+#    The rules for selecting the Source Address of this message are
+#    defined in section 2.2.
+# 
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 4443 - ICMPv6 (ICMP for IPv6)
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+	  perldoc V6evalTool
+
+=cut

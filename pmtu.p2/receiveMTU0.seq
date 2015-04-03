@@ -1,0 +1,418 @@
+#!/usr/bin/perl
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: receiveMTU0.seq,v 1.11 2008/07/31 03:02:06 hide Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+use CommonPMTU;
+
+$pktdesc{'echo_request1280'}	= 'Send Echo Request (Packet size is 1280)';
+$pktdesc{'echo_reply1280'}	= 'Recv Echo Reply (Packet size is 1280)';
+$pktdesc{'PktTooBig0'}		= 'Send Packet Too Big message (56 octets)';
+$pktdesc{'echo_reply1280_1'}	= 'Recv Echo Reply (1280 octets, 1st fragment)';
+$pktdesc{'echo_reply1280_2'}	= 'Recv Echo Reply (1280 octets, 2nd fragment)';
+
+$endStatus = $V6evalTool::exitPass;
+$IF = 'Link0';
+
+vCapture($IF);
+#======================================================================
+if (setup11($IF) != $CommonPMTU::Success) {
+	$ret = cleanup($IF);
+	if ($ret == $CommonPMTU::Success) {
+		exit($V6evalTool::exitFail);
+	} else {
+		exit($V6evalTool::exitFatal);
+	}
+}
+#======================================================================
+#----- test
+
+
+vSend($IF, 'echo_request1280');
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, 'echo_reply1280');
+
+if ($ret{'status'} != 0) {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+} else {
+	vLogHTML('OK<BR>');
+}
+
+vSend($IF, 'PktTooBig0');
+
+
+#----- create fragment pkt.def(from tn2 to nut)
+
+$original_name = "echo_reply1280"; #must same echo reply packet
+$MTU_value = 1500; #MTU value, fixed
+$PKT_size = 1280; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8; 
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_HETHER_nut2tn';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'TN2_GL2_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef($def_file, $original_name, $MTU_value, $PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF -DFRAG_ID=any");
+
+
+
+
+vSend($IF, 'echo_request1280');
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, 'echo_reply1280_frag',@CommonPMTU::fragment_1st_name);
+
+if ($ret{'status'} == 0) {
+	if($ret{'recvFrame'} eq 'echo_reply1280_frag'){
+		vLogHTML('OK<BR>');
+	}
+	else{
+		vLogHTML('OK. recive 1st fragment.<BR>');
+		$pkt_name = $ret{'recvFrame'};
+		$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+		$size_2nd_frag = $1-$2-40;
+		$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+		
+		%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+		if ($ret{'status'} == 0) {
+			vLogHTML('OK. recive 2nd fragment.<BR>');
+			
+		}
+		else {
+			vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+			$endStatus = $V6evalTool::exitFail;
+		}
+	}
+		
+}else {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+
+
+unlink($def_file);
+
+#----- end test
+
+$ret = cleanup($IF);
+vStop($IF);
+if ($ret == $CommonPMTU::Success) {
+	exit($endStatus);
+} else {
+	exit($V6evalTool::exitFatal);
+}
+
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  receiveMTU0 - MTU equal to 56
+
+=head1 TARGET
+
+  Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./receiveMTU0.seq">receiveMTU0.seq</A> [-tooloption ...] -pkt <A HREF="./receiveMTU0.def">receiveMTU0.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+	Common Test Setup 1.1
+
+=head1 TEST PROCEDURE
+
+Verify that a node does not reduce its estimate of the Path MTU below the IPv6 minimum link MTU.
+
+   TN2                    TR1                    NUT
+    |                      |                      |
+    |-------------------------------------------->|
+    |   1.Echo Request     |                      |
+    |   (1280 octets)      |                      |
+    |                      |                      |
+    |<--------------------------------------------|
+    |   2.Echo Reply       |                      |
+    |   (1280 octets)      |                      |
+    |                      |                      |
+    |                      +--------------------->|
+    |                      |  3.Packet Too Big    |
+    |                      |    (MTU 56)          |
+    |                      |                      |
+    |-------------------------------------------->|
+    |   4.Echo Request     |                      |
+    |   (1280 octets)      |                      |
+    |                      |                      |
+    |<--------------------------------------------|
+    | 5.Echo Reply         |                      |
+    |   (1288 octets)      |                      |
+    |                      |                      |
+    v                      v                      v
+
+  1. Send Echo Request
+  2. Receive Echo Reply <<Check 1>>
+  3. Send Packet Too Big message
+  4. Send Echo Request
+  5. Receive Echo Reply(include Fragment Header) 
+     or  fragmented Echo Reply <<Check 2>>
+
+  Echo Request Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 1240
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = TN2's Global Address
+            DestinationAddress = NUT's Global Address
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = (1232 octets)
+
+  Packet Too Big message is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 1280
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = TR1's Global Address
+            DestinationAddress = NUT's Global Address
+
+        ICMP Packet Too Big
+            Type           = 2 (Packet Too Big)
+            Code           = 0
+            Checksum       = (auto)
+            MTU            = 56
+            PayloadData    = (1232 octets)
+
+
+
+=head1 JUDGEMENT
+
+  PASS: <<Check 1>> Echo Reply Received or Fragment Echo Reply Received
+        <<Check 2>> Echo Reply which include Fragment Header Received, or 
+                    Fragment Echo Reply Received. 
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = 0
+            FlowLabel           = 0
+            PayloadLength       = 1240
+            NextHeader          = 58 (ICMPv6)
+            SourceAddress       = Target Global Address
+            Destination Address = TN2's Global Address
+
+        ICMP Echo Reply
+            Type           = 129 (Echo Reply)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff (same as Echo Request)
+            SequenceNumber = 1 (same as Echo Request)
+            PayloadData    = (1232 octets) (same as Echo Request)
+
+=head1 CLEANUP
+
+Common Test Cleanup
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC1981
+# 
+# 4. Protocol Requirements
+# 
+#    As discussed in section 1, IPv6 nodes are not required to implement
+#    Path MTU Discovery.  The requirements in this section apply only to
+#    those implementations that include Path MTU Discovery.
+# 
+#    When a node receives a Packet Too Big message, it MUST reduce its
+#    estimate of the PMTU for the relevant path, based on the value of the
+#    MTU field in the message.  The precise behavior of a node in this
+#    circumstance is not specified, since different applications may have
+#    different requirements, and since different implementation
+#    architectures may favor different strategies.
+# 
+#    After receiving a Packet Too Big message, a node MUST attempt to
+#    avoid eliciting more such messages in the near future.  The node MUST
+#    reduce the size of the packets it is sending along the path.  Using a
+#    PMTU estimate larger than the IPv6 minimum link MTU may continue to
+#    elicit Packet Too Big messages.  Since each of these messages (and
+#    the dropped packets they respond to) consume network resources, the
+#    node MUST force the Path MTU Discovery process to end.
+# 
+#    Nodes using Path MTU Discovery MUST detect decreases in PMTU as fast
+#    as possible.  Nodes MAY detect increases in PMTU, but because doing
+#    so requires sending packets larger than the current estimated PMTU,
+#    and because the likelihood is that the PMTU will not have increased,
+#    this MUST be done at infrequent intervals.  An attempt to detect an
+#    increase (by sending a packet larger than the current estimate) MUST
+#    NOT be done less than 5 minutes after a Packet Too Big message has
+#    been received for the given path.  The recommended setting for this
+#    timer is twice its minimum value (10 minutes).
+# 
+#    A node MUST NOT reduce its estimate of the Path MTU below the IPv6
+#    minimum link MTU.
+# 
+#       Note: A node may receive a Packet Too Big message reporting a
+#       next-hop MTU that is less than the IPv6 minimum link MTU.  In that
+#       case, the node is not required to reduce the size of subsequent
+#       packets sent on the path to less than the IPv6 minimun link MTU,
+#       but rather must include a Fragment header in those packets [IPv6-
+#       SPEC].
+# 
+#    A node MUST NOT increase its estimate of the Path MTU in response to
+#    the contents of a Packet Too Big message.  A message purporting to
+#    announce an increase in the Path MTU might be a stale packet that has
+#    been floating around in the network, a false packet injected as part
+#    of a denial-of-service attack, or the result of having multiple paths
+#    to the destination, each with a different PMTU.
+# 
+# RFC2460
+# 
+# 5. Packet Size Issues
+# 
+#    IPv6 requires that every link in the internet have an MTU of 1280
+#    octets or greater.  On any link that cannot convey a 1280-octet
+#    packet in one piece, link-specific fragmentation and reassembly must
+#    be provided at a layer below IPv6.
+# 
+#    Links that have a configurable MTU (for example, PPP links [RFC-
+#    1661]) must be configured to have an MTU of at least 1280 octets; it
+#    is recommended that they be configured with an MTU of 1500 octets or
+#    greater, to accommodate possible encapsulations (i.e., tunneling)
+#    without incurring IPv6-layer fragmentation.
+# 
+#    From each link to which a node is directly attached, the node must be
+#    able to accept packets as large as that link's MTU.
+# 
+#    It is strongly recommended that IPv6 nodes implement Path MTU
+#    Discovery [RFC-1981], in order to discover and take advantage of path
+#    MTUs greater than 1280 octets.  However, a minimal IPv6
+#    implementation (e.g., in a boot ROM) may simply restrict itself to
+#    sending packets no larger than 1280 octets, and omit implementation
+#    of Path MTU Discovery.
+# 
+#    In order to send a packet larger than a path's MTU, a node may use
+#    the IPv6 Fragment header to fragment the packet at the source and
+#    have it reassembled at the destination(s).  However, the use of such
+#    fragmentation is discouraged in any application that is able to
+#    adjust its packets to fit the measured path MTU (i.e., down to 1280
+#    octets).
+# 
+#    A node must be able to accept a fragmented packet that, after
+#    reassembly, is as large as 1500 octets.  A node is permitted to
+#    accept fragmented packets that reassemble to more than 1500 octets.
+#    An upper-layer protocol or application that depends on IPv6
+#    fragmentation to send packets larger than the MTU of a path should
+#    not send packets larger than 1500 octets unless it has assurance that
+#    the destination is capable of reassembling packets of that larger
+#    size.
+# 
+#    In response to an IPv6 packet that is sent to an IPv4 destination
+#    (i.e., a packet that undergoes translation from IPv6 to IPv4), the
+#    originating IPv6 node may receive an ICMP Packet Too Big message
+#    reporting a Next-Hop MTU less than 1280.  In that case, the IPv6 node
+#    is not required to reduce the size of subsequent packets to less than
+#    1280, but must include a Fragment header in those packets so that the
+#    IPv6-to-IPv4 translating router can obtain a suitable Identification
+#    value to use in resulting IPv4 fragments.  Note that this means the
+#    payload may have to be reduced to 1232 octets (1280 minus 40 for the
+#    IPv6 header and 8 for the Fragment header), and smaller still if
+#    additional extension headers are used.
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 1981 - Path MTU Discovery for IPv6
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

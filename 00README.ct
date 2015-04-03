@@ -1,0 +1,125 @@
+
+                README of IPv6 Conformance Test Package
+
+                              TAHI Project
+
+                      $Date: 2010/03/24 05:53:41 $
+
+
+
+Project Overview
+================
+
+    TAHI Project is the joint effort formed with the objective of
+    developing and providing the verification technology for IPv6.
+
+    The growth process of IPv4 was the history of encountering various kinds of
+    obstacles and conquering such obstacles. However, once the position as
+    infrastructure was established,
+    it is not allowed to repeat the same history.
+    This is a reason why the verification technology is essential for IPv6
+    deployment.
+
+        We research and develop conformance tests and interoperability tests
+        for IPv6.
+
+        We closely work with the KAME project and USAGI project.
+        We help activities of these projects in the quality side by offering
+        the verification technology we develop in TAHI project and improve
+        the development efficiency.
+
+        We open the results and fruits of the project to the public for FREE.
+        Any developer concerned with IPv6 can utilize the results and fruits
+        of TAHI project freely. A free software plays an important role
+        in progress of the Internet. We believe that providing the
+        verification technology for FREE contributes to advances of IPv6.
+        Besides the programs, the specifications and criteria of verification
+        will be included in the Package.
+
+
+Organizations
+=============
+
+    TAHI Project started at October 1, 1998,
+    then the project was formed by following three organizations
+    (in alphabetical order):
+
+        The University of Tokyo
+        YDC Corp.
+        Yokogawa Electric Corp.
+
+    Now the project is formed by following two organizations.
+
+        The University of Tokyo
+        Yokogawa Electric Corp.
+
+
+Introduction of the Package
+===========================
+
+    "Self_Test" is the IPv6 Conformance Test Program Package
+    written by TAHI project.
+    These IPv6 conformance tests are developped to ensure requirements of
+    IPv6 Ready Logo Program Phase-1 and
+    IPv6 Ready Logo Program Phase-2 Core Protocols.
+
+    The tests run on the IPv6 Conformance Test Tool Package "v6eval",
+    that is also written by TAHI project. See 00README.v6eval for more
+    information about the Tool.
+
+    Both packages "Self_Test" and "v6eval" may be obtained at our site:
+        http://www.tahi.org/
+
+
+Copyright
+=========
+
+    Please refer to the COPYRIGHT file for copyright notice.
+
+
+Install and Run
+===============
+
+    Complete installation instructions can be found in the INSTALL.ct file.
+
+
+Contact Points
+==============
+
+    o IPv6 Ready Logo Program
+        For more information about IPv6 Ready Logo Program, please visit to:
+            http://www.ipv6ready.org/
+
+        If you have any questions about Test Specification, please e-mail to:
+            ipv6ready-info@ipv6ready.org
+
+    o TAHI Project
+        For more information about TAHI project, please visit our site:
+            http://www.tahi.org/
+
+        If you have any questions about Self Test, please e-mail to:
+            contact@tahi.org
+
+
+Acknowledgments
+===============
+
+    We deeply thank the following projects for their great support to us:
+        KAME Project    (http://www.kame.net/)
+        USAGI Project   (http://www.linux-ipv6.org/)
+        WIDE Project    (http://www.wide.ad.jp/)
+            (in alphabetical order):
+
+    The tests have ran for the following implementations.
+    We also thank people who have given us the opportunities.
+
+        All of participants and organizers in
+            - Connectathon
+            - ETSI plugtests
+            - TAHI IPv6 Interoperability Test Event
+                (in alphabetical order):
+
+    NOTE: If your want to run the test for the above implementations,
+          you must configure them to fit testing environment.
+
+                                                         [End of README]

@@ -1,0 +1,1353 @@
+//
+// Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+// Yokogawa Electric Corporation.
+// All rights reserved.
+// 
+// Redistribution and use of this software in source and binary
+// forms, with or without modification, are permitted provided that
+// the following conditions and disclaimer are agreed and accepted
+// by the user:
+// 
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in
+//    the documentation and/or other materials provided with
+//    the distribution.
+// 
+// 3. Neither the names of the copyrighters, the name of the project
+//    which is related to this software (hereinafter referred to as
+//    "project") nor the names of the contributors may be used to
+//    endorse or promote products derived from this software without
+//    specific prior written permission.
+// 
+// 4. No merchantable use may be permitted without prior written
+//    notification to the copyrighters.
+// 
+// 5. The copyrighters, the project and the contributors may prohibit
+//    the use of this software at any time.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+// CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+// BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+// FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+// COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+// IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+// $Id: RA_SAA.def,v 1.7 2008/05/09 08:30:17 akisada Exp $
+//
+//  This file has some basic definition and frames for DAD test about
+//  any tentative address, and may be included from other *.def files.
+//
+// DADV6ADDR              : v6 Tentative address for DAD
+// NUT_HasNoLLOCAL        : if defined NUT has no link-local address
+// DADNA_SRC              : IPv6 src address of DAD NA
+// dadns_from_NUT         : DAD NS coming from NUT on DAD
+// chkconf_dadns_to_NUT   : DAD NS send to NUT to check if address is configured
+// chkconf_dadna_from_NUT : DAD NA coming from NUT if addrss is configured
+//
+// 
+
+#include "LLA_SAA.def"
+
+
+#define GA0  v6merge( _GLOBAL0_UCAST_PRFX, _GLOBAL0_UCAST_PRFXLEN, nutv6())
+#define GA1  v6merge( _GLOBAL1_UCAST_PRFX, _GLOBAL1_UCAST_PRFXLEN, nutv6())
+#define GA2  v6merge( _GLOBAL2_UCAST_PRFX, _GLOBAL2_UCAST_PRFXLEN, nutv6())
+#define SLA0 v6merge( _SLOCAL0_UCAST_PRFX, _SLOCAL0_UCAST_PRFXLEN, nutv6())
+#define LLA0_RT1 v6("fe80::0000:00ff:fe11:1111")
+#define OFFLINK_HOST_GA v6("3ffe:501:ffff:aaaa::abcd")
+
+
+_HETHER_define(hether_tn2nut,
+	       tnether(), nutether())
+
+_HETHER_define(hether_nut2tn,
+	       nutether(), tnether())
+
+_HETHER_define(hether_nut2tnsolnode,
+	       nutether(), _ETHER_SOLNODE_MCAST(tnv6()))
+
+
+//#########################################################
+_HETHER_define(hether_any2any, any, any)
+_SLLOPT_define(sllopt_any, any)
+
+FEM_ADDRCONF_dadns(DADNS_any, hether_any2any,
+                   SourceAddress=any;
+                   DestinationAddress=any;
+                   ,
+                   TargetAddress=any;
+                   )
+
+FEM_ADDRCONF_dadns(DADNS_any_wSLL, hether_any2any,
+                   SourceAddress=any;
+                   DestinationAddress=any;
+                   ,
+                   TargetAddress=any;
+                   option=sllopt_any;
+                   )
+
+//#########################################################
+
+// General Definition
+FEM_icmp6_ra (
+	ra,
+	_HETHER_tn2allnodes,
+		{
+		_SRC(tnv6());
+		_DST(v6(_LLOCAL_ALLNODES_MCAST_ADDR));
+		HopLimit=255;
+	},
+		{
+		CurHopLimit=64;
+		LifeTime=1805;
+		ReachableTime=30005;
+		RetransTimer=1005;
+		option=_SLLOPT_tn;
+		option=prefix_ra;
+	}
+)
+	
+Opt_ICMPv6_Prefix prefix_ra { 
+	PrefixLength=64;
+	LFlag=1;
+	AFlag=1;
+	ValidLifetime=10000;
+	PreferredLifetime=10000;
+	Prefix=v6(_GLOBAL0_UCAST_PRFX);
+}
+
+
+FEM_icmp6_rs(RS_from_NUT,_HETHER_nut2allrouters,
+        {   
+         _SRC(oneof(nutv6(), v6("::")));
+         _DST(v6(_ALLROUTERS_MCAST_ADDR));
+         HopLimit=255;
+        },
+        {
+        }
+)
+
+FEM_icmp6_rs(RS_from_NUT_wSLL, _HETHER_nut2allrouters,
+        {
+         _SRC(nutv6());
+         _DST(v6(_ALLROUTERS_MCAST_ADDR));
+         HopLimit=255;
+        },
+        {
+         option=_SLLOPT_nut;
+        }
+)
+
+
+
+//==============================
+// Specific Definition
+//==============================
+
+//------------------------------
+//------ Global
+//------------------------------
+
+FEM_ADDRCONF_ra(RA_GA0, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0;
+                )
+FEM_ADDRCONF_ra(RA_GA0_VP10, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_VP10;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_VP20, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_VP20;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_VP30, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_VP30;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_VP60, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_VP60;
+                )
+
+
+FEM_ADDRCONF_ra(RA_GA0_VP7230, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_VP7230;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_VP10800, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_VP10800;
+                )
+
+FEM_ADDRCONF_ra(RA_GA1, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA1;
+                )
+
+FEM_ADDRCONF_ra(RA_GA2, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA2;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0GA1, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0;
+                option=PrefixOptGA1;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0GA1_dVLT, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_VLT20;
+                option=PrefixOptGA1_VLT40;
+                )
+
+FEM_ADDRCONF_ra(RA_GA1_RT1, _HETHER_src2allnodes,
+                _SRC(LLA0_RT1);
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA1;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_HL254, _HETHER_src2allnodes,
+                _SRC(v6src());
+		HopLimit=254;
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_VP20;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_AF0, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_AF0;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_PXLEN48, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_PXLEN48;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_PXLEN96, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_PXLEN96;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_PXLEN0, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_PXLEN0;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_PXLEN120, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_PXLEN120;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_PXLEN128, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_PXLEN128;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_PXLEN130, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_PXLEN130;
+                )
+
+FEM_ADDRCONF_ra(RA_LLA, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOpt_PXLLA;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_PLTgtVLT, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_PLTgtVLT;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_VLT0, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_VLT0;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_VLT20, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_VLT20;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_VLT30, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_VLT30;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_VLT40, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_VLT40;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_VLT60, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_VLT60;
+                )
+
+FEM_ADDRCONF_ra(RA_GA0_VLT90, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0_VLT90;
+                )
+
+FEM_ADDRCONF_ra(RA_GA1_VLT60, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA1_VLT60;
+                )
+
+_PRFXOPT_define(PrefixOptGA0, v6(_GLOBAL0_UCAST_PRFX), _GLOBAL0_UCAST_PRFXLEN,
+                ValidLifetime=30;  
+                PreferredLifetime=15;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_VP10, v6(_GLOBAL0_UCAST_PRFX), _GLOBAL0_UCAST_PRFXLEN,
+                ValidLifetime=10;  
+                PreferredLifetime=10;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_VP20, v6(_GLOBAL0_UCAST_PRFX), _GLOBAL0_UCAST_PRFXLEN,
+                ValidLifetime=20;  
+                PreferredLifetime=20;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_VP30, v6(_GLOBAL0_UCAST_PRFX), _GLOBAL0_UCAST_PRFXLEN,
+                ValidLifetime=30;  
+                PreferredLifetime=30;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_VP60, v6(_GLOBAL0_UCAST_PRFX), _GLOBAL0_UCAST_PRFXLEN,
+                ValidLifetime=60;  
+                PreferredLifetime=60;
+                )
+
+ _PRFXOPT_define(PrefixOptGA0_VP7230, v6(_GLOBAL0_UCAST_PRFX), _GLOBAL0_UCAST_PRFXLEN,
+                 ValidLifetime=7230; //7230 
+                 PreferredLifetime=7230; //7230
+                 )
+
+_PRFXOPT_define(PrefixOptGA0_VP10800, v6(_GLOBAL0_UCAST_PRFX), _GLOBAL0_UCAST_PRFXLEN,
+                ValidLifetime=10800; //10800
+                PreferredLifetime=10800; //10800
+                )
+
+_PRFXOPT_define(PrefixOptGA1, v6(_GLOBAL1_UCAST_PRFX), _GLOBAL1_UCAST_PRFXLEN,
+                ValidLifetime=30;
+                PreferredLifetime=15;
+                )
+
+_PRFXOPT_define(PrefixOptGA2, v6(_GLOBAL2_UCAST_PRFX), _GLOBAL2_UCAST_PRFXLEN,
+                ValidLifetime=30;
+                PreferredLifetime=15;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_AF0, v6(_GLOBAL0_UCAST_PRFX), _GLOBAL0_UCAST_PRFXLEN,
+                ValidLifetime=20;
+                PreferredLifetime=20;
+                AFlag=0;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_PXLEN48, v6(_GLOBAL0_UCAST_PRFX), 48,
+                ValidLifetime=30;
+                PreferredLifetime=15;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_PXLEN96, v6(_GLOBAL0_UCAST_PRFX), 96,
+                ValidLifetime=30;
+                PreferredLifetime=15;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_PXLEN0, v6(_GLOBAL0_UCAST_PRFX), 0,
+                ValidLifetime=20;
+                PreferredLifetime=20;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_PXLEN120, v6(_GLOBAL0_UCAST_PRFX), 120,
+                ValidLifetime=20;
+                PreferredLifetime=20;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_PXLEN128, v6(_GLOBAL0_UCAST_PRFX), 128,
+                ValidLifetime=20;
+                PreferredLifetime=20;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_PXLEN130, v6(_GLOBAL0_UCAST_PRFX), 130,
+                ValidLifetime=30;
+                PreferredLifetime=15;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_PLTgtVLT, v6(_GLOBAL0_UCAST_PRFX), _GLOBAL0_UCAST_PRFXLEN,
+                ValidLifetime=20;
+                PreferredLifetime=30;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_VLT0, v6(_GLOBAL0_UCAST_PRFX), _GLOBAL0_UCAST_PRFXLEN,
+                ValidLifetime=0;
+                PreferredLifetime=0;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_VLT20, v6(_GLOBAL0_UCAST_PRFX), _GLOBAL0_UCAST_PRFXLEN,
+                ValidLifetime=20;
+                PreferredLifetime=10;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_VLT30, v6(_GLOBAL0_UCAST_PRFX), _GLOBAL0_UCAST_PRFXLEN,
+                ValidLifetime=30;
+                PreferredLifetime=30;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_VLT40, v6(_GLOBAL0_UCAST_PRFX), _GLOBAL0_UCAST_PRFXLEN,
+                ValidLifetime=40;
+                PreferredLifetime=20;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_VLT60, v6(_GLOBAL0_UCAST_PRFX), _GLOBAL0_UCAST_PRFXLEN,
+                ValidLifetime=60;
+                PreferredLifetime=30;
+                )
+
+_PRFXOPT_define(PrefixOptGA0_VLT90, v6(_GLOBAL0_UCAST_PRFX), _GLOBAL0_UCAST_PRFXLEN,
+                ValidLifetime=90;
+                PreferredLifetime=45;
+                )
+
+_PRFXOPT_define(PrefixOpt_PXLLA, v6(_LLOCAL0_UCAST_PRFX), _LLOCAL0_UCAST_PRFXLEN,
+                ValidLifetime=20;
+                PreferredLifetime=20;
+                )
+
+_PRFXOPT_define(PrefixOptGA1_VLT40, v6(_GLOBAL1_UCAST_PRFX), _GLOBAL1_UCAST_PRFXLEN,
+                ValidLifetime=40;
+                PreferredLifetime=20;
+                )
+
+_PRFXOPT_define(PrefixOptGA1_VLT60, v6(_GLOBAL1_UCAST_PRFX), _GLOBAL1_UCAST_PRFXLEN,
+                ValidLifetime=60;
+                PreferredLifetime=30;
+                )
+
+//--- NS from NUT
+
+FEM_ADDRCONF_dadns(DADNS_from_NUT_GA0Tgt, hether_nut2tentsolnode,
+                   DestinationAddress=_IPV6_SOLNODE_MCAST(nutv6());
+                   ,
+                   TargetAddress=GA0; // Tentative Address
+                   )
+
+FEM_ADDRCONF_dadns(DADNS_from_NUT_GA1Tgt, hether_nut2tentsolnode,
+                   DestinationAddress=_IPV6_SOLNODE_MCAST(nutv6());
+                   ,
+                   TargetAddress=GA1; // Tentative Address
+                   )
+
+FEM_ADDRCONF_dadns(DADNS_from_NUT_GA2Tgt, hether_nut2tentsolnode,
+                   DestinationAddress=_IPV6_SOLNODE_MCAST(nutv6());
+                   ,
+                   TargetAddress=GA2; // Tentative Address
+                   )
+
+
+
+//--- NS from TN
+
+FEM_ADDRCONF_dadns(DADNS_from_TN_GA0Tgt, hether_tn2tentsolnode,
+                   DestinationAddress=_IPV6_SOLNODE_MCAST(nutv6());
+                   ,
+                   TargetAddress=GA0; // Tentative Address
+                   )
+
+FEM_ADDRCONF_dadns(DADNS_from_TN_GA1Tgt, hether_tn2tentsolnode,
+                   DestinationAddress=_IPV6_SOLNODE_MCAST(nutv6());
+                   ,
+                   TargetAddress=GA1; // Tentative Address
+                   )
+
+FEM_ADDRCONF_dadns(DADNS_from_TN_GA2Tgt, hether_tn2tentsolnode,
+                   DestinationAddress=_IPV6_SOLNODE_MCAST(nutv6());
+                   ,
+                   TargetAddress=GA2; // Tentative Address
+                   )
+
+//--- NA from NUT
+
+FEM_ADDRCONF_dadna(DADNA_from_NUT_GA0Tgt, _HETHER_nut2allnodes,
+                   SourceAddress=nutv6();
+                   ,
+                   TargetAddress=GA0;
+                   option=_TLLOPT_nut;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_NUT_GA0Tgt_woTLL, _HETHER_nut2allnodes,
+                   SourceAddress=nutv6();
+                   ,
+                   TargetAddress=GA0;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_NUT_GA1Tgt, _HETHER_nut2allnodes,
+                   SourceAddress=nutv6();
+                   ,
+                   TargetAddress=GA1;
+                   option=_TLLOPT_nut;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_NUT_GA1Tgt_woTLL, _HETHER_nut2allnodes,
+                   SourceAddress=nutv6();
+                   ,
+                   TargetAddress=GA1;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_NUT_GA2Tgt, _HETHER_nut2allnodes,
+                   SourceAddress=nutv6();
+                   ,
+                   TargetAddress=GA2;
+                   option=_TLLOPT_nut;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_NUT_GA2Tgt_woTLL, _HETHER_nut2allnodes,
+                   SourceAddress=nutv6();
+                   ,
+                   TargetAddress=GA2;
+                   )
+
+//--- NA from Global NUT
+
+FEM_ADDRCONF_dadna(DADNA_from_GA0NUT_GA0Tgt, _HETHER_nut2allnodes,
+                   SourceAddress=GA0;
+                   ,
+                   TargetAddress=GA0;
+                   option=_TLLOPT_nut;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_GA0NUT_GA0Tgt_woTLL, _HETHER_nut2allnodes,
+                   SourceAddress=GA0;
+                   ,
+                   TargetAddress=GA0;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_GA1NUT_GA0Tgt, _HETHER_nut2allnodes,
+                   SourceAddress=GA1;
+                   ,
+                   TargetAddress=GA0;
+                   option=_TLLOPT_nut;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_GA1NUT_GA0Tgt_woTLL, _HETHER_nut2allnodes,
+                   SourceAddress=GA1;
+                   ,
+                   TargetAddress=GA0;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_GA1NUT_GA1Tgt, _HETHER_nut2allnodes,
+                   SourceAddress=GA1;
+                   ,
+                   TargetAddress=GA1;
+                   option=_TLLOPT_nut;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_GA1NUT_GA1Tgt_woTLL, _HETHER_nut2allnodes,
+                   SourceAddress=GA1;
+                   ,
+                   TargetAddress=GA1;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_GA0NUT_GA1Tgt, _HETHER_nut2allnodes,
+                   SourceAddress=GA0;
+                   ,
+                   TargetAddress=GA1;
+                   option=_TLLOPT_nut;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_GA0NUT_GA1Tgt_woTLL, _HETHER_nut2allnodes,
+                   SourceAddress=GA0;
+                   ,
+                   TargetAddress=GA1;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_GA2NUT_GA2Tgt, _HETHER_nut2allnodes,
+                   SourceAddress=GA2;
+                   ,
+                   TargetAddress=GA2;
+                   option=_TLLOPT_nut;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_GA2NUT_GA2Tgt_woTLL, _HETHER_nut2allnodes,
+                   SourceAddress=GA2;
+                   ,
+                   TargetAddress=GA2;
+                   )
+
+//--- NA from Site-Local NUT
+
+FEM_ADDRCONF_dadna(DADNA_from_SLA0NUT_GA0Tgt, _HETHER_nut2allnodes,
+                   SourceAddress=SLA0;
+                   ,
+                   TargetAddress=GA0;
+                   option=_TLLOPT_nut;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_SLA0NUT_GA0Tgt_woTLL, _HETHER_nut2allnodes,
+                   SourceAddress=SLA0;
+                   ,
+                   TargetAddress=GA0;
+                   )
+
+
+//------------------------------
+//------ Site-Local
+//------------------------------
+
+FEM_ADDRCONF_ra(RA_SLA0, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptSLA0;
+                )
+
+FEM_ADDRCONF_ra(RA_SLA0_RT1, _HETHER_src2allnodes,
+                _SRC(LLA0_RT1);
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptSLA0;
+                )
+
+_PRFXOPT_define(PrefixOptSLA0, v6(_SLOCAL0_UCAST_PRFX), _SLOCAL0_UCAST_PRFXLEN,
+                ValidLifetime=30;
+                PreferredLifetime=15;
+                )
+
+
+FEM_ADDRCONF_dadns(DADNS_from_NUT_SLA0Tgt, hether_nut2tentsolnode,
+                   DestinationAddress=_IPV6_SOLNODE_MCAST(nutv6());
+                   ,
+                   TargetAddress=SLA0; // Tentative Address
+                   )
+
+FEM_ADDRCONF_dadns(DADNS_from_TN_SLA0Tgt, hether_tn2tentsolnode,
+                   DestinationAddress=_IPV6_SOLNODE_MCAST(nutv6());
+                   ,
+                   TargetAddress=SLA0; // Tentative Address
+                   )
+
+//--- NA from link-local NUT
+
+FEM_ADDRCONF_dadna(DADNA_from_NUT_SLA0Tgt, _HETHER_nut2allnodes,
+                   SourceAddress=nutv6();
+                   ,
+                   TargetAddress=SLA0;
+                   option=_TLLOPT_nut;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_NUT_SLA0Tgt_woTLL, _HETHER_nut2allnodes,
+                   SourceAddress=nutv6();
+                   ,
+                   TargetAddress=SLA0;
+                   )
+
+//--- NA from Site-local NUT
+
+FEM_ADDRCONF_dadna(DADNA_from_SLA0NUT_SLA0Tgt, _HETHER_nut2allnodes,
+                   SourceAddress=SLA0;
+                   ,
+                   TargetAddress=SLA0;
+                   option=_TLLOPT_nut;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_SLA0NUT_SLA0Tgt_woTLL, _HETHER_nut2allnodes,
+                   SourceAddress=SLA0;
+                   ,
+                   TargetAddress=SLA0;
+                   )
+
+//--- NA from Global NUT
+
+FEM_ADDRCONF_dadna(DADNA_from_GA0NUT_SLA0Tgt, _HETHER_nut2allnodes,
+                   SourceAddress=GA0;
+                   ,
+                   TargetAddress=SLA0;
+                   option=_TLLOPT_nut;
+                   )
+
+FEM_ADDRCONF_dadna(DADNA_from_GA0NUT_SLA0Tgt_woTLL, _HETHER_nut2allnodes,
+                   SourceAddress=GA0;
+                   ,
+                   TargetAddress=SLA0;
+                   )
+
+//------------------------------
+//------ Global and Site-Local
+//------------------------------
+FEM_ADDRCONF_ra(RA_GA0SLA0, _HETHER_src2allnodes,
+                _SRC(v6src());
+                ,
+                option=_SLLOPT_src;
+                option=PrefixOptGA0;
+                option=PrefixOptSLA0;
+                )
+
+
+
+//###########################################################
+//------------------------------
+//------ Resolution NS/NA
+//------------------------------
+
+//--- NS for GA0
+
+FEM_icmp6_ns (
+        SOLNS_from_TN_GA0Tgt,
+	 hether_tn2nutsolnode,
+                {
+                _SRC(tnv6());
+                _DST(_IPV6_SOLNODE_MCAST(nutv6()));
+                HopLimit=255;
+        },
+                {
+                TargetAddress=GA0;
+                option=_SLLOPT_tn;
+        }
+)
+
+//--- NS for GA1
+
+FEM_icmp6_ns (
+        SOLNS_from_TN_GA1Tgt,
+	 hether_tn2nutsolnode,
+                {
+                _SRC(tnv6());
+                _DST(_IPV6_SOLNODE_MCAST(nutv6()));
+                HopLimit=255;
+        },
+                {
+                TargetAddress=GA1;
+                option=_SLLOPT_tn;
+        }
+)
+
+//--- NS for SLA0
+
+FEM_icmp6_ns (
+        SOLNS_from_TN_SLA0Tgt,
+	 hether_tn2nutsolnode,
+                {
+                _SRC(tnv6());
+                _DST(_IPV6_SOLNODE_MCAST(nutv6()));
+                HopLimit=255;
+        },
+                {
+                TargetAddress=SLA0;
+                option=_SLLOPT_tn;
+        }
+)
+
+//###########################################################
+
+//###################
+//--- NA for GA0
+
+FEM_icmp6_na (
+        NA_from_NUT_GA0Tgt,
+        _HETHER_nut2tn,
+                {
+                _SRC(nutv6());
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=GA0;
+                option=_TLLOPT_nut;
+        }
+)
+
+FEM_icmp6_na (
+        NA_from_NUT_GA0Tgt_woTLL,
+        _HETHER_nut2tn,
+                {
+                _SRC(nutv6());
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=GA0;
+        }
+)
+
+//--- NA for GA0 from GA0
+
+FEM_icmp6_na (
+        NA_from_GA0NUT_GA0Tgt,
+        _HETHER_nut2tn,
+                {
+                _SRC(GA0);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=GA0;
+                option=_TLLOPT_nut;
+        }
+)
+
+FEM_icmp6_na (
+        NA_from_GA0NUT_GA0Tgt_woTLL,
+        _HETHER_nut2tn,
+                {
+                _SRC(GA0);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=GA0;
+        }
+)
+
+//--- NA for GA0 from GA1
+
+FEM_icmp6_na (
+        NA_from_GA1NUT_GA0Tgt,
+        _HETHER_nut2tn,
+                {
+                _SRC(GA1);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=GA0;
+                option=_TLLOPT_nut;
+        }
+)
+
+FEM_icmp6_na (
+        NA_from_GA1NUT_GA0Tgt_woTLL,
+        _HETHER_nut2tn,
+                {
+                _SRC(GA1);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=GA0;
+        }
+)
+
+//--- NA for GA0 from SLA0
+
+FEM_icmp6_na (
+        NA_from_SLA0NUT_GA0Tgt,
+        _HETHER_nut2tn,
+                {
+                _SRC(SLA0);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=GA0;
+                option=_TLLOPT_nut;
+        }
+)
+
+FEM_icmp6_na (
+        NA_from_SLA0NUT_GA0Tgt_woTLL,
+        _HETHER_nut2tn,
+                {
+                _SRC(SLA0);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=GA0;
+        }
+)
+
+//###################
+//--- NA for GA1
+
+FEM_icmp6_na (
+        NA_from_NUT_GA1Tgt,
+        _HETHER_nut2tn,
+                {
+                _SRC(nutv6());
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=GA1;
+                option=_TLLOPT_nut;
+        }
+)
+
+FEM_icmp6_na (
+        NA_from_NUT_GA1Tgt_woTLL,
+        _HETHER_nut2tn,
+                {
+                _SRC(nutv6());
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=GA1;
+        }
+)
+
+//--- NA for GA1 from GA0
+
+FEM_icmp6_na (
+        NA_from_GA0NUT_GA1Tgt,
+        _HETHER_nut2tn,
+                {
+                _SRC(GA0);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=GA1;
+                option=_TLLOPT_nut;
+        }
+)
+
+FEM_icmp6_na (
+        NA_from_GA0NUT_GA1Tgt_woTLL,
+        _HETHER_nut2tn,
+                {
+                _SRC(GA0);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=GA1;
+        }
+)
+
+//--- NA for GA1 from GA1
+
+FEM_icmp6_na (
+        NA_from_GA1NUT_GA1Tgt,
+        _HETHER_nut2tn,
+                {
+                _SRC(GA1);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=GA1;
+                option=_TLLOPT_nut;
+        }
+)
+
+FEM_icmp6_na (
+        NA_from_GA1NUT_GA1Tgt_woTLL,
+        _HETHER_nut2tn,
+                {
+                _SRC(GA1);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=GA1;
+        }
+)
+
+//--- NA for GA1 from SLA0
+
+FEM_icmp6_na (
+        NA_from_SLA0NUT_GA1Tgt,
+        _HETHER_nut2tn,
+                {
+                _SRC(SLA0);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=GA1;
+                option=_TLLOPT_nut;
+        }
+)
+
+FEM_icmp6_na (
+        NA_from_SLA0NUT_GA1Tgt_woTLL,
+        _HETHER_nut2tn,
+                {
+                _SRC(SLA0);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=GA1;
+        }
+)
+
+//###################
+//--- NA for SLA0
+
+FEM_icmp6_na (
+        NA_from_NUT_SLA0Tgt,
+        _HETHER_nut2tn,
+                {
+                _SRC(nutv6());
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=SLA0;
+                option=_TLLOPT_nut;
+        }
+)
+
+FEM_icmp6_na (
+        NA_from_NUT_SLA0Tgt_woTLL,
+        _HETHER_nut2tn,
+                {
+                _SRC(nutv6());
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=SLA0;
+        }
+)
+
+//--- NA for SLA0 from GA0
+
+FEM_icmp6_na (
+        NA_from_GA0NUT_SLA0Tgt,
+        _HETHER_nut2tn,
+                {
+                _SRC(GA0);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=SLA0;
+                option=_TLLOPT_nut;
+        }
+)
+
+FEM_icmp6_na (
+        NA_from_GA0NUT_SLA0Tgt_woTLL,
+        _HETHER_nut2tn,
+                {
+                _SRC(GA0);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=SLA0;
+        }
+)
+
+//--- NA for SLA0 from GA1
+
+FEM_icmp6_na (
+        NA_from_GA1NUT_SLA0Tgt,
+        _HETHER_nut2tn,
+                {
+                _SRC(GA1);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=SLA0;
+                option=_TLLOPT_nut;
+        }
+)
+
+FEM_icmp6_na (
+        NA_from_GA1NUT_SLA0Tgt_woTLL,
+        _HETHER_nut2tn,
+                {
+                _SRC(GA1);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=SLA0;
+        }
+)
+
+//--- NA for SLA0 from SLA0
+
+FEM_icmp6_na (
+        NA_from_SLA0NUT_SLA0Tgt,
+        _HETHER_nut2tn,
+                {
+                _SRC(SLA0);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=SLA0;
+                option=_TLLOPT_nut;
+        }
+)
+
+FEM_icmp6_na (
+        NA_from_SLA0NUT_SLA0Tgt_woTLL,
+        _HETHER_nut2tn,
+                {
+                _SRC(SLA0);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=0;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=SLA0;
+        }
+)
+
+
+FEM_icmp6_echo_request(
+	PingFromNUTGA1,
+	_HETHER_nut2tn,
+		{
+                _SRC(GA1);
+                _DST(OFFLINK_HOST_GA);
+		HopLimit=64;
+	},
+		{
+		Identifier=any;
+		SequenceNumber=any;
+		payload=any;
+	}
+)
+
+
+//########################
+//for offlink ping
+//########################
+
+//
+// ns for TN's link local address
+//
+
+FEM_icmp6_ns (
+        SOLNS_from_NUT_to_TN,
+        hether_nut2tn,
+                {
+                _SRC(nutv6());
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                TargetAddress=tnv6();
+                option=_SLLOPT_nut;
+        }
+)
+
+FEM_icmp6_ns (
+        SOLNS_from_NUT_to_TN_srcGlobal,
+        hether_nut2tn,
+                {
+                _SRC(GA1);
+                _DST(tnv6());
+                HopLimit=255;
+        },
+                {
+                TargetAddress=tnv6();
+                option=_SLLOPT_nut;
+        }
+)
+
+FEM_icmp6_ns (
+        SOLNS_from_NUT_to_TN_DstMulti,
+        hether_nut2tnsolnode,
+                {
+                _SRC(nutv6());
+                _DST(_IPV6_SOLNODE_MCAST(nutv6()));
+                HopLimit=255;
+        },
+                {
+                TargetAddress=tnv6();
+                option=_SLLOPT_nut;
+        }
+)
+
+FEM_icmp6_ns (
+        SOLNS_from_NUT_to_TN_srcGlobal_DstMulti,
+        hether_nut2tnsolnode,
+                {
+                _SRC(GA1);
+                _DST(_IPV6_SOLNODE_MCAST(nutv6()));
+                HopLimit=255;
+        },
+                {
+                TargetAddress=tnv6();
+                option=_SLLOPT_nut;
+        }
+)
+
+//
+// na for TN's link local address
+//
+ 
+FEM_icmp6_na (
+        NA_from_TN_to_NUT,
+        _HETHER_tn2nut,
+                {
+                _SRC(tnv6());
+                _DST(nutv6());
+                HopLimit=255;
+        },
+                {
+                RFlag=1;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=tnv6();
+                option=_TLLOPT_tn;
+        }
+)
+
+FEM_icmp6_na (
+        NA_from_TN_to_NUT_dstGlobal,
+        _HETHER_tn2nut,
+                {
+                _SRC(tnv6());
+                _DST(GA1);
+                HopLimit=255;
+        },
+                {
+                RFlag=1;
+                SFlag=1;
+                OFlag=1;
+                TargetAddress=tnv6();
+                option=_TLLOPT_tn;
+        }
+)
+
+//

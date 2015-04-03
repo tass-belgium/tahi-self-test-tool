@@ -1,0 +1,179 @@
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Name: V6LC_5_0_0 $
+#
+# $TAHI: ct/addr.p2/INDEX_P1_HOST,v 1.11 2008/05/21 14:08:30 akisada Exp $
+#
+# <seq>:<def>:<opts>:<htmldoc>:<dsc>:<links>
+#
+
+
+
+#----------------------------------------------------------------------#
+# Group 1 Address Autoconfiguration and Duplicate Address Detection    #
+#----------------------------------------------------------------------#
+&print:Group 1: Address Autoconfiguration and Duplicate Address Detection
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.3.1.1 Address Autoconfiguration and Duplicate Address Detection #
+#----------------------------------------------------------------------#
+&print:Test v6LC.3.1.1: Address Autoconfiguration and Duplicate Address Detection
+./LLA_DADSuccess.seq:LLA_SAA.def:::Address Autoconfiguration and Duplicate Address Detection:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.3.1.2 Receiving DAD Neighbor Solicitations and Advertisements   #
+#----------------------------------------------------------------------#
+&print:Test v6LC.3.1.2: Receiving DAD Neighbor Solicitations and Advertisements
+./LLA_DAD_NSPostDAD_SameDstDiffTgt.seq:LLA_SAA.def:::Part A&#58; NUT receives DAD NS (target != NUT):1
+./v6LC_3_1_2_B_p1.seq:DAD_Failure_Host.def:::Part B&#58; NUT receives DAD NS (target == NUT):1
+./LLA_DAD_NAPostDAD_DiffTgt.seq:LLA_SAA.def:::Part C&#58; NUT receives DAD NA (target != NUT):1
+./v6LC_3_1_2_D_p1.seq:DAD_Failure_Host.def:::Part D&#58; NUT receives DAD NA (target == NUT):1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.3.1.3 Validation of DAD Neighbor Solicitations                  #
+#----------------------------------------------------------------------#
+&print:Test v6LC.3.1.3: Validation of DAD Neighbor Solicitations
+./LLA_DAD_NSPostDAD_invalidLEN.seq:LLA_SAA.def:::Part A&#58; NUT receives invalid DAD NS (ICMP length &lt; 24 octets):1
+./LLA_DAD_NSPostDAD_HL254.seq:LLA_SAA.def:::Part B&#58; NUT receives invalid DAD NS (HopLimit !=255):1
+./LLA_DAD_NSPostDAD_DstTent.seq:LLA_SAA.def:::Part C&#58; NUT receives invalid DAD NS (Dst = NUT's tentative address):1
+./LLA_DAD_NSPostDAD_DstAll.seq:LLA_SAA.def:::Part D&#58; NUT receives invalid DAD NS (Dst = allnode):1
+./LLA_DAD_NSPostDAD_CODEnon0.seq:LLA_SAA.def:::Part E&#58; NUT receives invalid DAD NS (ICMP code!= zero):1
+./LLA_DAD_NSPostDAD_invalidCHKSUM.seq:LLA_SAA.def:::Part F&#58; NUT receives invalid DAD NS (Invalid Checksum):1
+./LLA_DAD_NSPostDAD_tgtMCAST.seq:LLA_SAA.def:::Part G&#58; NUT receives invalid DAD NS (target == multicast address):1
+./LLA_DAD_NSPostDAD_wSLL.seq:LLA_SAA.def:::Part H&#58; NUT receives invalid DAD NS (contains SLL):1
+./v6LC_3_1_3_I_p1.seq:DAD_Failure_Host.def:::Part I&#58; NUT receives valid DAD NS (Reserved Field):1
+./v6LC_3_1_3_J_p1.seq:DAD_Failure_Host.def:::Part J&#58; NUT receives valid DAD NS (contains TLL):1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.3.1.4 Validation of DAD Neighbor Advertisements                 #
+#----------------------------------------------------------------------#
+&print:Test v6LC.3.1.4: Validation of DAD Neighbor Advertisements
+./LLA_DAD_NAPostDAD_invalidLEN.seq:LLA_SAA.def:::Part A&#58; NUT receives invalid DAD NA (ICMP length &lt; 24 octets):1
+./LLA_DAD_NAPostDAD_HL254.seq:LLA_SAA.def:::Part B&#58; NUT receives invalid DAD NA (HopLimit != 255):1
+./LLA_DAD_NAPostDAD_CODEnon0.seq:LLA_SAA.def:::Part C&#58; NUT receives invalid DAD NA (ICMP code!= zero):1
+./LLA_DAD_NAPostDAD_invalidCHKSUM.seq:LLA_SAA.def:::Part D&#58; NUT receives invalid DAD NA (Invalid Checksum):1
+./LLA_DAD_NAPostDAD_SF1.seq:LLA_SAA.def:::Part E&#58; NUT receives invalid DAD NA (SolicitedFlag ==1):1
+./LLA_DAD_NAPostDAD_tgtMCAST.seq:LLA_SAA.def:::Part F&#58;  NUT receives invalid DAD NA (target == multicast address):1
+./LLA_DAD_NAPostDAD_invalidOptLen.seq:LLA_SAA.def:::Part G&#58; NUT receives invalid DAD NA (option length ==zero):1
+./v6LC_3_1_4_H_p1.seq:DAD_Failure_Host.def:::Part H&#58; NUT receives valid DAD NA (Reserved Field):1
+./v6LC_3_1_4_I_p1.seq:DAD_Failure_Host.def:::Part I&#58; NUT receives valid DAD NA (contains SLL):1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.3.1.5 Receiving Neighbor Solicitations for Address Resolution   #
+#----------------------------------------------------------------------#
+&print:Test v6LC.3.1.5: Receiving Neighbor Solicitations for Address Resolution
+./LLA_DAD_NSPostDAD_SrcUni.seq:LLA_SAA.def:::Part A&#58; NUT receives NS (src == unicast):1
+./LLA_DAD_NSPostDAD_SrcDstUni.seq:LLA_SAA.def:::Part B&#58; NUT receives NS (Src == unicast &amp;&amp; Dst == NUT's tentative address):1
+
+
+
+#----------------------------------------------------------------------#
+# Group 2 Router Advertisement Processing and Address Lifetime         #
+#----------------------------------------------------------------------#
+&print:Group 2: Router Advertisement Processing and Address Lifetime
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.3.2.1 Global Address Autoconfiguration and DAD                  #
+#----------------------------------------------------------------------#
+&print:Test v6LC.3.2.1: Global Address Autoconfiguration and DAD
+./v6LC_3_2_1_A.seq:v6LC_3_2_1_A.def:::Part A&#58; Unicast Autoconfigured Address - Global:1
+./v6LC_3_2_1_B.seq:v6LC_3_2_1_B.def:::Part B&#58; Unicast Autoconfigured Address  Prefix ending in zero valued fields:1
+./v6LC_3_2_1_C.seq:v6LC_3_2_1_C.def:::Part C&#58; Unicast Autoconfigured Address  Site-Local:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.3.2.2 Address Lifetime Expiry (Hosts Only)                      #
+#----------------------------------------------------------------------#
+&print:Test v6LC.3.2.2: Address Lifetime Expiry (Hosts Only)
+./RA_GA_Success.seq:RA_SAA.def:::Address Lifetime Expiry (Hosts Only):1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.3.2.3 Multiple Prefixes and Network Renumbering (Hosts only)    #
+#----------------------------------------------------------------------#
+&print:Test v6LC.3.2.3: Multiple Prefixes and Network Renumbering (Hosts only)
+&#./RA_GA_MultiRenumber.seq:RA_SAA.def:::Multiple Prefixes and Network Renumbering (Hosts only):1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.3.2.4 Prefix-Information Option Processing (Hosts Only)         #
+#----------------------------------------------------------------------#
+&print:Test v6LC.3.2.4: Prefix-Information Option Processing (Hosts Only)
+&#./RA_mGA_sRAmPXsRTdVLT.seq:RA_SAA.def:::Part A&#58; Router Advertisement with multiple Prefix Options:1
+./RA_wAF0.seq:RA_SAA.def:::Part B&#58; Autonomous Flag not set:1
+./RA_wPXLLA.seq:RA_SAA.def:::Part C&#58; prefix is set to link-local prefix:1
+./RA_wPLTgtVLT.seq:RA_SAA.def:::Part D&#58; preferred lifetime &gt; valid lifetime:1
+./RA_wPXLEN128.seq:RA_SAA.def:::Part E&#58; prefix length &gt; 128 bits:1
+./RA_wPXLEN0.seq:RA_SAA.def:::Part F&#58; prefix length &lt; 64 bits:1
+./RA_wPXLEN120.seq:RA_SAA.def:::Part G&#58; (64 bits &lt; prefix length &lt; 128 bits):1
+./RA_wVLT0.seq:RA_SAA.def:::Part H&#58; Valid Lifetime is zero:1
+./RA_wHOPL254.seq:RA_SAA.def:::Part I&#58; Invalid RA with Hop Limit 254:1
+./v6LC_3_2_4_J.seq:v6LC_3_2_4_J.def:::Part J&#58; Valid Lifetime is 0xffffffff:1
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.3.2.5 Prefix-Information Option Processing, Lifetime            #
+#            (Hosts Only)                                              #
+#----------------------------------------------------------------------#
+&print:3.2.5: Prefix-Information Option Processing, Lifetime(Host Only)
+./RA_incVLT.seq:RA_SAA.def:::Part A&#58; Prefix Lifetime greater than Stored Lifetime:1
+./RA_gt2gt2.seq:RA_SAA.def:::Part B&#58; Prefix Lifetime greater than 2 hours:1
+./v6LC_3_2_4_C.seq:RA_SAA.def:::Part C&#58; Prefix Lifetime less than the Stored Lifetime and the Stored Lifetime is less than 2 hours:1
+./RA_gt2lt2.seq:RA_SAA.def:::Part D&#58; Prefix Lifetime less than 2 hours and the Stored Lifetime is greater than 2 hours:1

@@ -1,0 +1,137 @@
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: INDEX_p2_router,v 1.7 2006/04/20 10:50:28 akisada Exp $
+#
+# <seq>:<def>:[<opt>]:[<log>]:<desc>
+#
+
+
+
+./Reboot.seq:/dev/null:::Initialization:2
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.4.1.1 Confirm Ping                                              #
+#----------------------------------------------------------------------#
+&print:Test v6LC.4.1.1: Confirm Ping
+./confirmPing64.seq:./confirmPing64.def:::Part A&#58; ICMPv6 Echo Request 64 octets:2
+./confirmPing1280.seq:./confirmPing1280.def:::Part B&#58; ICMPv6 Echo Request 1280 octets:2
+./confirmPing1500.seq:./confirmPing1500.def:::Part C&#58; ICMPv6 Echo Request 1500 octets:2
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.4.1.2 Stored PMTU                                               #
+#----------------------------------------------------------------------#
+&print:Test v6LC.4.1.2: Stored PMTU
+./storedPMTU.seq:./storedPMTU.def:::Stored PMTU:2
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.4.1.3 Non-zero ICMPv6 Code                                      #
+#----------------------------------------------------------------------#
+&print:Test v6LC.4.1.3: Non-zero ICMPv6 Code
+./nonZeroICMPv6Code.seq:./nonZeroICMPv6Code.def:::Non-zero ICMPv6 Code:2
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.4.1.4 Reduce PMTU On-link                                       #
+#----------------------------------------------------------------------#
+&print:Test v6LC.4.1.4: Reduce PMTU On-link
+./reducePMTUonlink.seq:./reducePMTUonlink.def:::Reduce PMTU On-link:2
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.4.1.5 Reduce PMTU Off-link                                      #
+#----------------------------------------------------------------------#
+&print:Test v6LC.4.1.5: Reduce PMTU Off-link
+./reducePMTUofflink.seq:./reducePMTUofflink.def:::Reduce PMTU Off-link:2
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.4.1.6 Receiving MTU Below IPv6 Minimum Link MTU                 #
+#----------------------------------------------------------------------#
+&print:Test v6LC.4.1.6: Receiving MTU Below IPv6 Minimum Link MTU
+./receiveMTU0.seq:./receiveMTU0.def:::Part A&#58; MTU equal to 56:2
+./receiveMTU512.seq:./receiveMTU512.def:::Part B&#58; MTU equal to 1279:2
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.4.1.7 Increase Estimate                                         #
+#----------------------------------------------------------------------#
+&print:Test v6LC.4.1.7: Increase Estimate
+./increase1500.seq:./increase1500.def:::Part A&#58; MTU increase:2
+./increase0x1fffffff.seq:./increase0x1fffffff.def:::Part B&#58; MTU equal to 0x1FFFFFFF:2
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.4.1.9 Checking For Increase in PMTU                             #
+#----------------------------------------------------------------------#
+&print:Test v6LC.4.1.9: Checking For Increase in PMTU
+./checkIncreasePMTU.seq:./checkIncreasePMTU.def:::Checking For Increase in PMTU:2
+
+
+
+#----------------------------------------------------------------------#
+# v6LC.4.1.10 Multicast Destination  One Router                        #
+#----------------------------------------------------------------------#
+&print:Test v6LC.4.1.10: Multicast Destination - One Router
+./mcastOne.seq:./mcastOne.def:::Multicast Destination - One Router:2
+
+
+
+#----------------------------------------------------------------------#
+# Test v6LC.4.1.11: Multicast Destination - Two Routers                #
+#----------------------------------------------------------------------#
+&print:Test v6LC.4.1.11: Multicast Destination - Two Routers
+./mcastTwo.seq:./mcastTwo.def:::Multicast Destination - Two Routers:2

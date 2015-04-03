@@ -1,0 +1,258 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/spec.p2/EH_HBHOptAfterDstOpt.seq,v 1.4 2005/04/11 08:27:20 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+
+%pktdesc = (
+	echo_request	=> 'Send Echo Request (Hop-by-Hop Options Header after Destination Options Header)',
+	icmperr		=> 'Recv ICMP Error (Parameter Problem, unrecognized Next Header type encountered)',
+	ns		=> 'Recv Neighbor Solicitation',
+	na		=> 'Send Neighbor Advertisement',
+);
+
+$IF = Link0;
+
+vCapture($IF);
+
+vSend($IF, echo_request);
+
+%ret = vRecv($IF, 5, 0, 0, ns, icmperr);
+if ($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+if ($ret{recvFrame} eq 'ns') {
+	vSend($IF, na);
+
+	%ret = vRecv($IF, 5, 0, 0, icmperr);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} ne 'icmperr') {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+
+vLogHTML('OK');
+exit $V6evalTool::exitPass;
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  EH_HBHOptAfterDstOpt - check Hop-by-Hop Options Header position
+
+=head1 TARGET
+
+  Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./EH_HBHOptAfterDstOpt.seq">EH_HBHOptAfterDstOpt.seq</A> [-tooloption ...] -pkt <A HREF="./EH_HBHOptAfterDstOpt.def">EH_HBHOptAfterDstOpt.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  None
+
+=head1 TEST PROCEDURE
+
+  Tester                      Target
+    |                           |
+    |-------------------------->|
+    |   Echo Request            |
+    |                           |
+    |                           |
+    |<--------------------------|
+    |   Neighbor Solicitation   |
+    |                           |
+    |                           |
+    |-------------------------->|
+    |   Neighbor Advertisement  |
+    |                           |
+    |                           |
+    |<--------------------------|
+    |   ICMP Error              |
+    |                           |
+    v                           v
+
+  1. Send Echo Request
+  2. Wait ICMP Error or NS
+  3. If NS received then send NA, and wait ICMP Error again
+  4. Receive ICMP Error
+
+  Test Packet to Target Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 32
+            NextHeader         = 60 (Destination Options Header)
+            SourceAddress      = Tester Address
+            DestinationAddress = Target Address
+
+        Destination Options Header
+            NextHeader      = 0 (Hop-by-Hop Options Header)
+            HeaderExtLength = 0
+            OptionType      = 1 (PadN)
+            OptDataLength   = 4
+            pad             = {0,0,0,0}
+
+        Hop-by-Hop Options Header
+            NextHeader      = 58 (ICMP)
+            HeaderExtLength = 0
+            OptionType      = 1 (PadN)
+            OptDataLength   = 4
+            pad             = {0,0,0,0}
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = {1,2,3,4,5,6,7,8}
+
+=head1 JUDGEMENT
+
+  PASS: ICMP Error Received
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 80
+            NextHeader         = 58 (ICMP)
+            SourceAddress      = Target Address
+            DestinationAddress = Tester Address
+
+        ICMP Error
+            Type           = 4 (Parameter Problem)
+            Code           = 1 (unrecognized Next Header type encountered)
+            Checksum       = (auto)
+            Pointer        = 40 (Offset to Next Header type)
+            PayloadData    = (Sent Packet)
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+# 
+# 4.  IPv6 Extension Headers
+# 
+#    If, as a result of processing a header, a node is required to proceed
+#    to the next header but the Next Header value in the current header is
+#    unrecognized by the node, it should discard the packet and send an
+#    ICMP Parameter Problem message to the source of the packet, with an
+#    ICMP Code value of 1 ("unrecognized Next Header type encountered")
+#    and the ICMP Pointer field containing the offset of the unrecognized
+#    value within the original packet.  The same action should be taken if
+#    a node encounters a Next Header value of zero in any header other
+#    than an IPv6 header.
+# 
+# 4.1  Extension Header Order
+# 
+#    When more than one extension header is used in the same packet, it is
+#    recommended that those headers appear in the following order:
+# 
+#            IPv6 header
+#            Hop-by-Hop Options header
+#            Destination Options header (note 1)
+#            Routing header
+#            Fragment header
+#            Authentication header (note 2)
+#            Encapsulating Security Payload header (note 2)
+#            Destination Options header (note 3)
+#            upper-layer header
+# 
+# =begin html
+# <PRE>
+#    <B>IPv6 nodes must accept and attempt to process extension headers in
+#    any order and occurring any number of times in the same packet,
+#    except for the Hop-by-Hop Options header which is restricted to
+#    appear immediately after an IPv6 header only.</B>  Nonetheless, it is
+#    strongly advised that sources of IPv6 packets adhere to the above
+#    recommended order until and unless subsequent specifications revise
+#    that recommendation.
+# </PRE>
+# 
+# =end html
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

@@ -1,0 +1,1285 @@
+#!/usr/bin/perl
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: storedPMTU.seq,v 1.12 2009/01/09 02:31:44 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+use CommonPMTU;
+
+$pktdesc{'echo_request1500_tn1'}	= "Send Echo Request from TN1 (on-link, $CommonPMTU::default_mtu octets (Media Type Default))";
+$pktdesc{'echo_request1500_tn2'}	= "Send Echo Request from TN2 ($CommonPMTU::default_mtu octets (Media Type Default))";
+$pktdesc{'echo_request1500_tn3'}	= "Send Echo Request from TN3 ($CommonPMTU::default_mtu octets (Media Type Default))";
+$pktdesc{'echo_reply1500_tn1'}		= "Recv Echo Reply to TN1 (on-link, $CommonPMTU::default_mtu octets (Media Type Default))";
+$pktdesc{'echo_reply1500_tn2'}		= "Recv Echo Reply to TN2 ($CommonPMTU::default_mtu octets (Media Type Default))";
+$pktdesc{'echo_reply1500_tn3'}		= "Recv Echo Reply to TN3 ($CommonPMTU::default_mtu octets (Media Type Default))";
+$pktdesc{'PktTooBig1400_tn2'}		= 'Send Packet Too Big message for Echo Reply to TN2';
+$pktdesc{'PktTooBig1280_tn3'}		= 'Send Packet Too Big message for Echo Reply to TN3';
+
+$pktdesc{'setup_echo_request_tn1'}	= 'Send Echo Request from TN1 (Global)';
+$pktdesc{'setup_echo_reply_tn1'}	= 'Recv Echo Reply to TN1 (Global)';
+$pktdesc{'ns_g2g_tn1'}			= 'Recv Neighbor Solicitation to TN1 (Global to Global)';
+$pktdesc{'ns_l2g_tn1'}			= 'Recv Neighbor Solicitation to TN1 (Link-Local to Global)';
+$pktdesc{'na_g2g_tn1'}			= 'Send Neighbor Advertisement from TN1 (Global to Global)';
+$pktdesc{'na_g2l_tn1'}			= 'Send Neighbor Advertisement from TN1 (Global to Link-Local)';
+
+$pktdesc{'cleanup_na_tn1'}		= 'Send Neighbor Advertisement from TN1 (Globaladdress with Different Link-Layer Address)',
+$pktdesc{'cleanup_echo_request_tn1'}	= 'Send Echo Request from TN1 (Global)';
+
+$endStatus = $V6evalTool::exitPass;
+$IF = 'Link0';
+
+$mtu_diff_min = $CommonPMTU::default_mtu - 1280;
+vCPP("-DMTU_DIFF_MIN=$mtu_diff_min");
+
+
+#fake data
+$fragment_id = 0;
+$PTB_payload = '_PACKET_IPV6_echo_reply1500_tn1';
+$packet_len = 1500;
+
+vCapture($IF);
+#======================================================================
+if (setup11_v6LC_4_1_2($IF) != $CommonPMTU::Success or additional_setup($IF) != $CommonPMTU::Success) {
+	$ret = cleanup($IF);
+	if ($ret == $CommonPMTU::Success) {
+		exit($V6evalTool::exitFail);
+	} else {
+		exit($V6evalTool::exitFatal);
+	}
+}
+#======================================================================
+#----- test
+
+#----- create fragment pkt.def(from tn1 to nut(onlink))
+
+$original_name = "echo_reply1500_tn1"; #must same echo reply packet
+$MTU_value = 1500; #MTU value, fixed
+$PKT_size = 1500; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8;
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_hether_nut_to_onlinkTN1';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'TN1_GL0_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef($def_file, $original_name, $MTU_value,$PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF -DFRAG_ID=any");
+
+
+#send echo request from tn1 to nut(on link)
+vClear($IF);
+vSend($IF, 'echo_request1500_tn1');
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, 'echo_reply1500_tn1',@CommonPMTU::fragment_1st_name);
+
+if ($ret{'status'} == 0) {
+	if($ret{'recvFrame'} eq 'echo_reply1500_tn1'){
+		vLogHTML('OK<BR>');
+	}
+	else{
+		vLogHTML('OK. recive 1st fragment.<BR>');
+		$pkt_name = $ret{'recvFrame'};
+		$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+		$size_2nd_frag = $1-$2-40;
+		$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+		
+		%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+		if ($ret{'status'} == 0) {
+			vLogHTML('OK. recive 2nd fragment.<BR>');
+			
+		}
+		else {
+			vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+			$endStatus = $V6evalTool::exitFail;
+		}
+	}
+	
+	
+}else {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+keep_cache_tn1_and_tr1($IF);
+unlink($def_file);
+
+#----- create fragment pkt.def(from tn2 to nut)
+
+$original_name = "echo_reply1500_tn2"; #must same echo reply packet
+$MTU_value = 1500; #MTU value, fixed
+$PKT_size = 1500; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8;
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_HETHER_nut2tn';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'TN2_GL2_ADDR';
+
+$def_file_tn2 = 'pkt_frag_tn2.def'; #fragment define file
+
+
+#write def file
+if(writefragdef($def_file_tn2, $original_name, $MTU_value,$PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF_TN2 -DFRAG_ID=any");
+
+#send echo request from tn2 to nut(off link)
+vClear($IF);
+vSend($IF, 'echo_request1500_tn2');
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, 'echo_reply1500_tn2',@CommonPMTU::fragment_1st_name);
+
+if ($ret{'status'} == 0) {
+	$packet_len = 0;
+	$fragment_id = 0;
+	$PTB_payload = '_PACKET_IPV6_echo_reply1500_tn2';
+	if($ret{'recvFrame'} eq 'echo_reply1500_tn2'){
+		vLogHTML('OK<BR>');
+		$packet_len = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;
+	}
+	else{
+		vLogHTML('OK. recive 1st fragment.<BR>');
+		$pkt_name = $ret{'recvFrame'};
+		$PTB_payload = "_PACKET_IPV6_$pkt_name";
+		$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+		$size_2nd_frag = $1-$2-40;
+		$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+
+		#get ipv6 packet length
+		$packet_len = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;
+		#get id
+		$fragment_id = $ret{"Frame_Ether.Packet_IPv6.Hdr_Fragment.Identification"};	
+		%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+		if ($ret{'status'} == 0) {
+			vLogHTML('OK. recive 2nd fragment.<BR>');
+			#get ipv6 packet length
+			$packet_len_2nd = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;	
+			if($packet_len < $packet_len_2nd){
+				$PTB_payload = "_PACKET_IPV6_$name_2nd_frag";
+				$packet_len = $packet_len_2nd;
+				#get id
+				$fragment_id = $ret{"Frame_Ether.Packet_IPv6.Hdr_Fragment.Identification"};
+			}
+		}
+		else {
+			vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+			$endStatus = $V6evalTool::exitFail;
+		}
+	}
+		
+}else {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+
+keep_cache_tn1_and_tr1($IF);
+
+
+
+#----- create fragment pkt.def(from tn3 to nut)
+
+$original_name = "echo_reply1500_tn3"; #must same echo reply packet
+$MTU_value = 1500; #MTU value, fixed
+$PKT_size = 1500; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8;
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_HETHER_nut2tn';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'TN3_GL3_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef($def_file, $original_name, $MTU_value,$PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF -DFRAG_ID=any");
+
+
+#send echo request from tn3 to nut(on link)
+vClear($IF);
+vSend($IF, 'echo_request1500_tn3');
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, 'echo_reply1500_tn3',@CommonPMTU::fragment_1st_name);
+
+if ($ret{'status'} == 0) {
+	if($ret{'recvFrame'} eq 'echo_reply1500_tn3'){
+		vLogHTML('OK<BR>');
+	}
+	else{
+		vLogHTML('OK. recive 1st fragment.<BR>');
+		$pkt_name = $ret{'recvFrame'};
+		$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+		$size_2nd_frag = $1-$2-40;
+		$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+		
+		%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+		if ($ret{'status'} == 0) {
+			vLogHTML('OK. recive 2nd fragment.<BR>');
+			
+		}
+		else {
+			vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+			$endStatus = $V6evalTool::exitFail;
+		}
+	}
+		
+}else {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+
+
+keep_cache_tn1_and_tr1($IF);
+unlink($def_file);
+
+
+
+#send Packet Too Big to NUT for echo reply to TN2
+if($packet_len > 1280){
+	if($packet_len >= 1400){
+		vCPP("-DFRAG_DEF_TN2 -DMAX_MTU=1400 -DPAYLOAD=$PTB_payload -DFRAG_ID=$fragment_id");
+		vSend($IF, 'PktTooBig1400_tn2');
+		$max_mtu = 1400;
+	}
+	else{
+		vCPP("-DFRAG_DEF_TN2 -DMAX_MTU=$packet_len -DPAYLOAD=$PTB_payload -DFRAG_ID=$fragment_id");
+		vSend($IF, 'PktTooBig1400_tn2');
+		$max_mtu = packet_len;
+	}
+}else{
+	$max_mtu = 1280;
+	vLogHTML('<FONT COLOR="#FF0000">Cannot send Packet Too Big message</FONT><BR>');
+}
+
+
+unlink($def_file_tn2);
+
+
+
+
+#----- create fragment pkt.def(from tn1 to nut(onlink))
+
+$original_name = "echo_reply1500_tn1"; #must same echo reply packet
+$MTU_value = 1500; #MTU value, fixed
+$PKT_size = 1500; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8;
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_hether_nut_to_onlinkTN1';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'TN1_GL0_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef($def_file, $original_name, $MTU_value,$PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF  -DFRAG_ID=any");
+
+
+#send echo request from tn1 to nut(on link)
+vClear($IF);
+vSend($IF, 'echo_request1500_tn1');
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, 'echo_reply1500_tn1',@CommonPMTU::fragment_1st_name);
+
+if ($ret{'status'} == 0) {
+	if($ret{'recvFrame'} eq 'echo_reply1500_tn1'){
+		vLogHTML('OK<BR>');
+	}
+	else{
+		vLogHTML('OK. recive 1st fragment.<BR>');
+		$pkt_name = $ret{'recvFrame'};
+		$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+		$size_2nd_frag = $1-$2-40;
+		$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+		
+		%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+		if ($ret{'status'} == 0) {
+			vLogHTML('OK. recive 2nd fragment.<BR>');
+			
+		}
+		else {
+			vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+			$endStatus = $V6evalTool::exitFail;
+		}
+	}
+	
+	
+}else {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+keep_cache_tn1_and_tr1($IF);
+unlink($def_file);
+
+#----- create fragment pkt.def(from tn2 to nut)
+
+$original_name = "echo_reply1500_tn2"; #must same echo reply packet
+$MTU_value = $max_mtu ; #MTU value, fixed
+$PKT_size = 1500; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8;
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_HETHER_nut2tn';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'TN2_GL2_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef($def_file, $original_name, $MTU_value,$PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF -DFRAG_ID=any");
+
+
+#send echo request from tn2 to nut(off link)
+vClear($IF);
+vSend($IF, 'echo_request1500_tn2');
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, @CommonPMTU::fragment_1st_name);
+
+if ($ret{'status'} == 0) {
+	vLogHTML('OK. recive 1st fragment.<BR>');
+	$pkt_name = $ret{'recvFrame'};
+	$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+	$size_2nd_frag = $1-$2-40;
+	$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+		
+	%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+	if ($ret{'status'} == 0) {
+		vLogHTML('OK. recive 2nd fragment.<BR>');
+	
+	}else {
+		vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+		$endStatus = $V6evalTool::exitFail;
+	}
+
+		
+}else {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+keep_cache_tn1_and_tr1($IF);
+unlink($def_file);
+
+
+
+#----- create fragment pkt.def(from tn3 to nut)
+
+$original_name = "echo_reply1500_tn3"; #must same echo reply packet
+$MTU_value = 1500; #MTU value, fixed
+$PKT_size = 1500; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8;
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_HETHER_nut2tn';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'TN3_GL3_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef($def_file, $original_name, $MTU_value,$PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF -DFRAG_ID=any");
+
+
+#send echo request from tn3 to nut(on link)
+vClear($IF);
+vSend($IF, 'echo_request1500_tn3');
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, 'echo_reply1500_tn3',@CommonPMTU::fragment_1st_name);
+
+if ($ret{'status'} == 0) {
+	$packet_len = 0;
+	$fragment_id = 0;
+	$PTB_payload = '_PACKET_IPV6_echo_reply1500_tn3';
+	if($ret{'recvFrame'} eq 'echo_reply1500_tn3'){
+		vLogHTML('OK<BR>');
+		$packet_len = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;
+	}
+	else{
+		vLogHTML('OK. recive 1st fragment.<BR>');
+		$pkt_name = $ret{'recvFrame'};
+		$PTB_payload = "_PACKET_IPV6_$pkt_name";
+		$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+		$size_2nd_frag = $1-$2-40;
+		$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+		
+		#get ipv6 packet length
+		$packet_len = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;		
+        #get id
+		$fragment_id = $ret{"Frame_Ether.Packet_IPv6.Hdr_Fragment.Identification"};
+		
+		%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+		if ($ret{'status'} == 0) {
+			vLogHTML('OK. recive 2nd fragment.<BR>');
+			#get ipv6 packet length
+			$packet_len_2nd = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;	
+			if($packet_len < $packet_len_2nd){
+				$PTB_payload = "_PACKET_IPV6_$name_2nd_frag";
+				$packet_len = $packet_len_2nd;
+				#get id
+				$fragment_id = $ret{"Frame_Ether.Packet_IPv6.Hdr_Fragment.Identification"};
+			}
+		}
+		else {
+			vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+			$endStatus = $V6evalTool::exitFail;
+		}
+	}
+		
+}else {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+
+keep_cache_tn1_and_tr1($IF);
+
+
+
+#send Packet Too Big to NUT for echo reply to TN3
+if($packet_len > 1280){
+		vCPP("-DFRAG_DEF -DPAYLOAD=$PTB_payload -DFRAG_ID=$fragment_id");
+		vSend($IF, 'PktTooBig1280_tn3');
+}else{
+	vLogHTML('<FONT COLOR="#FF0000">Cannot send Packet Too Big message</FONT><BR>');
+}
+
+
+unlink($def_file);
+
+
+
+#----- create fragment pkt.def(from tn1 to nut(onlink))
+
+$original_name = "echo_reply1500_tn1"; #must same echo reply packet
+$MTU_value = 1500; #MTU value, fixed
+$PKT_size = 1500; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8;
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_hether_nut_to_onlinkTN1';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'TN1_GL0_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef($def_file, $original_name, $MTU_value,$PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF -DFRAG_ID=any");
+
+
+#send echo request from tn1 to nut(on link)
+vClear($IF);
+vSend($IF, 'echo_request1500_tn1');
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, 'echo_reply1500_tn1',@CommonPMTU::fragment_1st_name);
+
+if ($ret{'status'} == 0) {
+	if($ret{'recvFrame'} eq 'echo_reply1500_tn1'){
+		vLogHTML('OK<BR>');
+	}
+	else{
+		vLogHTML('OK. recive 1st fragment.<BR>');
+		$pkt_name = $ret{'recvFrame'};
+		$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+		$size_2nd_frag = $1-$2-40;
+		$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+		
+		%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+		if ($ret{'status'} == 0) {
+			vLogHTML('OK. recive 2nd fragment.<BR>');
+			
+		}
+		else {
+			vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+			$endStatus = $V6evalTool::exitFail;
+		}
+	}
+	
+	
+}else {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+keep_cache_tn1_and_tr1($IF);
+unlink($def_file);
+
+#----- create fragment pkt.def(from tn2 to nut)
+
+$original_name = "echo_reply1500_tn2"; #must same echo reply packet
+$MTU_value = $max_mtu ; #MTU value, fixed
+$PKT_size = 1500; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8;
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_HETHER_nut2tn';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'TN2_GL2_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef($def_file, $original_name, $MTU_value,$PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF -DFRAG_ID=any");
+
+
+#send echo request from tn2 to nut(off link)
+vClear($IF);
+vSend($IF, 'echo_request1500_tn2');
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, @CommonPMTU::fragment_1st_name);
+
+if ($ret{'status'} == 0) {
+	vLogHTML('OK. recive 1st fragment.<BR>');
+	$pkt_name = $ret{'recvFrame'};
+	$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+	$size_2nd_frag = $1-$2-40;
+	$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+		
+	%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+	if ($ret{'status'} == 0) {
+		vLogHTML('OK. recive 2nd fragment.<BR>');
+	
+	}else {
+		vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+		$endStatus = $V6evalTool::exitFail;
+	}
+
+		
+}else {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+keep_cache_tn1_and_tr1($IF);
+unlink($def_file);
+
+
+
+#----- create fragment pkt.def(from tn3 to nut)
+
+$original_name = "echo_reply1500_tn3"; #must same echo reply packet
+$MTU_value = 1280; #MTU value, fixed
+$PKT_size = 1500; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8;
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_HETHER_nut2tn';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'TN3_GL3_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef($def_file, $original_name, $MTU_value,$PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF -DFRAG_ID=any");
+
+
+#send echo request from tn3 to nut(on link)
+vClear($IF);
+vSend($IF, 'echo_request1500_tn3');
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, @CommonPMTU::fragment_1st_name);
+
+if ($ret{'status'} == 0) {
+	vLogHTML('OK. recive 1st fragment.<BR>');
+	$pkt_name = $ret{'recvFrame'};
+	$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+	$size_2nd_frag = $1-$2-40;
+	$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+	
+	%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+	if ($ret{'status'} == 0) {
+		vLogHTML('OK. recive 2nd fragment.<BR>');
+		
+	}
+	else {
+		vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+		$endStatus = $V6evalTool::exitFail;
+	}
+
+}else {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+keep_cache_tn1_and_tr1($IF);
+unlink($def_file);
+
+
+
+#----- end test
+additional_cleanup($IF);
+$ret = cleanup($IF);
+
+vStop($IF);
+if ($ret == $CommonPMTU::Success) {
+	exit($endStatus);
+} else {
+	exit($V6evalTool::exitFatal);
+}
+
+sub additional_setup {
+	my($IF) = @_;
+	my(%ret, $status);
+
+	vLogHTML('--- start additional Setup<BR>');
+
+	vSend($IF, 'setup_echo_request_tn1');
+	%ret = vRecv($IF, $CommonPMTU::wait_reply, 0, 0, 'setup_echo_reply_tn1', 'ns_g2g_tn1', 'ns_l2g_tn1');
+	if ($ret{'status'} == 0) {
+		if ($ret{'recvFrame'} eq 'ns_g2g_tn1') {
+			vSend($IF, 'na_g2g_tn1');
+			%ret = vRecv($IF, $CommonPMTU::wait_reply, 0, 0, 'setup_echo_reply_tn1');
+		} elsif ($ret{'recvFrame'} eq 'ns_l2g_tn1') {
+			vSend($IF, 'na_g2l_tn1');
+			%ret = vRecv($IF, $CommonPMTU::wait_reply, 0, 0, 'setup_echo_reply_tn1');
+		}
+	}
+	if ($ret{'status'} == 0 and $ret{'recvFrame'} eq 'setup_echo_reply_tn1') {
+		vLogHTML('OK<BR>');
+		$status = $CommonPMTU::Success;
+	} else {
+		vLogHTML('Cannot receive Echo Reply<BR>');
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+		vLogHTML('<FONT COLOR="#FF0000">setup failure</FONT><BR>');
+		$status = $CommonPMTU::Failure;
+	}
+
+	vClear($IF);
+	vLogHTML('--- end additional Setup<BR>');
+
+	return ($status);
+}
+
+
+sub additional_cleanup {
+	vLogHTML('--- additional Cleanup NUT<BR>');
+
+	if ($CommonPMTU::cleanup eq 'normal') {
+		vSend($IF, 'cleanup_na_tn1');
+		vSend($IF, 'cleanup_echo_request_tn1');
+		vLogHTML("Wait for transit target Neighbor Cache Entry to INCOMPLETE/NONCE ($CommonPMTU::wait_incomplete sec.)<BR>");
+		vRecv($IF, $CommonPMTU::wait_incomplete, 0, 0);
+	}
+}
+
+
+
+sub
+keep_cache_tn1_and_tr1($) {
+	my ($link) = @_;
+
+	my $true	= 1;
+	my $false	= 0;
+
+	my $delay_first_probe_time = 5;
+
+	$pktdesc{'ucast_ns_tn1_from_linklocal_sll'}
+			= 'Recv NS w/ SLL: NUT (link-local) -&gt; TN1 (global)';
+
+	$pktdesc{'ucast_ns_tn1_from_linklocal'}
+			= 'Recv NS: NUT (link-local) -&gt; TN1 (global)';
+
+	$pktdesc{'ucast_ns_tn1_from_global_sll'}
+		= 'Recv NS w/ SLL: NUT (global) -&gt; TN1 (global)';
+
+	$pktdesc{'ucast_ns_tn1_from_global'}
+		= 'Recv NS: NUT (global) -&gt; TN1 (global)';
+
+
+	$pktdesc{'ucast_na_tn1_to_linklocal'}
+		= 'Send NA: TN1 (global) -&gt; NUT (link-local)';
+
+	$pktdesc{'ucast_na_tn1_to_global'}
+		= 'Send NA: TN1 (global) -&gt; NUT (global)';
+
+
+	$pktdesc{'ucast_ns_tr1_from_linklocal_sll'}
+		= 'Recv NS w/ SLL: NUT (link-local) -&gt; TR1 (link-local)';
+
+	$pktdesc{'ucast_ns_tr1_from_linklocal'}
+		= 'Recv NS: NUT (link-local) -&gt; TR1 (link-local)';
+
+	$pktdesc{'ucast_ns_tr1_from_global_sll'}
+		= 'Recv NS w/ SLL: NUT (global) -&gt; TR1 (link-local)';
+
+	$pktdesc{'ucast_ns_tr1_from_global'}
+		= 'Recv NS: NUT (global) -&gt; TR1 (link-local)';
+
+
+	$pktdesc{'ucast_na_tr1_to_linklocal'}
+		= 'Send NA: TR1 (link-local) -&gt; NUT (link-local)';
+
+	$pktdesc{'ucast_na_tr1_to_global'}
+		= 'Send NA: TR1 (link-local) -&gt; NUT (global)';
+
+	my %magic_tn1 = (
+		'ucast_ns_tn1_from_linklocal_sll'
+			=> 'ucast_na_tn1_to_linklocal',
+
+		'ucast_ns_tn1_from_linklocal'
+			=> 'ucast_na_tn1_to_linklocal',
+
+		'ucast_ns_tn1_from_global_sll'
+			=> 'ucast_na_tn1_to_global',
+
+		'ucast_ns_tn1_from_global'
+			=> 'ucast_na_tn1_to_global',
+	);
+
+	my %magic_tr1 = (
+		'ucast_ns_tr1_from_linklocal_sll'
+			=> 'ucast_na_tr1_to_linklocal',
+
+		'ucast_ns_tr1_from_linklocal'
+			=> 'ucast_na_tr1_to_linklocal',
+
+		'ucast_ns_tr1_from_global_sll'
+			=> 'ucast_na_tr1_to_global',
+
+		'ucast_ns_tr1_from_global'
+			=> 'ucast_na_tr1_to_global'
+	);
+
+ 	vLogHTML('===&gt; '.
+ 		'make it sure to keep neighbor cache for TN1&amp;TR1'.
+ 		' &lt;===<BR>');
+
+	vLogHTML('&gt;&gt;&gt;&gt; '.
+		'TN1|TR1: REACHABLE|STALE|DELAY &gt;&gt;&gt;&gt;<BR>');
+
+	# TN1&TR1: REACHABLE/STALE/DELAY
+	my %ret = vRecv($link, $delay_first_probe_time + 1, 0, 0,
+		keys(%magic_tn1), keys(%magic_tr1));
+
+	my $bool_tn1	= $false;
+	my $bool_tr1	= $false;
+
+	for( ; ; ) {
+		foreach my $frame (keys(%magic_tn1)) {
+			if($ret{'recvFrame'} eq $frame) {
+				$bool_tn1 = $true;
+				last;
+			}
+		}
+
+		if($bool_tn1) {
+			last;
+		}
+
+		foreach my $frame (keys(%magic_tr1)) {
+			if($ret{'recvFrame'} eq $frame) {
+				$bool_tr1 = $true;
+				last;
+			}
+		}
+
+		if($bool_tr1) {
+			last;
+		}
+
+
+		last;
+	}
+
+	for( ; ; ) {
+		if($bool_tn1) {
+			# TN1: PROBE
+			vSend($link, $magic_tn1{$ret{'recvFrame'}});
+			# TN1: REACHABLE
+
+			%ret = vRecv($link, $delay_first_probe_time + 1, 0, 0,
+				keys(%magic_tr1));
+
+			foreach my $frame (keys(%magic_tr1)) {
+				if($ret{'recvFrame'} eq $frame) {
+					$bool_tr1 = $true;
+					last;
+				}
+			}
+
+			if($bool_tr1) {
+				# TR1: PROBE
+				vSend($link, $magic_tr1{$ret{'recvFrame'}});
+				# TR1: REACHABLE
+			}
+
+			last;
+		}
+
+		if($bool_tr1) {
+			# TR1: PROBE
+			vSend($link, $magic_tr1{$ret{'recvFrame'}});
+			# TR1: REACHABLE
+
+			%ret = vRecv($link, $delay_first_probe_time + 1, 0, 0,
+				keys(%magic_tn1));
+
+			foreach my $frame (keys(%magic_tn1)) {
+				if($ret{'recvFrame'} eq $frame) {
+					$bool_tn1 = $true;
+					last;
+				}
+			}
+
+			if($bool_tn1) {
+				# TN1: PROBE
+				vSend($link, $magic_tn1{$ret{'recvFrame'}});
+				# TN1: REACHABLE
+			}
+
+			last;
+		}
+
+		last;
+	}
+
+	# TN1&TR1: REACHABLE|STALE
+
+	vLogHTML('&lt;&lt;&lt;&lt; '.
+		'TN1&amp;TR1: REACHABLE|STALE &lt;&lt;&lt;&lt;<BR>');
+
+	return;
+}
+
+
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  storedPMTU - Stored PMTU
+
+=head1 TARGET
+
+  Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./storedPMTU.seq">storedPMTU.seq</A> [-tooloption ...] -pkt <A HREF="./storedPMTU.def">storedPMTU.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+	Common Test Setup 1.1
+
+=head1 TEST PROCEDURE
+
+Verify that a node can store Path MTU information for multiple destinations
+
+   TN3                    TN2                    TR1                    NUT                    TN1
+    |                      |                      |                      |                      |
+    |                      |                      |                      |<---------------------|
+    |                      |                      |                      |   1.Echo Request     |
+    |                      |                      |                      |   (1500 octets)      |
+    |                      |                      |                      |                      |
+    |                      |                      |                      +--------------------->|
+    |                      |                      |                      |   2.Echo Reply       |
+    |                      |                      |                      |   (1500 octets)      |
+    |                      |                      |                      |                      |
+    |                      +-------------------------------------------->|                      |
+    |                      |  3.Echo Request      |                      |                      |
+    |                      |  (1500 octets)       |                      |                      |
+    |                      |                      |                      |                      |
+    |                      |<--------------------------------------------+                      |
+    |                      |  4.Echo Reply        |                      |                      |
+    |                      |  (1500 octets)       |                      |                      |
+    |                      |                      |                      |                      |
+    +----------------------|-------------------------------------------->|                      |
+    |   5.Echo Request     |                      |                      |                      |
+    |   (1500 octets)      |                      |                      |                      |
+    |                      |                      |                      |                      |
+    |<---------------------|---------------------------------------------+                      |
+    |   6.Echo Reply       |                      |                      |                      |
+    |   (1500 octets)      |                      |                      |                      |
+    |                      |                      |                      |                      |
+    |                      |                      +--------------------->|                      |
+    |                      |                      |  7.Packet Too Big    |                      |
+    |                      |                      |  for TN2 (MTU 1400)  |                      |
+    |                      |                      |                      |                      |
+    |                      |                      |                      |<---------------------|
+    |                      |                      |                      |   8.Echo Request     |
+    |                      |                      |                      |   (1500 octets)      |
+    |                      |                      |                      |                      |
+    |                      |                      |                      +--------------------->|
+    |                      |                      |                      |   9.Echo Reply       |
+    |                      |                      |                      |   (1500 octets)      |
+    |                      |                      |                      |                      |
+    |                      +-------------------------------------------->|                      |
+    |                      | 10.Echo Request      |                      |                      |
+    |                      |  (1500 octets)       |                      |                      |
+    |                      |                      |                      |                      |
+    |                      |<--------------------------------------------+                      |
+    |                      |11.Fragment Echo Reply|                      |                      |
+    |                      |  (1st + 2nd =1500)   |                      |                      |
+    |                      |                      |                      |                      |
+    +----------------------|-------------------------------------------->|                      |
+    |  12.Echo Request     |                      |                      |                      |
+    |   (1500 octets)      |                      |                      |                      |
+    |                      |                      |                      |                      |
+    |<---------------------|---------------------------------------------+                      |
+    |  13.Echo Reply       |                      |                      |                      |
+    |   (1500 octets)      |                      |                      |                      |
+    |                      |                      |                      |                      |
+    |                      |                      +--------------------->|                      |
+    |                      |                      | 14.Packet Too Big    |                      |
+    |                      |                      |  for TN3 (MTU 1280)  |                      |
+    |                      |                      |                      |                      |
+    |                      |                      |                      |<---------------------|
+    |                      |                      |                      |  15.Echo Request     |
+    |                      |                      |                      |   (1500 octets)      |
+    |                      |                      |                      |                      |
+    |                      |                      |                      +--------------------->|
+    |                      |                      |                      |  16.Echo Reply       |
+    |                      |                      |                      |   (1500 octets)      |
+    |                      |                      |                      |                      |
+    |                      +-------------------------------------------->|                      |
+    |                      | 17.Echo Request      |                      |                      |
+    |                      |  (1500 octets)       |                      |                      |
+    |                      |                      |                      |                      |
+    |                      |<--------------------------------------------+                      |
+    |                      |18.Fragment Echo Reply|                      |                      |
+    |                      |  (1st + 2nd = 1500)  |                      |                      |
+    |                      |                      |                      |                      |
+    +----------------------|-------------------------------------------->|                      |
+    |  19.Echo Request     |                      |                      |                      |
+    |   (1500 octets)      |                      |                      |                      |
+    |                      |                      |                      |                      |
+    |<---------------------|---------------------------------------------+                      |
+    |20.Fragment Echo Reply|                      |                      |                      |
+    |   (1st + 2nd = 1500) |                      |                      |                      |
+    |                      |                      |                      |                      |
+    v                      v                      v                      v                      v
+
+  1. Send Echo Request from TN1
+  2. Receive Echo Reply to TN1 <<Check 1>>
+  3. Send Echo Request from TN2
+  4. Receive Echo Reply to TN2 <<Check 2>>
+  5. Send Echo Request from TN3
+  6. Receive Echo Reply to TN3 <<Check 3>>
+  7. Send Packet Too Big message from TR1 for Echo Reply to TN2
+  8. Send Echo Request from TN1
+  9. Receive Echo Reply to TN1 <<Check 4>>
+ 10. Send Echo Request from TN2
+ 11. Receive fragmented Echo Reply to TN2 <<Check 5>>
+ 12. Send Echo Request from TN3
+ 13. Receive Echo Reply to TN3 <<Check 6>>
+ 14. Send Packet Too Big message from TR1 for Echo Reply to TN3
+ 15. Send Echo Request from TN1
+ 16. Receive Echo Reply to TN1 <<Check 7>>
+ 17. Send Echo Request from TN2
+ 18. Receive fragmented Echo Reply to TN2 <<Check 8>>
+ 19. Send Echo Request from TN3
+ 20. Receive fragmented Echo Reply to TN3 <<Check 9>>
+
+  Echo Request Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 1460
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = TN1,TN2 or TN3's Global Address
+            DestinationAddress = NUT's Global Address
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = (PayloadLength - 8 octets)
+
+  Packet Too Big message is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 1280
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = TR1's Global Address
+            DestinationAddress = NUT's Global Address
+
+        ICMP Echo Request
+            Type           = 2 (Packet Too Big)
+            Code           = 0
+            Checksum       = (auto)
+            MTU            = 1400 or 1280
+            PayloadData    = (1232 octets)
+
+=head1 JUDGEMENT
+
+  PASS: <<Check 1,2,3,4,6,7>> Echo Reply or Fragment Echo Reply Received
+        <<Check 5,8>> Fragment Echo Reply Received. 1st and 2nd fragment no larger than 1400 octets.
+        <<Check 9>> Fragment Echo Reply Received. 1st and 2nd fragment no larger than 1280 octets.
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = 0
+            FlowLabel           = 0
+            PayloadLength      = 1460
+            NextHeader          = 58 (ICMPv6)
+            SourceAddress       = NUT's Global Address
+            Destination Address = TN1,TN2 or TN3's Global Address
+
+        ICMP Echo Reply
+            Type           = 129 (Echo Reply)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff (same as Echo Request)
+            SequenceNumber = 1 (same as Echo Request)
+            PayloadData    = (PayloadLength - 8 octets) (same as Echo Request)
+
+
+=head1 CLEANUP
+
+Common Test Cleanup
+
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC1981
+# 
+# 5.2. Storing PMTU information
+# 
+#    Ideally, a PMTU value should be associated with a specific path
+#    traversed by packets exchanged between the source and destination
+#    nodes.  However, in most cases a node will not have enough
+#    information to completely and accurately identify such a path.
+#    Rather, a node must associate a PMTU value with some local
+#    representation of a path.  It is left to the implementation to select
+#    the local representation of a path.
+# 
+#    In the case of a multicast destination address, copies of a packet
+#    may traverse many different paths to reach many different nodes.  The
+#    local representation of the "path" to a multicast destination must in
+#    fact represent a potentially large set of paths.
+# 
+#    Minimally, an implementation could maintain a single PMTU value to be
+#    used for all packets originated from the node.  This PMTU value would
+#    be the minimum PMTU learned across the set of all paths in use by the
+#    node.  This approach is likely to result in the use of smaller
+#    packets than is necessary for many paths.
+# 
+#    An implementation could use the destination address as the local
+#    representation of a path.  The PMTU value associated with a
+#    destination would be the minimum PMTU learned across the set of all
+#    paths in use to that destination.  The set of paths in use to a
+#    particular destination is expected to be small, in many cases
+#    consisting of a single path.  This approach will result in the use of
+#    optimally sized packets on a per-destination basis.  This approach
+#    integrates nicely with the conceptual model of a host as described in
+#    [ND]: a PMTU value could be stored with the corresponding entry in
+#    the destination cache.
+# 
+#    If flows [IPv6-SPEC] are in use, an implementation could use the flow
+#    id as the local representation of a path.  Packets sent to a
+#    particular destination but belonging to different flows may use
+#    different paths, with the choice of path depending on the flow id.
+#    This approach will result in the use of optimally sized packets on a
+#    per-flow basis, providing finer granularity than PMTU values
+#    maintained on a per-destination basis.
+# 
+#    For source routed packets (i.e. packets containing an IPv6 Routing
+#    header [IPv6-SPEC]), the source route may further qualify the local
+#    representation of a path.  In particular, a packet containing a type
+#    0 Routing header in which all bits in the Strict/Loose Bit Map are
+#    equal to 1 contains a complete path specification.  An implementation
+#    could use source route information in the local representation of a
+#    path.
+# 
+#       Note: Some paths may be further distinguished by different
+#       security classifications.  The details of such classifications are
+#       beyond the scope of this memo.
+# 
+#    Initially, the PMTU value for a path is assumed to be the (known) MTU
+#    of the first-hop link.
+# 
+#    When a Packet Too Big message is received, the node determines which
+#    Big message.  For example, if the destination address is used as the
+#    local representation of a path, the destination address from the
+#    original packet would be used to determine which path the message
+#    applies to.
+# 
+#       Note: if the original packet contained a Routing header, the
+#       Routing header should be used to determine the location of the
+#       destination address within the original packet.  If Segments Left
+#       is equal to zero, the destination address is in the Destination
+#       Address field in the IPv6 header.  If Segments Left is greater
+#       than zero, the destination address is the last address
+#       (Address[n]) in the Routing header.
+# 
+#    The node then uses the value in the MTU field in the Packet Too Big
+#    message as a tentative PMTU value, and compares the tentative PMTU to
+#    the existing PMTU.  If the tentative PMTU is less than the existing
+#    PMTU estimate, the tentative PMTU replaces the existing PMTU as the
+#    PMTU value for the path.
+# 
+#    The packetization layers must be notified about decreases in the
+#    PMTU.  Any packetization layer instance (for example, a TCP
+#    connection) that is actively using the path must be notified if the
+#    PMTU estimate is decreased.
+# 
+#       Note: even if the Packet Too Big message contains an Original
+#       Packet Header that refers to a UDP packet, the TCP layer must be
+#       notified if any of its connections use the given path.
+# 
+#    Also, the instance that sent the packet that elicited the Packet Too
+#    Big message should be notified that its packet has been dropped, even
+#    if the PMTU estimate has not changed, so that it may retransmit the
+#    dropped data.
+# 
+#       Note: An implementation can avoid the use of an asynchronous
+#       notification mechanism for PMTU decreases by postponing
+#       notification until the next attempt to send a packet larger than
+#       the PMTU estimate.  In this approach, when an attempt is made to
+#       SEND a packet that is larger than the PMTU estimate, the SEND
+#       function should fail and return a suitable error indication.  This
+#       approach may be more suitable to a connectionless packetization
+#       layer (such as one using UDP), which (in some implementations) may
+#       be hard to "notify" from the ICMP layer.  In this case, the normal
+#       timeout-based retransmission mechanisms would be used to recover
+#       from the dropped packets.
+# 
+#    It is important to understand that the notification of the
+#    packetization layer instances using the path about the change in the
+#    PMTU is distinct from the notification of a specific instance that a
+#    packet has been dropped.  The latter should be done as soon as
+#    packetization layer instance), while the former may be delayed until
+#    a packetization layer instance wants to create a packet.
+#    Retransmission should be done for only for those packets that are
+#    known to be dropped, as indicated by a Packet Too Big message.
+# 
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 1981 - Path MTU Discovery for IPv6
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

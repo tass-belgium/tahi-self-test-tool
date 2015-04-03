@@ -1,0 +1,362 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+# $TINY: pingwRH.seq,v 1.1 2002/03/26 11:01:13 miyata Exp $
+# 
+########################################################################
+BEGIN { $V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $ '; }
+use V6evalTool;
+use PMTU;
+
+$IF=Link0;
+$WAIT_TO_FIN_DAD=5;
+$WAIT_TO_SET_PMTU=1;
+$WAIT_TO_SET_NA=1;
+
+%pktdesc = (
+    ns                       => 'TN <--Neighbor Solicitation --------- NUT',
+    ns_srcGlobal             => 'TN <--Neighbor Solicitation Global--- NUT',
+    echo_request_1280_from_A => 'TN(A) ---ICMP Echo Request (1280)------> NUT',
+    echo_reply_1280_to_A     => 'TN(A) <--ICMP Echo Reply   (1280)------- NUT',
+    echo_request_1400_from_A => 'TN(A) ---ICMP Echo Request (1400)------> NUT',
+    echo_reply_1400_to_A     => 'TN(A) <--ICMP Echo Reply   (1400)------- NUT',
+    frag_echo_reply_1400_1st_mtu1280_A => 'TN(A) <--ICMP Echo Reply (1st MTU 1280)- NUT',
+    frag_echo_reply_1400_2nd_mtu1280_A => 'TN(A) <--ICMP Echo Reply (2nd MTU 1280)- NUT',
+    icmp6_TooBigMesg_1280_for_1400_A => 'TN(A) --ICMP PktTooBig(1280)-> NUT',
+    icmp6_TooBigMesg_1400_for_1280_A => 'TN(A) --ICMP PktTooBig(1400 gt MinMTU)-> NUT'
+);
+
+vLogHTML("Packet Too Big acception test");
+
+# Initialize
+
+flushtables($V6evalTool::NutDef{System});
+
+if ($V6evalTool::NutDef{Type} eq "router"){
+	vLogHTML("Your router have to assign prefix $PMTU::NUTPREFIX");
+	vLogHTML("and use EUI-64 address");
+	vLogHTML("Your router have to set default route $PMTU::DEFROUTE");
+
+}else{
+	vSend($IF,ra);
+	vLogHTML("Ignoring DAD packets");
+	vSleep($WAIT_TO_FIN_DAD);
+#	vSend($IF,na_router);
+}
+
+# Test start
+
+vCapture($IF);
+vClear($IF);
+
+# Send Triger Packet
+
+vSend($IF, echo_request_1500_from_A);
+
+%ret=vRecv($IF, 5,0,0,
+	echo_reply_1500_to_A,
+	ns_srcGlobal,
+	ns);
+
+if( $ret{status} !=0) {
+    vLogHTML("TN COULD NOT receive Echo Reply nor ns from NUT<BR>");
+    exit $V6evalTool::exitFail;  
+}
+if($ret{recvFrame} eq 'ns' || $ret{recvFrame} eq 'ns_srcGlobal') {
+    if( $ret{recvFrame} eq 'ns') {
+	vSend($IF,na_router);
+    }elsif( $ret{recvFrame} eq 'ns_srcGlobal') {
+	vSend($IF,na_srcGlobal_router);
+    }
+
+    vSleep($WAIT_TO_SET_NA);
+    vClear($IF);
+    vSend($IF, echo_request_1500_from_A);
+
+    %ret=vRecv($IF, 5,0,0,
+            echo_reply_1500_to_A,
+	);
+
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive Echo Reply nor ns from NUT<BR>");
+        vClear($IF);
+        exit $V6evalTool::exitFail;  
+    }elsif( $ret{recvFrame} eq 'echo_reply_1400_to_A') {
+        vLogHTML("TN received Echo Reply (Size=1500) from NUT<BR>");
+###
+# Send Packet Too BIG
+###
+        vSend($IF,icmp6_TooBigMesg_1400_for_1500_A);
+    }
+}elsif( $ret{recvFrame} eq 'echo_reply_1500_to_A') {
+# NUT DOES NOT NEED THIS TEST
+    vLogHTML("TN received Echo Reply (Size=1500) from NUT<BR>");
+###
+# Send Packet Too BIG
+###
+    vSend($IF,icmp6_TooBigMesg_1400_for_1500_A);
+}
+
+
+#-----------------------------------------------
+# Start test
+#-----------------------------------------------
+# Test for Packet Too Big size=1400
+#
+
+#-----------------------
+# Test packet size=1400+Routing_Header
+#-----------------------
+
+vSend($IF, echo_request_1400_plus_RH_from_B_to_A_via_NUT);
+
+%ret=vRecv($IF, 5,0,0,
+	echo_request_1400_plus_RH_from_B_to_A_fwd,
+	frag_echo_request_1400_plus_RH_1st_mtu1400_from_B_to_A,
+	frag_echo_request_1400_plus_RH_2nd_mtu1400_from_B_to_A
+	);
+
+
+if( $ret{status} !=0) {
+    vLogHTML('<FONT COLOR="#FF0000">FAIL</FONT><BR>');
+    vLogHTML("TN COULD NOT receive Echo Reply from NUT<BR>");
+    exit $V6evalTool::exitFail;  
+}
+if( $ret{recvFrame} eq 'frag_echo_request_1400_plus_RH_1st_mtu1400_from_B_to_A') {
+    vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1400) from NUT");
+    %ret=vRecv($IF, 5,0,0,frag_echo_request_1400_plus_RH_2nd_mtu1400_from_B_to_A);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULDN'T receive Fragmented Echo Reply (2/2 MTU1400) from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+        vClear($IF);
+    }else{
+        vLogHTML("TN received Fragmented Echo Reply (2/2 MTU1400) from NUT<BR>");
+        vClear($IF);
+    }
+}elsif( $ret{recvFrame} eq 'frag_echo_request_1400_plus_RH_2nd_mtu1400_from_B_to_A') {
+    vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1400) from NUT");
+    %ret=vRecv($IF, 5,0,0,frag_echo_request_1400_plus_RH_1st_mtu1400_from_B_to_A);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULDN'T receive Fragmented Echo Reply (1/2 MTU1400) from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;  
+    }else{
+        vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1400) from NUT<BR>");
+        vClear($IF);
+        exit $V6evalTool::exitPass;  
+    }
+}elsif( $ret{recvFrame} eq 'echo_request_1400_plus_RH_from_B_to_A_fwd') {
+    vLogHTML("TN received Echo Reply (Size=1400) from NUT<BR>");
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    exit $V6evalTool::exitFail;  
+}
+
+
+########################################################################
+__END__
+
+=head1 NAME
+
+	pingwRH - Verify the behavior of NUT when it receives ICMP Echo Request which has Routing Header and Greater size than PMTU for next hop.
+
+=head1 TARGET
+
+	Host(LCNA)
+
+=head1 SYNOPSIS
+
+	pingwRH.seq [-tooloption ...] -p pingwRH.def
+
+=head1 NETWORK CONFIGURATION
+
+	In this test, NUT is a host(LCNA) and TN plays a Roll of Router and 
+	other host.
+	
+	Phisical Network configuration
+	
+	--------+---------------+----------
+		|		|
+		NUT		TN
+
+
+
+	Logical Network Configuration
+
+				NUT
+				|
+	----------------+-------+--------
+			|
+		    Router-A
+			|
+	----------------+-------+--------
+		                | 
+				HOST-A
+
+	(NotYet)In this test, NUT receives strange Packet Too Big Message. 
+	- Smaller MTU(1200) than Minimum MTU(1280)
+
+
+=head1 INITIALIZATION
+
+        (NotYet)The TN send a RA to assign global address prefix.
+
+           TN          NUT
+	   |		|
+        ---+------------+------
+
+        ===multicast RA===>
+        src=TN's link-local
+        dst=LinkLocal-all-node                                                  
+        M=0, O=0,
+        Lifetime=3600, ReachableTime=60000, RetransTimer=1005
+        Prefix:
+           L=1, A=1,                       
+           ValidLifetime=3600005, PreferredLifetime=3600005
+           Prefix=3ffe:501:ffff:100::, PrefixLength=64                      
+   
+          Wait (5 sec.)
+                 Ignoring DAD packets for global address.                 
+
+
+=head1 TEST PROCEDURE
+
+	(NotYet)"pingwRH" verify NUT's behavior when it receives 
+	 ICMP Packet Too Big Mesg.
+
+           TN          NUT
+	   |		|
+        ---+------------+------
+
+	1. Initializing send PKT TOO BIG (MTU=1280) if required ---
+	1.1
+	TN send Echo Request.  
+        TN(A) === echo request(1400) ===> NUT
+
+	1.2
+	NUT send Echo Reply.
+        TN(A) <=== echo reply(1400) ===== NUT
+
+	1.3
+	TN send ICMPv6 Too Big Mesg include MTU (1280).
+        TN(A) === ICMPv6 Too Big Mesg(MTU=1280) ===> NUT
+
+	1.4
+	TN send Echo Request.  
+        TN(A) === echo request(1280) ===> NUT
+
+	1.5
+        NUT send Echo Reply.
+	<< JUDGEMENT 1 >>
+        TN(A) <=== echo reply(1280)  ==== NUT
+
+	1.6
+	TN send Echo Request.  
+        TN(B) === echo request(1400) ===> NUT
+
+	1.7
+        NUT send Echo Reply 
+	<< JUDGEMENT 2 >>
+        TN(B) <=== echo reply(1280 1/2) === NUT
+        TN(B) <=== echo reply( 176 2/2) === NUT
+
+	2. PKT TOO BIG (MTU=1400) -------------------------------
+	2.1
+	TN send ICMPv6 Too Big Mesg include MTU (1400).
+        TN(B) === ICMPv6 Too Big Mesg(MTU=1400) ===> NUT
+
+	2.4
+	TN send Echo Request.  
+        TN(B) === echo request(1400) ===> NUT
+
+	2.5
+        NUT send Echo Reply 
+	<< JUDGEMENT 3 >>
+        TN(B) <=== echo reply(1280 1/2) === NUT
+        TN(B) <=== echo reply( 176 2/2) === NUT
+
+
+=head1 JUDGEMENT
+
+	(not yet)
+	<< JUDGEMENT 1 -PASS- >>
+		NUT send Echo Reply
+
+		"PASS" means that NUT can send ICMP Echo Reply which size is 1280.
+		And packets are correct.
+
+	<< JUDGEMENT 2 -PASS- >>
+		NUT send Echo Reply
+
+		"PASS" means that NUT does not transmit packets bigger than Minimum MTU.
+		And fragmented packets are correct.
+		But LCNA may not be able to deal with packets greater than Minimum MTU, 
+		and also LNCA may not be able to fragment packets. 
+		In this case LCNA could not send Echo Reply. 
+		It is not critical, it means just "not supporting".
+		The worst case is sending Echo Reply (1400) without fragment.
+		It means NUT does not pay attention to received Packet Too Big Message.
+		And also if the NUT does not support PMTU Discovery function, 
+		it MUST NOT send greater packets than Minimun MTU.
+
+	<< JUDGEMENT 3 -PASS- >>
+		NUT send Echo Reply
+
+		"PASS" means that NUT does not increase MTU by receiving PackeTooBig Message.
+		And fragmented packets are correct.
+		But LCNA may not be able to deal with packets greater than Minimum MTU, 
+		and also LNCA may not be able to fragment packets. 
+		In this case LCNA could not send Echo Reply. 
+		It is not critical, it means just "not supporting".
+		The worst case is sending Echo Reply (1400) without fragment.
+		It means NUT increase PMTU by receiving Packet Too Big Message.
+		And also if the NUT does not support PMTU Discovery function, 
+		it MUST NOT send greater packets than Minimun MTU.
+
+=head1 SEE ALSO
+
+	perldoc V6evalTool
+	perldoc V6evalRemote
+
+=cut
+

@@ -1,0 +1,299 @@
+#!/usr/bin/perl
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: IP_Version.seq,v 1.8 2009/12/28 05:31:34 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+use CommonSPEC;
+
+sub ping_invalid($);
+sub ping_valid();
+
+$pktdesc{'echo_request_v4'}	= 'Send Echo Request (Version field is 4)';
+$pktdesc{'echo_request_v0'}	= 'Send Echo Request (Version field is 0)';
+$pktdesc{'echo_request_v5'}	= 'Send Echo Request (Version field is 5)';
+$pktdesc{'echo_request_v7'}	= 'Send Echo Request (Version field is 7)';
+$pktdesc{'echo_request_v15'}	= 'Send Echo Request (Version field is 15)';
+$pktdesc{'ux_reply'}		= 'Recv Echo Reply (Invalid)';
+$pktdesc{'icmperr'}		= 'Recv ICMP Error message (Invalid)';
+$pktdesc{'echo_request'}	= 'Send Echo Request (Valid)';
+$pktdesc{'echo_reply'}		= 'Recv Echo Reply (Valid)';
+
+@invalids = (
+	'echo_request_v4',
+	'echo_request_v0',
+	'echo_request_v5',
+	'echo_request_v7',
+	'echo_request_v15'
+);
+
+$endStatus = $V6evalTool::exitPass;
+$IF = 'Link0';
+
+#----- start Capturing
+vCapture($IF);
+
+#----- test
+foreach $invalid (@invalids) {
+	$ret = ping_invalid($invalid);
+	if ($ret == $CommonSPEC::Success) {
+		$ret = ping_valid();
+	}
+	if ($ret != $CommonSPEC::Success) {
+		$endStatus = $V6evalTool::exitFail;
+		last;
+	}
+}
+#----- end test
+
+$ret = cleanup($IF);
+vStop($IF);
+if ($ret == $CommonSPEC::Success) {
+	exit($endStatus);
+} else {
+	exit($V6evalTool::exitFatal);
+}
+
+
+sub ping_invalid($) {
+	my($frame) = $_[0];
+
+	vSend($IF, $frame);
+	%ret = nd_vRecv_EN($IF, $CommonSPEC::wait_reply, 0, 0, 'ux_reply', 'icmperr');
+	if ($ret{'status'} != 1) {
+		vLogHTML('Receive invalid packets.<BR>');
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+		return ($CommonSPEC::Failure);
+	}
+
+	vClear($IF);
+	return ($CommonSPEC::Success);
+}
+
+sub ping_valid() {
+	vSend($IF, 'echo_request');
+	%ret = nd_vRecv_EN($IF, $CommonSPEC::wait_reply, 0, 0, 'echo_reply');
+
+	if ($ret{'status'} != 0) {
+		vLogHTML('Cannot receive Echo Reply<BR>');
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+		return ($CommonSPEC::Failure);
+	}
+
+	vLogHTML('OK<BR>');
+	return ($CommonSPEC::Success);
+}
+
+
+######################################################################
+__END__
+
+=head1 NAME
+
+IP_Version - Version Field
+
+=head1 TARGET
+
+Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./IP_Version.seq">IP_Version.seq</A> [-tooloption ...] -pkt <A HREF="./IP_Version.def">IP_Version.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+Common Test Cleanup
+
+=head1 TEST PROCEDURE
+
+Verify that a node properly processes the Version field of received packets.
+
+   TN                          NUT
+    |                           |
+    |-------------------------->|
+    |   Invalid Echo Request    |
+    |                           |
+    |-------------------------->|
+    |   Valid Echo Request      |
+    |                           |
+    |                           | 
+    |<--------------------------|
+    |   Echo Reply              |
+    |                           |
+    |                           |
+    v                           v
+
+
+  1. TN transmits an Echo Request to the NUT, which has an IPv6 header with Version field of 4.
+  2. TN transmits an Send Echo Request(valid, Version is 6).
+  3. Observe the NUT.
+  4. Repeat Steps 1 to 3 with a Version field of 0, 5, 7, and 15.
+
+
+  Echo Request Data is:
+
+        IPv6 Header
+            Version            = 4/0/5/7/15 (Invalid value is 6)
+            Traffic Class      = 0
+            FlowLabel          = 0
+            NextHeader         = 58 (ICMPv6)
+            HopLimit           = 64
+            SourceAddress      = TN Link Local Address
+            DestinationAddress = NUT Link Local Address
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = {1, 2, 3, 4, 5, 6, 7, 8}
+
+=head1 JUDGEMENT
+
+  PASS : The NUT must not crash or generate invalid packets.
+         In Step2, the NUT must respond to the second Echo Request from TN1.
+
+=head1 CLEANUP
+
+Common Test Cleanup
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+# 
+# 3.  IPv6 Header Format
+# 
+#    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#    |Version| Traffic Class |           Flow Label                  |
+#    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#    |         Payload Length        |  Next Header  |   Hop Limit   |
+#    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#    |                                                               |
+#    +                                                               +
+#    |                                                               |
+#    +                         Source Address                        +
+#    |                                                               |
+#    +                                                               +
+#    |                                                               |
+#    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#    |                                                               |
+#    +                                                               +
+#    |                                                               |
+#    +                      Destination Address                      +
+#    |                                                               |
+#    +                                                               +
+#    |                                                               |
+#    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# 
+# =begin html
+# <PRE>
+#    <B>Version              4-bit Internet Protocol version number = 6.</B>
+# </PRE>
+# 
+# =end html
+# 
+#    Traffic Class        8-bit traffic class field.  See section 7.
+# 
+#    Flow Label           20-bit flow label.  See section 6.
+# 
+#    Payload Length       16-bit unsigned integer.  Length of the IPv6
+#                         payload, i.e., the rest of the packet following
+#                         this IPv6 header, in octets.  (Note that any
+#                         extension headers [section 4] present are
+#                         considered part of the payload, i.e., included
+#                         in the length count.)
+# 
+#    Next Header          8-bit selector.  Identifies the type of header
+#                         immediately following the IPv6 header.  Uses the
+#                         same values as the IPv4 Protocol field [RFC-1700
+#                         et seq.].
+# 
+#    Hop Limit            8-bit unsigned integer.  Decremented by 1 by
+#                         each node that forwards the packet. The packet
+#                         is discarded if Hop Limit is decremented to
+#                         zero.
+# 
+#    Source Address       128-bit address of the originator of the packet.
+#                         See [ADDRARCH].
+# 
+#    Destination Address  128-bit address of the intended recipient of the
+#                         packet (possibly not the ultimate recipient, if
+#                         a Routing header is present).  See [ADDRARCH]
+#                         and section 4.4.
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+perldoc V6evalTool
+
+=cut

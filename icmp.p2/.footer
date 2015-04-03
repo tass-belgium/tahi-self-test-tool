@@ -1,0 +1,22 @@
+Terminology
+<UL>
+  HUT: Host Under Test<BR>
+  MTU: Maximum Transmission Unit<BR>
+  NA: Neighbor Advertisement<BR>
+  NCE: Neighbor Cache Entry<BR>
+  NS: Neighbor Solicitation<BR>
+  NUT: Node Under Test<BR>
+  RUT: Router Under Test<BR>
+  RA: Router Advertisement<BR>
+  TN: Testing Node<BR>
+</UL>
+<BR>
+<HR>	
+Index
+<UL>
+  <LI><A HREF="../spec.p2/index.html">Section 1: RFC 2460 - IPv6 Specification</A>
+  <LI><A HREF="../nd.p2/index.html">Section 2: RFC 4861 - Neighbor Discovery for IPv6</A>
+  <LI><A HREF="../addr.p2/index.html">Section 3: RFC 4862 - IPv6 Stateless Address Autoconfiguration</A>
+  <LI><A HREF="../pmtu.p2/index.html">Section 4: RFC 1981 - Path MTU Discovery for IPv6</A>
+  <LI>Section 5: RFC 4443 - ICMPv6
+</UL>

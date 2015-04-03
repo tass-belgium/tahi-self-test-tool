@@ -1,0 +1,559 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/nd.p2/V6LC_2_1_6_B.seq,v 1.19 2010/01/14 01:34:08 akisada Exp $
+#
+########################################################################
+
+use nd;
+
+BEGIN {}
+END   {}
+
+startNdiscWorld($Link0);
+
+
+
+#-- AdvRetransTimer: 1 ------------------------------------------------#
+vLogHTML('<FONT COLOR="#FF0000" SIZE="5"><U><B>Procedure</B></U></FONT><BR>');
+
+my $retransTimer = 1;
+if(setupCommon11_local($Link0, $retransTimer, 'mcast_ra_commonsetup', 0) < 0) {
+	exitFail();
+	#NOTREACHED
+}
+
+
+
+my $ereq = 'ndisc_ereq_GG';
+vClear($Link0);
+vSend($Link0, $ereq);
+
+my @frames = mcastNS($ereq);
+my $recvCount = 0;
+my $solicit = 0;
+
+$TimeOut = 1 + 1;
+my @recvTimes = ();
+
+for( ; ; ) {
+	my $recv_valid	= 0;
+	my %ret = vRecvWrapper($Link0, $TimeOut, 0, 0, @frames);
+
+	if($ret{'recvCount'}) {
+		$recvCount += $ret{'recvCount'};
+
+		foreach my $frame (@frames) {
+			if($ret{'recvFrame'} eq $frame) {
+				$solicit ++;
+				$recvCount --;
+				$recv_valid	++;
+				push(@recvTimes,
+					$ret{'recvTime'.$ret{'recvCount'}});
+				last;
+			}
+		}
+
+		if($solicit > $MAX_MULTICAST_SOLICIT) {
+			vLogHTML('<FONT COLOR="#FF0000"><B>'.
+				'Observed too many NSs</B></FONT><BR>');
+
+			exitFail();
+		}
+
+		if($recv_valid) {
+			next;
+		}
+	}
+
+	last;
+}
+
+unless($solicit) {
+	vLogHTML('<FONT COLOR="#FF0000"><B>'.
+		'Could\'t observe NS</B></FONT><BR>');
+
+	exitFail();
+}
+
+if($solicit < $MAX_MULTICAST_SOLICIT) {
+	vLogHTML('<FONT COLOR="#FF0000"><B>'.
+		'Observed too less NSs</B></FONT><BR>');
+
+	exitFail();
+}
+
+if(checkInterval($retransTimer, @recvTimes) < 0) {
+	exitFail();
+}
+
+
+
+#-- AdvRetransTimer: 5 ------------------------------------------------#
+if($V6evalTool::NutDef{'Type'} eq 'router') {
+	vClear($Link0);
+	if(vRemote('racontrol.rmt', 'mode=stop')) {
+		vLogHTML('<FONT COLOR="#FF0000"><B>racontrol.rmt: '.
+			'Could\'t stop to send RA</B></FONT><BR>');
+
+		exitFatal();
+		#NOTREACHED
+	}
+
+	$rut_rtadvd	= 0;
+
+	vRecv($Link0,
+		$MAX_INITIAL_RTR_ADVERT_INTERVAL *
+			$MAX_INITIAL_RTR_ADVERTISEMENTS +
+				$MIN_DELAY_BETWEEN_RAS + 1,
+		0, 0);
+}
+
+$retransTimer = 5;
+if(setupCommon11_local($Link0, $retransTimer, 'mcast_ra_retranstiemer5', 1) < 0) {
+	exitFail();
+	#NOTREACHED
+}
+
+# send link-local Echo Request
+vClear($Link0);
+vSend($Link0, $ereq);
+$recvCount = 0;
+$solicit = 0;
+
+$TimeOut = 5 + 1;
+@recvTimes = ();
+
+for( ; ; ) {
+	my $recv_valid	= 0;
+	my %ret = vRecvWrapper($Link0, $TimeOut, 0, 0, @frames);
+
+	if($ret{'recvCount'}) {
+		$recvCount += $ret{'recvCount'};
+
+		foreach my $frame (@frames) {
+			if($ret{'recvFrame'} eq $frame) {
+				$solicit ++;
+				$recvCount --;
+				$recv_valid	++;
+				push(@recvTimes,
+					$ret{'recvTime'.$ret{'recvCount'}});
+				last;
+			}
+		}
+
+		if($solicit > $MAX_MULTICAST_SOLICIT) {
+			vLogHTML('<FONT COLOR="#FF0000"><B>'.
+				'Observed too many NSs</B></FONT><BR>');
+
+			exitFail();
+		}
+
+		if($recv_valid) {
+			next;
+		}
+	}
+
+	last;
+}
+
+unless($solicit) {
+	vLogHTML('<FONT COLOR="#FF0000"><B>'.
+		'Could\'t observe NS</B></FONT><BR>');
+
+	exitFail();
+}
+
+if($solicit < $MAX_MULTICAST_SOLICIT) {
+	vLogHTML('<FONT COLOR="#FF0000"><B>'.
+		'Observed too less NSs</B></FONT><BR>');
+
+	exitFail();
+}
+
+if(checkInterval($retransTimer, @recvTimes) < 0) {
+	exitFail();
+}
+
+exitPass();
+#NOTREACHED
+
+
+
+#------------------------------#
+# checkInterval                #
+#------------------------------#
+sub
+checkInterval($@)
+{
+	my ($retransTimer, @recvtimes) = @_;
+	my $returnvalue = 0;
+
+	vLogHTML('<TABLE>');
+
+	for(my $d = 0; $d <= $#recvtimes; $d ++) {
+		vLogHTML('<TR>');
+		vLogHTML("<TD ROWSPAN=\"2\">Recv[$d]</TD>");
+		vLogHTML('<TD ROWSPAN="2">:</TD>');
+		vLogHTML("<TD ROWSPAN=\"2\">$recvtimes[$d] sec.</TD>");
+
+		if($d == 0) {
+			vLogHTML('<TD COLSPAN="4">&nbsp;</TD>');
+		}
+
+		vLogHTML('</TR>');
+
+		vLogHTML('<TR>');
+
+		if($d == $#recvtimes) {
+			vLogHTML('<TD COLSPAN="4">&nbsp;</TD>');
+		} else {
+			my $delta = $recvtimes[$d + 1] - $recvtimes[$d];
+
+			vLogHTML("<TD ROWSPAN=\"2\">Interval[$d]</TD>");
+			vLogHTML('<TD ROWSPAN="2">:</TD>');
+			vLogHTML(sprintf("<TD ROWSPAN=\"2\">%.6f sec.</TD>",
+				$delta));
+
+			my $margin = 0.5;
+			if(($delta < $retransTimer - $margin) ||
+				($delta > $retransTimer + $margin)) {
+
+				vLogHTML('<TD ROWSPAN="2">');
+				vLogHTML('<FONT COLOR="#FF0000">*</FONT>');
+				vLogHTML('</TD>');
+				$returnvalue = -1;
+			} else {
+				vLogHTML('<TD ROWSPAN="2">&nbsp;</TD>');
+			}
+		}
+
+		vLogHTML('</TR>');
+	}
+
+	vLogHTML('</TABLE>');
+
+	if($returnvalue < 0) {
+		vLogHTML('<FONT COLOR="#FF0000">'.
+			'Retransmissions MUST be rate-limited to '.
+			'at most one solicitation per<BR>');
+		vLogHTML('<FONT COLOR="#FF0000">'.
+			'neighbor every RetransTimer milliseconds.<BR>');
+	}
+
+	return($returnvalue);
+}
+
+
+
+#------------------------------#
+# setupCommon11_local()        #
+#------------------------------#
+sub
+setupCommon11_local($$)
+{
+	my ($Link, $retrans, $ra, $bool) = @_;
+
+	vLogHTML("set RetransTimer=$retransTimer<BR>");
+
+	$NEED_COMMON_CLEANUP = 1;
+
+	if($V6evalTool::NutDef{'Type'} eq 'router') {
+		#if(vRemote(
+		#	'route.rmt',
+		#	'cmd=add',
+		#	'prefix=default',
+		#	"gateway=fe80::200:ff:fe00:a0a0",
+		#	"if=$V6evalTool::NutDef{'Link0_device'}"
+		#)) {
+		#	vLogHTML('<FONT COLOR="#FF0000"><B>route.rmt: Could\'t set route</B></FONT><BR>');
+		#	exitFatal();
+		#}
+		#
+		#$tr1_default = 1;
+
+		my $str = sprintf("%s", $retrans * 1000);
+		vClear($Link);
+		if(vRemote('racontrol.rmt', 'mode=start',
+			"retrans=$str",
+			"link0=$V6evalTool::NutDef{'Link0_device'}")) {
+
+			vLogHTML('<FONT COLOR="#FF0000"><B>racontrol.rmt: '.
+				'Could\'t start to send RA</B></FONT><BR>');
+
+			exitFatal();
+			#NOTREACHED
+		}
+
+		$rut_rtadvd	= 1;
+
+		if($bool) {
+			$rut_rtadvd_retrans	= 1;
+		}
+
+		vRecv($Link,
+			$MAX_INITIAL_RTR_ADVERT_INTERVAL *
+			$MAX_INITIAL_RTR_ADVERTISEMENTS +
+			$MIN_DELAY_BETWEEN_RAS + 1,
+			0, 0);
+
+		return(0);
+	}
+
+
+
+	if($V6evalTool::NutDef{'Type'} ne 'router') {
+		my %nd_hash = (
+			'ns_l2l'	=> 'na_l2l',
+			'ns_g2l'	=> 'na_l2g',
+			'ucast_ns_l2l'	=> 'na_l2l',
+			'ucast_ns_g2l'	=> 'na_l2g',
+			'ucast_ns_sll_l2l'	=> 'na_l2l',
+			'ucast_ns_sll_g2l'	=> 'na_l2g',
+		);
+
+		vClear($Link);
+		vSend($Link, $ra);
+		ignoreDAD($Link);
+
+		if($bool) {
+			$force_cleanup_r0 = 1;
+		}
+
+		$tr1_default = 1;
+		my $ereq = 'setup_echo_request';
+		my $erep = 'setup_echo_reply';
+		my @frames = ();
+
+		if($bool) {
+			push(@frames, 'ucast_ns_l2l');
+			push(@frames, 'ucast_ns_g2l');
+			push(@frames, 'ucast_ns_sll_l2l');
+			push(@frames, 'ucast_ns_sll_g2l');
+		} else {
+			push(@frames, 'ns_l2l');
+			push(@frames, 'ns_g2l');
+		}
+
+		my $mcast_ns	= '';
+
+		vClear($Link);
+		vSend($Link, $ereq);
+
+		if($bool) {
+			my %ret1 = vRecvWrapper($Link, $TimeOut, 0, 0, $erep);
+			if($ret2{'recvCount'}) {
+				if($ret2{'recvFrame'} ne $erep) {
+					return(-1);
+				}
+			}
+
+			my %ret2 = vRecvWrapper($Link, 5 + $retrans + 1, 0, 0, @frames);
+			if($ret1{'recvCount'}) {
+				foreach my $frame (@frames) {
+					if($ret1{'recvFrame'} eq $frame) {
+						$mcast_ns = $frame;
+						last;
+					}
+				}
+			}
+
+			my $na = $nd_hash{$mcast_ns};
+
+			vClear($Link);
+			vSend($Link, $na);
+			$tr1_cache = 1;
+		} else {
+			my %ret1 = vRecvWrapper($Link, $retrans + 1, 0, 0, @frames);
+			if($ret1{'recvCount'}) {
+				foreach my $frame (@frames) {
+					if($ret1{'recvFrame'} eq $frame) {
+						$mcast_ns = $frame;
+						last;
+					}
+				}
+			}
+
+			if($mcast_ns eq '') {
+				vLogHTML('<FONT COLOR="#FF0000"><B>Could\'t observe NS</B></FONT><BR>');
+				return(-1);
+			}
+
+
+
+			my $na = $nd_hash{$mcast_ns};
+
+			vClear($Link);
+			vSend($Link, $na);
+			$tr1_cache = 1;
+
+			my %ret2 = vRecvWrapper($Link, $TimeOut, 0, 0, $erep);
+			if($ret2{'recvCount'}) {
+				if($ret2{'recvFrame'} ne $erep) {
+					return(-1);
+				}
+			}
+		}
+
+		return(0);
+	}
+
+	return(-1);
+}
+
+
+
+#
+# perldoc
+#
+########################################################################
+__END__
+
+=head1 NAME
+
+  Test v6LC.2.1.5 - Neighbor Solicitation Origination, Address Resolution
+  Part B: Neighbor Solicitation Origination, Target Address Being Global
+
+=head1 Purpose
+
+  Verify that a node properly originates Neighbor Solicitations when trying to resolve the
+  address of a neighbor.
+
+=head1 References
+
+  * [ND]  Sections 6.2.1, 7.2.2
+
+=head1 Resource Requirements
+
+  * Packet generator
+  * Monitor to capture packets
+
+=head1 Test Setup
+
+  No Common Test Setup is performed. The Common Test Cleanup procedure is
+  performed after each part.
+
+=begin html
+
+<BLOCKQUOTE>
+
+<TABLE>
+<TR>
+
+<TD>
+<TABLE BORDER>
+<Caption>Packet A</Caption>
+<TR>
+<TD>
+	IPv6 Header<br>
+	Next Header: 58<br>
+	Source Address: TN1's local Address<br>
+	Destination Address: NUT's Link-local Address
+</TD>
+</TR>
+<TR>
+<TD>ICMPv6 Echo Request</TD>
+</TR>
+</TABLE>
+</TD>
+
+<TD>
+<TABLE BORDER>
+<Caption>Packet B</Caption>
+<TR>
+<TD>
+        IPv6 Header<br>
+        Next Header: 58<br>
+        Source Address: TN1's Global Address<br>
+	Destination Address: NUT's Global Address
+</TD>
+</TR>
+<TR>
+<TD>ICMPv6 Echo Request</TD>
+</TR>
+</TABLE>
+</TD>
+
+</TR>
+</TABLE>
+
+</BLOCKQUOTE>
+
+=end html
+
+=head1 Procedure
+
+  Part B: Neighbor Solicitation Origination, Target Address Being Global
+   5. If the NUT is a host, perform Common Test Setup 1.1 with a Retransmit Interval value of 1
+      second. If the NUT is a router, configure the Retransmit Interval value to 1 second.
+   6. TN1 transmits Packet B. The source address is TN1's global address and the destination is the
+      NUT's global address.
+   7. Observe the packets transmitted by the NUT. TN1 doesn't send any Neighbor Advertisement.
+   8. Repeat Steps 5 and 6 with a Retransmit Interval value of 5 seconds and observe the packets
+      transmitted by the NUT.
+
+=head1 Observable Results
+
+  Part B
+
+   Step 7: 
+   In response to Packet B, the NUT should transmit Neighbor Solicitations with a
+   Target Address equal to the TN1's Global Address at intervals of 1 second. The NUT MUST
+   transmit no more than 1 Neighbor Solicitation every 1 second. Each Neighbor Solicitation
+   MUST have a Source Link-Layer Address Option. The maximum number of Neighbor
+   Solicitations should be MAX_MULTICAST_SOLICIT, which should be 3.
+
+   Step 8: 
+   The NUT should transmit the Neighbor Solicitations with a Target Address equal to
+   the TN1's Global Address at intervals of 5 seconds. The NUT MUST transmit no more than 1
+   Neighbor Solicitation every 5 seconds. Each Neighbor Solicitation MUST have a Source
+   Link-Layer Address Option. The maximum number of Neighbor Solicitations should be
+   MAX_MULTICAST_SOLICIT, which should be 3.
+
+=head1 Possible Problems
+
+  * None. 
+
+=cut
+

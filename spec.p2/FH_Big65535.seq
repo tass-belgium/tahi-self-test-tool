@@ -1,0 +1,198 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/spec.p2/FH_Big65535.seq,v 1.3 2005/01/06 06:49:57 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+
+%pktdesc = (
+	echo_request	=> 'Send Echo Request (Preparation)',
+	echo_reply	=> 'Recv Echo Reply',
+	ns		=> 'Recv Neighbor Solicitation',
+	na		=> 'Send Neighbor Advertisement',
+);
+
+$frag_num = 46;
+for ($seq = 1; $seq <= $frag_num; $seq++) {
+	$pktdesc{"echo_request_" . $seq} = "Send Echo Request fragment " . $seq ;
+	$pktdesc{"echo_reply_" . $seq} = "Recv Echo Reply fragment " . $seq ;
+	$done[$seq - 1] = "echo_reply_$seq";
+}
+
+$IF = Link0;
+
+vCapture($IF);
+
+#----- preparation
+
+vLogHTML('<B>Begin Preparation</B>');
+
+vSend($IF, echo_request);
+
+%ret = vRecv($IF, 5, 0, 0, ns, echo_reply);
+if ($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+if ($ret{recvFrame} eq 'ns') {
+	vSend($IF, na);
+	%ret = vRecv($IF, 5, 0, 0, echo_reply);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} ne 'echo_reply') {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+
+vSend($IF, na);
+
+vLogHTML('<B>End Preparation</B>');
+
+#----- main test
+
+for ($seq = 1; $seq <= $frag_num; $seq++) {
+	vSend($IF, "echo_request_$seq");
+}
+
+$rest = $frag_num;
+while ($rest > 0) {
+	%ret = vRecv($IF, 5, 0, 1, @done);
+	if ($ret{status} == 2) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		vSleep(65, "Discard Unexpected 'ICMP Time Exceeded' message (60+5 sec)");
+		exit $V6evalTool::exitFail;
+	}
+	if ($ret{status} != 0) {
+		if ($rest == $frag_num) {
+			vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+			vSleep(65, "Discard Unexpected 'ICMP Time Exceeded' message (60+5 sec)");
+			exit $V6evalTool::exitFail;
+		}
+		vLogHTML("Warning: [@done] not received, maybe dropped<BR>");
+		vLogHTML('<FONT COLOR="#00FF00">WARN</FONT>');
+		exit $V6evalTool::exitWarn;
+	}
+	for ($seq = 1; $seq <= $frag_num; $seq++) {
+		if ($ret{recvFrame} eq $done[$seq - 1]) {
+			$done[$seq - 1] = "";
+			$rest--;
+			break;
+		}
+	}
+}
+
+vLogHTML('OK');
+exit $V6evalTool::exitPass;
+
+######################################################################
+__END__
+
+=head1 NAME
+
+FH_Big65535.seq - check Fragment Reassembly (Payload Size = 65535)
+
+=head1 TARGET
+
+Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./FH_Big65535.seq">FH_Big65535.seq</A> [-tooloption ...] -pkt <A HREF="./FH_Big65535.def">FH_Big65535.def</A>
+    -tooloption : v6eval tool option
+  See also <A HREF="./FH_BigPayload.def">FH_BigPayload.def</A>
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  1. Ping to Target (create Neighbor Cache Entries, if not exist)
+  2. Override Neighbor Cache Entries
+
+=head1 TEST PROCEDURE
+
+  Tester                      Target
+    |                           |
+    |-------------------------->| 
+    |   Echo Request            |  * 46 fragments
+    |                           |
+    |                           |
+    |<--------------------------|
+    |   Echo Reply              |  * 46 fragments
+    |                           |
+    |                           |
+    v                           v
+
+
+  1. Send Echo Request (46 fragments)
+  2. Receive Echo Reply (46 fragments)
+
+  This test assumes MTU is 1500 (Ethernet Default).
+  Each fragment packet's Payload Length is 1456 octets.
+  Received fragment packets' Fragment ID are ignored.
+
+=head1 JUDGEMENT
+
+  PASS: All fragment packet of Echo Reply Received
+
+  WARN: Any fragment packet of Echo Reply Received
+
+        Maybe some packets are not captured by bpf.
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

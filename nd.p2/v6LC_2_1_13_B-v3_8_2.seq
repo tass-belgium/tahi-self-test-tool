@@ -1,0 +1,301 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/nd.p2/v6LC_2_1_13_B-v3_8_2.seq,v 1.7 2009/12/28 05:55:17 akisada Exp $
+#
+########################################################################
+
+use nd;
+
+BEGIN {}
+END   {}
+
+startNdiscWorld($Link0);
+
+if (setupCommon11($Link0) < 0) {
+	exitInitFail();
+	#NOTREACHED
+}
+
+$SeekTime = 0;
+
+my @na = ndSetNa4ucastNs();
+
+vLogHTML('<FONT COLOR="#FF0000" SIZE="5"><U><B>Procedure'.
+	'</B></U></FONT><BR>');
+
+if(ndSendNsRecvNaStale($Link0, 'nd_ucast_ns_sll', \@na) < 0) {
+	exitInitFail();
+	#NOTREACHED
+}
+
+if(ndOfflinkEchoDelay($Link0) < 0) {
+	exitFail();
+	#NOTREACHED
+}
+
+exitPass();
+#NOTREACHED
+
+#------------------------------#
+# setupCommon11()              #
+#------------------------------#
+sub setupCommon11 {
+    my ($Link) = @_;
+                 
+    $NEED_COMMON_CLEANUP = 1;
+     
+    vLogHTML('<FONT COLOR="#FF0000" SIZE="5"><U><B>Common Test Setup 1.1</B></U></FONT><BR>');
+
+    if($V6evalTool::NutDef{'Type'} eq 'router') {
+        if(vRemote(
+            'route.rmt',
+            'cmd=add',
+            'prefix=default',
+            "gateway=fe80::200:ff:fe00:a0a0",
+            "if=$V6evalTool::NutDef{'Link0_device'}"
+        )) {
+            vLogHTML('<FONT COLOR="#FF0000"><B>'.
+                     'route.rmt: Could\'t set route'.
+                     '</B></FONT><BR>');
+            return(0);
+        }
+
+        $tr1_default    = 1;
+    } else {
+        my %nd_hash = (
+            'ns_l2l'        => 'na_l2l',
+            'ns_g2l'        => 'na_l2g',
+        );
+
+        my $ra = 'mcast_ra_commonsetup';
+
+        vClear($Link);
+        vSend($Link, $ra);
+        ignoreDAD($Link);
+
+        $tr1_default = 1;
+        my $ereq = 'setup_echo_request';
+        my $erep = 'setup_echo_reply';
+        my @frames = ('ns_l2l', 'ns_g2l');
+
+        my $mcast_ns    = '';
+
+        vClear($Link);
+        vSend($Link, $ereq);
+
+        my %ret1 = vRecvWrapper($Link, $TimeOut, 0, 0, @frames);
+            if($ret1{'recvCount'}) {
+                foreach my $frame (@frames) {
+                    if($ret1{'recvFrame'} eq $frame) {
+                        $mcast_ns = $frame;
+                        last;
+                    }
+                }
+            }
+
+            if($mcast_ns eq '') {
+                vLogHTML('<FONT COLOR="#FF0000"><B>Could\'t observe NS</B></FONT><BR>');
+                return(-1);
+            }
+
+            my $na = $nd_hash{$mcast_ns};
+
+            vClear($Link);
+            vSend($Link, $na);
+            $tr1_cache = 1;
+
+            my %ret2 = vRecvWrapper($Link, $TimeOut, 0, 0, $erep);
+            if($ret2{'recvCount'}) {
+                if($ret2{'recvFrame'} ne $erep) {
+                    return(-1);
+                }
+            }
+    }
+
+    return(0);
+}
+
+#
+# perldoc
+#
+########################################################################
+__END__
+
+=head1 NAME
+
+  Test v6LC.2.1.13 - Neighbor Solicitation Processing, IsRouterFlag (Host Only)
+  Part B: Unicast Neighbor Solicitation with a SLLA
+
+=head1 Purpose
+
+  Verify that a host does not modify the isRouter flag after receiving a Neighbor Solicitation.
+
+=head1 References
+
+  * [IPv6-ARCH]  Section 2.6.1, 2.8
+  * [ND]  Sections 7.2.4
+
+=head1 Resource Requirements
+
+  * Packet generator
+  * Monitor to capture packets
+
+=head1 Test Setup
+
+  Common Test Setup 1.1 is performed The Common Test Cleanup procedure is performed
+  after each part.
+
+=begin html
+
+<BLOCKQUOTE>
+
+<TABLE BORDER>
+<Caption>Packet A</Caption>
+<TR>
+<TD>
+        IPv6 Header<br>
+        Next Header: 58<br>
+        Source Address: TN2's off-link Address<br>
+	Destination Address: HUT's Global Address
+</TD>
+</TR>
+<TR>
+<TD>ICMPv6 Echo Request</TD>
+</TR>
+</TABLE>
+
+<br>
+
+<TABLE BORDER>
+<Caption>Neighbor Advertisement B</Caption>
+<TR>
+<TD>
+        IPv6 Header<br>
+        Next Header: 58<br>
+        Destination Address: HUT's Link-local Address<br>
+        Source Address: TR1's Link-local Address<br>
+</TD>
+</TR>
+<TR>
+<TD>
+        Neighbor Solicitation<br>
+	Target Address: HUT's Link-local Address
+</TD>
+</TR>
+</TABLE>
+
+<br>
+
+<TABLE>
+<TR>
+
+<TD>
+<TABLE BORDER>
+<Caption>Neighbor Solicitation C</Caption>
+<TR>
+<TD>
+	IPv6 Header<br>
+	Next Header: 58<br>
+	Destination Address: HUT's Link-local Address<br>
+	Source Address: TR1's Link-local Address
+</TD>
+</TR>
+<TR>
+<TD>
+	Neighbor Solicitation<br>
+	Target Address: HUT's Link-local Address<br>
+	Source Link-Layer Address: TR1's Ethernet address
+</TD>
+</TR>
+</TABLE>
+</TD>
+
+<TD>
+<TABLE BORDER>
+<Caption>Neighbor Solicitation D</Caption>
+<TR>
+<TD>
+        IPv6 Header<br>
+        Next Header: 58<br>
+	Destination Address: NUT's Solicited-node Multicast Link-local Address<br>
+        Source Address: TR1's Link-local Address
+</TD>
+</TR>
+<TR>
+<TD>
+	Neighbor Solicitation<br>
+        Target Address: NUT's Link-local Address<br>
+        Source Link-Layer Address: TR2's Ethernet address
+</TD>
+</TR>
+</TABLE>
+</TD>
+
+</TR>
+</TABLE>
+</BLOCKQUOTE>
+
+=end html
+
+
+=head1 Procedure
+
+  Part B: Unicast Neighbor Solicitation with a SLLA
+   4. TR1 transmits Neighbor Solicitation C.
+   5. TN2 transmits Packet A to the HUT.
+   6. Observe the packets transmitted by the HUT.
+
+=head1 Observable Results
+
+  Part B
+   Step 6: The HUT should transmit an Echo Reply using TR1 as its default router. The HUT
+   should not update the isRouter flag after receiving the NS.
+
+=head1 Possible Problems
+
+  * None.
+
+=cut
+

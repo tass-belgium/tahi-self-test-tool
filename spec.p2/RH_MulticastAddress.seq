@@ -1,0 +1,397 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/spec.p2/RH_MulticastAddress.seq,v 1.4 2005/04/11 08:27:21 akisada Exp $
+#
+######################################################################
+
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+
+if($V6evalTool::NutDef{Type} ne 'router') {
+	vLogHTML("This test is for the router only<BR>");
+	exit $V6evalTool::exitRouterOnly;
+}
+
+%pktdesc = (
+	echo_request_on_link0        => 'Send Echo Request (Link0)',
+	echo_request_on_link1        => 'Recv Echo Request (Link1)',
+	echo_request_off_link0       => 'Send Echo Request (from Link0 to Link1) (Link0)',
+	echo_request_off_link1       => 'Recv Echo Request (from Link0 to Link1) (Link1)',
+	echo_request_ex_to_link0     => 'Send Echo Request (Routing Header) (Link0)',
+	echo_request_ex_to_link1     => 'Recv Echo Request (Routing Header) (Link1)',
+	echo_request_badex_to_link0  => 'Send Echo Request (Routing Header - Multicast) (Link0)',
+	echo_request_badex_to_link1  => 'Recv Echo Request (Routing Header - Multicast) (Link1)',
+	echo_reply_on_link0          => 'Recv Echo Reply (Link0)',
+	echo_reply_on_link1          => 'Recv Echo Reply (Link1)',
+	unicast_ns_global_link0      => 'Recv Multicast Neighbor Solicitation - global (Link0)',
+	multicast_ns_global_link0    => 'Recv Multicast Neighbor Solicitation - global (Link0)',
+	multicast_ns_global_link1    => 'Recv Multicast Neighbor Solicitation - global (Link1)',
+	multicast_ns_linklocal_link0 => 'Recv Multicast Neighbor Solicitation - link-local (Link0)',
+	multicast_ns_linklocal_link1 => 'Recv Multicast Neighbor Solicitation - link-local (Link1)',
+	na_global_link0              => 'Send Neighbor Advertisement - global (Link0)',
+	na_global_link1              => 'Send Neighbor Advertisement - global (Link1)',
+	na_linklocal_link0           => 'Send Neighbor Advertisement - link-local (Link0)',
+	na_linklocal_link1           => 'Send Neighbor Advertisement - link-local (Link1)',
+);
+
+######################################################################
+
+$IF0 = Link0;
+$IF1 = Link1;
+
+vCapture($IF0);
+vCapture($IF1);
+
+vLogHTML('<B> -- Test Preparation (Link0) --</B>');
+
+vSend($IF0, echo_request_on_link0);
+
+%ret = vRecv($IF0, 5, 0, 0, multicast_ns_global_link0, multicast_ns_linklocal_link0, unicast_ns_global_link0, echo_reply_on_link0);
+
+if($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">No response from NUT (Link0)</FONT><BR>');
+	goto fail;
+}
+
+if($ret{recvFrame} eq 'multicast_ns_global_link0') {
+	vSend($IF0, na_global_link0);
+	%ret = vRecv($IF0, 5, 0, 0, echo_reply_on_link0);
+
+	if($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">Cannot receive Echo Reply (Link0)</FONT><BR>');
+		goto fail;
+	}
+}
+
+if($ret{recvFrame} eq 'multicast_ns_linklocal_link0') {
+	vSend($IF0, na_linklocal_link0);
+	%ret = vRecv($IF0, 5, 0, 0, echo_reply_on_link0);
+
+	if($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">Cannot receive Echo Reply (Link0)</FONT><BR>');
+		goto fail;
+	}
+}
+
+if($ret{recvFrame} eq 'unicast_ns_global_link0') {
+	vSend($IF0, na_global_link0);
+	%ret = vRecv($IF0, 5, 0, 0, echo_reply_on_link0);
+
+	if($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">Cannot receive Echo Reply (Link0)</FONT><BR>');
+		goto fail;
+	}
+}
+
+if($ret{recvFrame} eq 'echo_reply_on_link0') {
+	vLogHTML('<FONT COLOR="#008000">Receive Echo Reply (Link0)</FONT><BR>');
+	vLogHTML('<B>OK</B>');
+}
+
+######################################################################
+
+vClear($IF0);
+vClear($IF1);
+
+vLogHTML('<B> -- Test Preparation (Link1) --</B>');
+
+vSend($IF1, echo_request_on_link1);
+
+%ret = vRecv($IF1, 5, 0, 0, multicast_ns_global_link1, multicast_ns_linklocal_link1, unicast_ns_global_link1, echo_reply_on_link1);
+
+if($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">No response from NUT (Link1)</FONT><BR>');
+	goto fail;
+}
+
+if($ret{recvFrame} eq 'multicast_ns_global_link1') {
+	vSend($IF1, na_global_link1);
+	%ret = vRecv($IF1, 5, 0, 0, echo_reply_on_link1);
+
+	if($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">Cannot receive Echo Reply (Link1)</FONT><BR>');
+		goto fail;
+	}
+}
+
+if($ret{recvFrame} eq 'multicast_ns_linklocal_link1') {
+	vSend($IF1, na_linklocal_link1);
+	%ret = vRecv($IF1, 5, 0, 0, echo_reply_on_link1);
+
+	if($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">Cannot receive Echo Reply (Link1)</FONT><BR>');
+		goto fail;
+	}
+}
+
+if($ret{recvFrame} eq 'unicast_ns_global_link1') {
+	vSend($IF1, na_global_link1);
+	%ret = vRecv($IF1, 5, 0, 0, echo_reply_on_link1);
+
+	if($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">Cannot receive Echo Reply (Link1)</FONT><BR>');
+		goto fail;
+	}
+}
+
+if($ret{recvFrame} eq 'echo_reply_on_link1') {
+	vLogHTML('<FONT COLOR="#008000">Receive Echo Reply (Link1)</FONT><BR>');
+	vLogHTML('<B>OK</B>');
+}
+
+######################################################################
+
+vSend($IF0, na_global_link0);
+vLogHTML('Make NCE certainly (Link0)');
+
+vSend($IF1, na_global_link1);
+vLogHTML('Make NCE certainly (Link1)');
+
+vClear($IF0);
+vClear($IF1);
+
+vLogHTML('<B> -- Test Preparation (ICMPv6 Echo) --</B>');
+
+vSend($IF0, echo_request_off_link0);
+
+%ret = vRecv($IF1, 5, 0, 0, echo_request_off_link1);
+
+if($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">No response from NUT (Link1)</FONT><BR>');
+	goto fail;
+}
+
+if($ret{recvFrame} eq 'echo_request_off_link1') {
+	vLogHTML('<FONT COLOR="#008000">Receive Echo Request (Link1)</FONT><BR>');
+	vLogHTML('<B>OK</B>');
+}
+
+######################################################################
+
+vSend($IF0, na_global_link0);
+vLogHTML('Make NCE certainly (Link0)');
+
+vSend($IF1, na_global_link1);
+vLogHTML('Make NCE certainly (Link1)');
+
+vClear($IF0);
+vClear($IF1);
+
+vLogHTML('<B> -- Test Preparation (ICMPv6 Echo, Routing Header) --</B>');
+
+vSend($IF0, echo_request_ex_to_link0);
+
+%ret = vRecv($IF1, 5, 0, 0, echo_request_ex_to_link1);
+
+if($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">No response from NUT (Link1)</FONT><BR>');
+	goto fail;
+}
+
+if($ret{recvFrame} eq 'echo_request_ex_to_link1') {
+	vLogHTML('<FONT COLOR="#008000">Receive Echo Request (Link1)</FONT><BR>');
+	vLogHTML('<B>OK</B>');
+}
+
+######################################################################
+
+vSend($IF0, na_global_link0);
+vLogHTML('Make NCE certainly (Link0)');
+
+vSend($IF1, na_global_link1);
+vLogHTML('Make NCE certainly (Link1)');
+
+vClear($IF0);
+vClear($IF1);
+
+vLogHTML('<B> -- Test --</B>');
+
+vSend($IF0, echo_request_badex_to_link0);
+%ret = vRecv($IF1, 5, 0, 0, echo_request_badex_to_link1);
+
+if($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#008000">No response from NUT</FONT><BR>');
+	goto pass;
+}
+
+if($ret{recvFrame} eq 'echo_request_badex_to_link1') {
+	vLogHTML('<FONT COLOR="#008000">Receive Echo Request (Link1)</FONT><BR>');
+	goto fail;
+}
+
+goto fail;
+
+######################################################################
+
+pass:
+	vLogHTML('<B>OK</B>');
+	exit $V6evalTool::exitPass;
+
+fail:
+	vLogHTML('<B><FONT COLOR="#FF0000">NG</FONT></B>');
+	exit $V6evalTool::exitFail;
+
+######################################################################
+__END__
+
+=head1 NAME
+
+    RH_MulticastAddress - Routing Header include Multicast address
+
+=head1 TARGET
+
+    Router
+
+=head1 SYNOPSIS
+
+=begin html
+    <PRE>
+    <A HREF="./RH_MulticastAddress.seq">RH_MulticastAddress.seq</A> [-tooloption ...] -pkt <A HREF="./RH_MulticastAddress.def">RH_MulticastAddress.def</A>
+        -tooloption : v6eval tool option
+    </PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+    1. Check Link0 Global Address Reachability
+    2. Check Link1 Global Address Reachability
+    3. Check Global Address Reachability (from Link0 to Link1)
+    4. Check support of Routing Header
+
+=head1 TEST PROCEDURE
+
+    1. Send bad Echo Request (Link0)
+    2. Receive bad Echo Request (Link1)
+
+    Test Topology is:
+
+                       H2
+                       |
+        Link3 ---------+---------+---------- 3ffe:501:ffff:103::/64
+                                 |
+                                 R3
+                                 |
+        Link2 ---------+---------+---------- 3ffe:501:ffff:102::/64
+                       |
+                       R2(TN)
+                       |
+        Link1 ---------+---------+---------- 3ffe:501:ffff:101::/64
+                                 |
+                                 R1(NUT)
+                                 |
+        Link0 ---------+---------+---------- 3ffe:501:ffff:100::/64
+                       |
+                       H1 (TN)
+
+    Bad Echo Request Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 72
+            NextHeader         = 43 (Routing Header)
+            HopLimit           = 64
+            SourceAddress      = H1         - Tester Global Address (Link0)
+            DestinationAddress = R1 (Link0) - Target Global Address (Link0)
+
+        Routing Header
+            NextHeader         = 58 (ICMPv6)
+            HeaderExtLength    = 6
+            RoutingType        = 0
+            SegmentsLeft       = 3
+            Reserved           = 0
+            Address            = FF05:0:0:0:0:0:0:2 - All Routers Address (Site-Local Scope)
+            Address            = R3 (Link2)
+            Address            = H2
+
+        ICMPv6 Echo Request
+            Type               = 128 (Echo Request)
+            Code               = 0
+            Checksum           = (auto)
+            Identifier         = 0
+            SequenceNumber     = 0
+            PayloadData        = {1, 2, 3, 4, 5, 6, 7, 8}
+
+=head1 JUDGEMENT
+
+    PASS : don't received echo reply packet.
+
+    FAIL : echo reply packet received.
+
+=cut
+
+# =head1 REFERENCE
+# 
+#     RFC 2460 - IPv6 Specification
+#         4.4  Routing Header
+# 
+#             Multicast addresses must not appear in a Routing header of Type 0, or
+#             in the IPv6 Destination Address field of a packet carrying a Routing
+#             header of Type 0.
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+    perldoc V6evalTool
+
+=cut

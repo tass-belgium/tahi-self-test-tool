@@ -1,0 +1,221 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/nd.p2/V6LC_2_1_2_A.seq,v 1.10 2009/12/28 05:55:17 akisada Exp $
+#
+########################################################################
+
+use nd;
+
+BEGIN {}
+END   {}
+
+my $max		= $WAIT_QUEUE_LMT;
+my %echo	= ();
+
+$NEED_COMMON_CLEANUP = 1;
+
+if(ndResolutionWaitQueueSingleSetup($max, \%echo) < 0) {
+	exitFatal();
+	#NOTREACHED
+}
+
+startNdiscWorld($Link0);
+
+if(ndResolutionWaitQueueSingle($Link0, \%echo) < 0) {
+	exitFail();
+	#NOTREACHED
+}
+
+exitPass();
+#NOTREACHED
+
+
+#
+# perldoc
+#
+########################################################################
+__END__
+
+
+=head1 NAME
+
+  Test v6LC.2.1.2 - Resolution Wait Queue
+  Part A: Single Queue
+
+=head1 Purpose
+
+  Verify that a node properly queues packets while waiting for address resolution of the next hop.
+
+=head1 References
+
+  * [ND] Section 3, Section 7.2.2
+
+=head1 Resource Requirements
+
+  * Packet generator
+  * Monitor to capture packets
+
+=head1 Test Setup
+
+  No Common Test Setup is performed. The Common Test Cleanup procedure is
+  performed after each part.
+
+=begin html
+
+<BLOCKQUOTE>
+
+<TABLE BORDER>
+<Caption>Packet A</Caption>
+<TR>
+<TD>
+	IPv6 Header<br>
+	Next Header: 58<br>
+	Source Address: TN1's Link-local Address
+</TD>
+</TR>
+<TR>
+<TD>ICMPv6 Echo Request<br>Sequence Number: 3</TD>
+</TR>
+</TABLE>
+
+<br>
+
+<TABLE BORDER>
+<Caption>Packet B</Caption>
+<TR>
+<TD>
+        IPv6 Header<br>
+        Next Header: 58<br>
+        Source Address: TN1's Global Address
+</TD>
+</TR>
+<TR>
+<TD>ICMPv6 Echo Request<br>Sequence Number: 4</TD>
+</TR>
+</TABLE>
+
+<br>
+
+<TABLE BORDER>
+<Caption>Neighbor Advertisement C</Caption>
+<TR>
+<TD>
+        IPv6 Header<br>
+        Next Header: 58<br>
+	Source Address: TN1's<br>
+	Link-local Address<br>
+	Destination Address: NUT's Link-local Address
+</TD>
+</TR>
+<TR>
+<TD>
+	Neighbor Advertisement<br>
+	Router flag: 0<br>
+	Solicited flag: 1<br>
+	Override flag: 1<br>
+	Target Address: TN1's Link-local Address
+</TD>
+</TR>
+</TABLE>
+
+<br>
+
+<TABLE BORDER>
+<Caption>Neighbor Advertisement D</Caption>
+<TR>
+<TD>
+        IPv6 Header<br>
+        Next Header: 58<br>
+        Source Address: TN2's<br>
+        Link-local Address<br>
+	Destination Address: NUT's Link-local Address
+</TD>
+</TR>
+<TR>
+<TD>
+        Neighbor Advertisement<br>
+        Router flag: 0<br>
+        Solicited flag: 1<br>
+        Override flag: 1<br>
+        Target Address: TN2's Link-local Address
+</TD>
+</TR>
+</TABLE>
+
+</BLOCKQUOTE>
+
+=end html
+
+
+=head1 Procedure
+
+  Part A: Single Queue
+   1. TN1 transmits Packet A, an Echo Request, 3 times. The Sequence number is incremented each
+      time.
+   2. Observe the packets transmitted by the NUT.
+   3. TN1 transmits the Neighbor Advertisement C in response to any Neighbor Solicitations from the
+      NUT.
+   4. Observe the packets transmitted by the NUT.
+
+=head1 Observable Results
+
+  Part A
+   Step 2:
+   The NUT should transmit a Neighbor Solicitation with a Target Address equal to
+   TN1's link-local address. The NUT should send Echo Replies to TN1 in response to Packet
+   A.
+
+   Step 4:
+   The Echo Replies should correspond to the last 3 Echo Requests sent by TN1 to 
+   the NUT, indicating successful queuing of packets while waiting for address resolution
+   to complete. The number of Echo Replies MUST be no less than 1.
+
+
+=head1 Possible Problems
+
+  * None. 
+
+=cut
+

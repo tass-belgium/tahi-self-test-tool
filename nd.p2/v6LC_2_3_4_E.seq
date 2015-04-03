@@ -1,0 +1,173 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/nd.p2/v6LC_2_3_4_E.seq,v 1.9 2009/12/28 05:55:19 akisada Exp $
+#
+########################################################################
+
+use redirect;
+
+BEGIN {}
+END   {}
+
+if($V6evalTool::NutDef{'Type'} ne 'host') {
+	exitHostOnly($Link0);
+	#NOTREACHED
+}
+
+vCapture($Link0);
+
+unless(commonSetup_1_1($Link0)) {
+	exitInitFail($Link0);
+	#NOTREACHED
+}
+
+$pktdesc{'local_redirect'} =
+	'    Send Redirect w/o TLL, w/o Redirected Header: '.
+	'TR1 (link-local) -&gt; HUT (global)';
+
+# unless(v6LC_2_3_4_E_F($Link0)) {
+unless(v6LC_2_3_4($Link0)) {
+	exitFail($Link0);
+	#NOTREACHED
+}
+
+exitPass($Link0);
+#NOTREACHED
+
+
+
+#
+# perldoc
+#
+########################################################################
+__END__
+
+=head1 NAME
+
+  Test v6LC.2.3.4 - Redirected to Alternate Router: Valid (Hosts Only)
+  Part A: Destination Addresses, TLLA Options, and Redirected Packet Options
+
+=head1 Purpose
+
+  Verify that a host properly processes valid Redirect messages when redirected to alternate
+  router.
+
+=head1 References
+
+  * [ND]  Sections 4.6.1, 4.6.3, and 8.3
+
+=head1 Resource Requirements
+
+  * Packet generator
+  * Monitor to capture packets
+
+=head1 Test Setup
+
+  The following setup procedure is performed before each Part:
+
+        a) Perform Common Setup 1.1.
+        b) TR2 transmits an Echo Request to the HUT's link-local address. TR2 responds to any
+           Neighbor Solicitations from the HUT with a Neighbor Advertisement with the solicited bit set to
+           1 causing the HUT to update it's NCE for TR2 to sate REACHABLE.
+
+  The Common Test Cleanup Procedure is performed after each part. The following table details the
+  Redirect message transmitted in each Part:
+
+=begin html
+
+<BLOCKQUOTE>
+
+<TABLE BORDER>
+<TR>
+<TD>IPv6 Destination Address</TD>
+<TD>TLLA Option</TD>
+<TD>Redirected Packet Option</TD>
+<TD>Part</TD>
+</TR>
+<TR>
+<TD>Global (HUT)</TD>
+<TD>No</TD>
+<TD>No</TD>
+<TD>A</TD>
+</TR>
+</TABLE>
+
+</BLOCKQUOTE>
+
+=end html
+
+
+=head1 Procedure
+
+  Parts A through D: Destination Addresses, TLLA Options, and Redirected Packet Options
+   1. TR1 forwards an Echo Request to the HUT. The Source Address is the off-link global address of
+      TN1. The Destination Address is the global address of the HUT.
+   2. Observe the packets transmitted by the HUT.
+   3. TR1 transmits a Redirect message to the HUT. The ICMPv6 Destination Address is the global
+      address of TN1. The Target Address is the link-local address of TR2. The Redirect message
+      contains a Target Link-layer Address option or Redirected Packet option according to the table
+      above.
+   4. TR1 forwards an Echo Request to the HUT. The Source Address is the off-link global address of
+      TN1. The Destination Address is the global address of the HUT.
+   5. Observe the packets transmitted by the HUT.
+   6. Repeat Steps 1 through 5 for each Part B through H, using the Redirect message detailed in the
+      table above in Step 3.
+
+=head1 Observable Results
+
+  Parts A-B
+   Step 2:
+   The HUT should respond to the Echo Request using TR1 as a first hop.
+
+   Step 5:
+   The HUT should transmit a Neighbor Solicitation for TR2 and an Echo Reply to TN1
+   using TR2 as a first hop, indicating the HUT processed the Redirect message.
+
+=head1 Possible Problems
+
+  * None.
+
+=cut
+

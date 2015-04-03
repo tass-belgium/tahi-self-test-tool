@@ -1,0 +1,521 @@
+//
+// Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+// Yokogawa Electric Corporation.
+// All rights reserved.
+// 
+// Redistribution and use of this software in source and binary
+// forms, with or without modification, are permitted provided that
+// the following conditions and disclaimer are agreed and accepted
+// by the user:
+// 
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in
+//    the documentation and/or other materials provided with
+//    the distribution.
+// 
+// 3. Neither the names of the copyrighters, the name of the project
+//    which is related to this software (hereinafter referred to as
+//    "project") nor the names of the contributors may be used to
+//    endorse or promote products derived from this software without
+//    specific prior written permission.
+// 
+// 4. No merchantable use may be permitted without prior written
+//    notification to the copyrighters.
+// 
+// 5. The copyrighters, the project and the contributors may prohibit
+//    the use of this software at any time.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+// CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+// BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+// FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+// COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+// IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+//
+// $TAHI: ct/spec.p2/HH_BadHdrExtLenOverRouter.def,v 1.2 2005/01/06 06:49:59 akisada Exp $
+//
+//////////////////////////////////////////////////////////////////////
+
+#define TN_GL0_ADDR tn2v6(_GLOBAL0_UCAST_PRFX, _GLOBAL0_UCAST_PRFXLEN, "Link0")
+#define TN_GL1_ADDR tn2v6(_GLOBAL1_UCAST_PRFX, _GLOBAL1_UCAST_PRFXLEN, "Link1")
+#define NUT_GL0_ADDR nut2v6(_GLOBAL0_UCAST_PRFX, _GLOBAL0_UCAST_PRFXLEN, "Link0")
+#define NUT_GL1_ADDR nut2v6(_GLOBAL1_UCAST_PRFX, _GLOBAL1_UCAST_PRFXLEN, "Link1")
+
+//
+// echo_request_global_on_link0
+//
+// - Echo Request (from Link0 to Link0)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_echo_request(
+	echo_request_global_on_link0,
+	_HETHER_tn2nut,
+	{
+		_SRC(TN_GL0_ADDR);
+		_DST(NUT_GL0_ADDR);
+	},
+	{
+		payload = echo_data8;
+	}
+)
+
+Payload echo_data8 {
+	data = {1, 2, 3, 4, 5, 6, 7, 8};
+}
+
+//
+// multicast_ns_linklocal_link0
+//
+// - Multicast Neighbor Solicitation
+//     - link-local (Link0)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_ns(
+	multicast_ns_linklocal_link0,
+	_HETHER_nut2tnsolnode,
+	{
+		_SRC(nutv6());
+		_DST(_IPV6_SOLNODE_MCAST(tnv6()));
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = TN_GL0_ADDR;
+		option = _SLLOPT_nut;
+	}
+)
+
+//
+// multicast_ns_global_link0
+//
+// - Multicast Neighbor Solicitation
+//     - global (Link0)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_ns(
+	multicast_ns_global_link0,
+	_HETHER_nut2tnsolnode,
+	{
+		_SRC(NUT_GL0_ADDR);
+		_DST(_IPV6_SOLNODE_MCAST(tnv6()));
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = TN_GL0_ADDR;
+		option = _SLLOPT_nut;
+	}
+)
+
+//
+// echo_reply_global_on_link0
+//
+// - Echo Reply (from Link0 to Link0)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_echo_reply(
+	echo_reply_global_on_link0,
+	_HETHER_nut2tn,
+	{
+		_SRC(NUT_GL0_ADDR);
+		_DST(TN_GL0_ADDR);
+	},
+	{
+		payload = echo_data8;
+	}
+)
+
+//
+// na_global_link0
+//
+// - Neighbor Advertisement
+//     - global (Link0)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_na(
+	na_global_link0,
+	_HETHER_tn2nut,
+	{
+		_SRC(TN_GL0_ADDR);
+		_DST(NUT_GL0_ADDR);
+		HopLimit = 255;
+	},
+	{
+		SFlag = 1;
+		OFlag = 1;
+		TargetAddress = TN_GL0_ADDR;
+		option = _TLLOPT_tn;
+	}
+)
+
+//
+// na_linklocal_link0
+//
+// - Neighbor Advertisement
+//     - link-local (Link0)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_na(
+	na_linklocal_link0,
+	_HETHER_tn2nut,
+	{
+		_SRC(tnv6());
+		_DST(nutv6());
+		HopLimit = 255;
+	},
+	{
+		SFlag = 1;
+		OFlag = 1;
+		TargetAddress = TN_GL0_ADDR;
+		option = _TLLOPT_tn;
+	}
+)
+
+//
+// echo_request_global_on_link1
+//
+// - Echo Request (from Link1 to Link1)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_echo_request(
+	echo_request_global_on_link1,
+	_HETHER_tn2nut,
+	{
+		_SRC(TN_GL1_ADDR);
+		_DST(NUT_GL1_ADDR);
+	},
+	{
+		payload = echo_data8;
+	}
+)
+
+//
+// multicast_ns_linklocal_link1
+//
+// - Multicast Neighbor Solicitation
+//     - link-local (Link1)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_ns(
+	multicast_ns_linklocal_link1,
+	_HETHER_nut2tnsolnode,
+	{
+		_SRC(nutv6());
+		_DST(_IPV6_SOLNODE_MCAST(tnv6()));
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = TN_GL1_ADDR;
+		option = _SLLOPT_nut;
+	}
+)
+
+//
+// multicast_ns_global_link1
+//
+// - Multicast Neighbor Solicitation
+//     - global (Link1)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_ns(
+	multicast_ns_global_link1,
+	_HETHER_nut2tnsolnode,
+	{
+		_SRC(NUT_GL1_ADDR);
+		_DST(_IPV6_SOLNODE_MCAST(tnv6()));
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = TN_GL1_ADDR;
+		option = _SLLOPT_nut;
+	}
+)
+
+//
+// echo_reply_global_on_link1
+//
+// - Echo Reply (from Link1 to Link1)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_echo_reply(
+	echo_reply_global_on_link1,
+	_HETHER_nut2tn,
+	{
+		_SRC(NUT_GL1_ADDR);
+		_DST(TN_GL1_ADDR);
+	},
+	{
+		payload = echo_data8;
+	}
+)
+
+//
+// na_global_link1
+//
+// - Neighbor Advertisement
+//     - global (Link1)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_na(
+	na_global_link1,
+	_HETHER_tn2nut,
+	{
+		_SRC(TN_GL1_ADDR);
+		_DST(NUT_GL1_ADDR);
+		HopLimit = 255;
+	},
+	{
+		SFlag = 1;
+		OFlag = 1;
+		TargetAddress = TN_GL1_ADDR;
+		option = _TLLOPT_tn;
+	}
+)
+
+//
+// na_linklocal_link1
+//
+// - Neighbor Advertisement
+//     - link-local (Link1)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_na(
+	na_linklocal_link1,
+	_HETHER_tn2nut,
+	{
+		_SRC(tnv6());
+		_DST(nutv6());
+		HopLimit = 255;
+	},
+	{
+		SFlag = 1;
+		OFlag = 1;
+		TargetAddress = TN_GL1_ADDR;
+		option = _TLLOPT_tn;
+	}
+)
+
+//
+// echo_request_global_off_link0
+//
+// - Echo Request (from Link0 to Link1) (Link0)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_echo_request(
+	echo_request_global_off_link0,
+	_HETHER_tn2nut,
+	{
+		_SRC(TN_GL0_ADDR);
+		_DST(TN_GL1_ADDR);
+	},
+	{
+		payload = echo_data8;
+	}
+)
+
+//
+// echo_request_global_off_link1
+//
+// - Echo Request (from Link0 to Link1) (Link1)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_echo_request(
+	echo_request_global_off_link1,
+	_HETHER_nut2tn,
+	{
+		_SRC(TN_GL0_ADDR);
+		_DST(TN_GL1_ADDR);
+	},
+	{
+		payload = echo_data8;
+	}
+)
+
+//
+// echo_reply_global_off_link1
+//
+// - Echo Reply (from Link1 to Link0) (Link1)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_echo_reply(
+	echo_reply_global_off_link1,
+	_HETHER_tn2nut,
+	{
+		_SRC(TN_GL1_ADDR);
+		_DST(TN_GL0_ADDR);
+	},
+	{
+		payload = echo_data8;
+	}
+)
+
+//
+// echo_reply_global_off_link0
+//
+// - Echo Reply (from Link1 to Link0) (Link0)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_echo_reply(
+	echo_reply_global_off_link0,
+	_HETHER_nut2tn,
+	{
+		_SRC(TN_GL1_ADDR);
+		_DST(TN_GL0_ADDR);
+	},
+	{
+		payload = echo_data8;
+	}
+)
+
+//
+// echo_request_badex_global_off_link0
+//
+// - Echo Request (Hop-by-Hop Options Header with bad Hdr Ext Len) (from Link0 to Link1) (Link0)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_echo_request_exth(
+	echo_request_badex_global_off_link0,
+	_HETHER_tn2nut,
+	{
+		_SRC(TN_GL0_ADDR);
+		_DST(TN_GL1_ADDR);
+	},
+	{
+		header = _HDR_IPV6_NAME(echo_request_badex_global_off_link0);
+		exthdr = opt_badPadN;
+		upper = _ICMPV6_NAME(echo_request_badex_global_off_link0);
+	},
+	{
+		payload = echo_data8;
+	}
+)
+
+Hdr_HopByHop opt_badPadN {
+	HeaderExtLength = 100;
+	option = _PadN;
+}
+
+Opt_PadN _PadN {
+	pad = {0, 0, 0, 0};
+}
+
+//
+// unicast_ns_global_link0
+//
+// - Unicast Neighbor Solicitation
+//     - global (Link0)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_ns(
+	unicast_ns_global_link0,
+	_HETHER_nut2tn,
+	{
+		_SRC(NUT_GL0_ADDR);
+		_DST(TN_GL0_ADDR);
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = TN_GL0_ADDR;
+		option = _SLLOPT_nut;
+	}
+)
+
+//
+// unicast_ns_global_link1
+//
+// - Unicast Neighbor Solicitation
+//     - global (Link1)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_ns(
+	unicast_ns_global_link1,
+	_HETHER_nut2tn,
+	{
+		_SRC(NUT_GL1_ADDR);
+		_DST(TN_GL1_ADDR);
+		HopLimit = 255;
+	},
+	{
+		TargetAddress = TN_GL1_ADDR;
+		option = _SLLOPT_nut;
+	}
+)
+
+//
+// echo_request_ex_global_off_link0
+//
+// - Echo Request (Hop-by-Hop Options Header) (from Link0 to Link1) (Link0)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_echo_request_exth(
+	echo_request_ex_global_off_link0,
+	_HETHER_tn2nut,
+	{
+		_SRC(TN_GL0_ADDR);
+		_DST(TN_GL1_ADDR);
+	},
+	{
+		header = _HDR_IPV6_NAME(echo_request_ex_global_off_link0);
+		exthdr = opt_PadN;
+		upper = _ICMPV6_NAME(echo_request_ex_global_off_link0);
+	},
+	{
+		payload = echo_data8;
+	}
+)
+
+Hdr_HopByHop opt_PadN {
+	HeaderExtLength = 0;
+	option = _PadN;
+}
+
+//
+// echo_request_ex_global_off_link1
+//
+// - Echo Request (Hop-by-Hop Options Header) (from Link0 to Link1) (Link1)
+//
+//////////////////////////////////////////////////////////////////////
+
+FEM_icmp6_echo_request_exth(
+	echo_request_ex_global_off_link1,
+	_HETHER_nut2tn,
+	{
+		_SRC(TN_GL0_ADDR);
+		_DST(TN_GL1_ADDR);
+	},
+	{
+		header = _HDR_IPV6_NAME(echo_request_ex_global_off_link1);
+		exthdr = opt_PadN;
+		upper = _ICMPV6_NAME(echo_request_ex_global_off_link1);
+	},
+	{
+		payload = echo_data8;
+	}
+)

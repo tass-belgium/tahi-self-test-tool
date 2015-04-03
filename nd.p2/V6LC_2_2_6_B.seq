@@ -1,0 +1,188 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/nd.p2/V6LC_2_2_6_B.seq,v 1.11 2010/03/30 06:46:34 akisada Exp $
+#
+########################################################################
+
+use rdisc;
+
+use lib '../';
+use AdvancedFunctionality;
+
+BEGIN {}
+END   {}
+
+if($V6evalTool::NutDef{'Type'} ne 'router') {
+	exitRouterOnly($Link0);
+	#NOTREACHED
+}
+
+unless($AdvancedFunctionality::HAS_MULTIPLE_INTERFACES) {
+	exit($V6evalTool::exitSkip);
+}
+
+
+
+$pktdesc{'unspec_rs_local'} =
+	'    Send RS w/o SLL: '.
+	'unspecified address -&gt; all-routers multicast address';
+
+$pktdesc{'ucast_rs_local'} =
+	'    Send RS w/  SLL: '.
+	'TN1 (link-local) -&gt; all-routers multicast address';
+
+
+register($Link0, $Link1);
+
+vLogHTML('<FONT COLOR="#FF0000" SIZE="5"><U><B>'.
+	'Test Procedure</B></U></FONT><BR>');
+
+unless(v6LC_2_2_6_B_Step_4($Link0)) {
+	exitFail($Link0);
+	#NOTREACHED
+}
+
+
+
+#----------------------------------------------------------------------#
+# unspecified address -> advertising interface                         #
+#----------------------------------------------------------------------#
+my $send = 'unspec_rs_local';
+unless(v6LC_2_2_6_B_Step_5_Advertising_Interface($Link0, $send)) {
+	exitFail($Link0);
+	#NOTREACHED
+}
+
+
+
+#----------------------------------------------------------------------#
+# link-local unicast address -> advertising interface                  #
+#----------------------------------------------------------------------#
+$send   = 'ucast_rs_local';
+$tn1_cache      = $true;
+unless(v6LC_2_2_6_B_Step_5_Advertising_Interface($Link0, $send)) {
+	exitFail($Link0);
+	#NOTREACHED
+}
+
+
+
+#----------------------------------------------------------------------#
+# unspecified address -> non-advertising interface                     #
+#----------------------------------------------------------------------#
+$send = 'unspec_rs_local';
+unless(v6LC_2_2_6_B_Step_5_Non_Advertising_Interface($Link1, $send)) {
+	exitFail($Link0);
+	#NOTREACHED
+}
+
+
+
+#----------------------------------------------------------------------#
+# link-local unicast address -> non-advertising interface              #
+#----------------------------------------------------------------------#
+$send   = 'ucast_rs_local';
+$tn1_cache_link1      = $true;
+unless(v6LC_2_2_6_B_Step_5_Non_Advertising_Interface($Link1, $send)) {
+	exitFail($Link0);
+	#NOTREACHED
+}
+
+
+
+exitPass($Link0);
+#NOTREACHED
+
+
+
+#
+# perldoc
+#
+########################################################################
+__END__
+
+=head1 NAME
+
+  Test v6LC.2.2.6 - Router Does Not Send Router Advertisements on Non-advertising Interface (Routers Only)
+  Part B: Advertising interface
+
+=head1 Purpose
+
+   Verify that a router does not send Router Advertisements on non-advertising interfaces.
+
+=head1 References
+
+  * [ND]  Section 6.2.2
+
+=head1 Resource Requirements
+
+  * Packet generator
+  * Monitor to capture packets
+
+=head1 Test Setup
+
+  Enable Interface A on Link B and Interface B on Link A. No Common Test Setup is
+  performed. The Common Test Cleanup procedure is performed after each part.
+
+=head1 Procedure
+
+  Part B: Advertising interface
+   4. If the RUT supports two physical network interfaces. Configure Interface A on the RUT to be an
+      advertising interface and Interface B to be a non-advertising interface.
+   5. Configure TR1 to transmit a RS to the RUT on Interface A and on Interface B.
+   6. Observe the packets transmitted by the RUT on Interface A and Interface B.
+
+=head1 Observable Results
+
+  Part B
+   Step 4: The RUT must send Router Advertisements out on Interface A. The RUT must not
+   send Router Advertisements out on Interface B.
+
+=head1 Possible Problems
+
+  * Part B may be omitted if the Router does not support two physical interfaces.
+
+=cut
+

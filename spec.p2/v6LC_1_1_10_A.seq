@@ -1,0 +1,422 @@
+#!/usr/bin/perl
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: v6LC_1_1_10_A.seq,v 1.6 2010/03/24 08:59:37 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+use CommonSPEC;
+use lib '../';
+use AdvancedFunctionality;
+
+sub cleanup_tunnel($);
+
+if ($V6evalTool::NutDef{'Type'} ne 'router') {
+	vLogHTML("This test is for the router only<BR>");
+	exit($V6evalTool::exitRouterOnly);
+}
+
+unless($AdvancedFunctionality::HAS_MULTIPLE_INTERFACES) {
+
+# HAS_MULTIPLE_INTERFACES: true
+# 
+#            TH1
+#             |
+#     ----+---+--- L1 3ffe:501:ffff:101::/64
+#         |
+#        RUT
+#         |
+#     ----+---+--- L0 3ffe:501:ffff:100::/64
+#             |
+#            TH0
+# 
+#     TH0: 3ffe:501:ffff:100:<TnDef.Link0_addr>
+#     TH1: 3ffe:501:ffff:101:<TnDef.Link1_addr>
+
+# HAS_MULTIPLE_INTERFACES: false
+# 
+#                TH1
+#                 |
+#     ----+-------+--- L1 3ffe:501:ffff:101::/64
+#         |
+#        TRX
+#         |
+#     ----+-------+--- LX 3ffe:501:ffff:110::/64
+#                 |
+#        RUT     TR1 (TH0)
+#         |       |
+#     ----+-------+--- L0 3ffe:501:ffff:100::/64
+# 
+#     TH0:      3ffe:501:ffff:100:<TnDef.Link0_addr>
+#     TH1:      3ffe:501:ffff:101:<TnDef.Link0_addr>
+#     TR1 (L0): fe80::<TnDef.Link0_addr>
+#     TRX (LX): 3ffe:501:ffff:110::<TnDef.Link0_addr>
+
+	my $srcaddr   =  vMAC2LLAddr($V6evalTool::NutDef{'Link0_addr'});
+	   $srcaddr   =~ s/fe80::/3ffe:501:ffff:100:/;
+
+	my $dstaddr   =  vMAC2LLAddr($V6evalTool::TnDef{'Link0_addr'});
+	   $dstaddr   =~ s/fe80::/3ffe:501:ffff:110:/;
+
+	my $insrcaddr =  vMAC2LLAddr($V6evalTool::TnDef{'Link0_addr'});
+	   $insrcaddr =~ s/fe80::/3ffe:501:ffff:100:/;
+
+	my $indstaddr =  vMAC2LLAddr($V6evalTool::TnDef{'Link0_addr'});
+	   $indstaddr =~ s/fe80::/3ffe:501:ffff:101:/;
+
+	my $gateway   =  vMAC2LLAddr($V6evalTool::TnDef{'Link0_addr'});
+
+	my $Link0_device = $V6evalTool::NutDef{'Link0_device'};
+
+	if(vRemote('route.rmt', 'cmd=add',
+		"prefix=3ffe:501:ffff:110::", 'prefixlen=64',
+		"gateway=$gateway", "if=$Link0_device")) {
+
+		vLogHTML('<FONT COLOR="#FF0000">route.rmt: '.
+			'Can\'t configure the route.</FONT><BR>');
+
+		exit($V6evalTool::exitFatal);
+	}
+
+	if(vRemote('tunnel.rmt',
+		'if=0 '.
+		'prefixlen=64 '.
+		'routeprefixlen=64 '.
+		'addrfamily=inet6 '.
+		"prefix=3ffe:501:ffff:101:: ".
+		"srcaddr=$srcaddr ".
+		"dstaddr=$dstaddr ".
+		"insrcaddr=$insrcaddr ".
+		"indstaddr=$indstaddr ")) {
+
+		vLogHTML('<FONT COLOR="#FF0000">tunnel.rmt: '.
+			'Can\'t configure the tunnel.</FONT><BR>');
+
+		exit($V6evalTool::exitFatal);
+	}
+}
+
+$pktdesc{'echo_request'}      = 'Send Echo Request to Link0';
+$pktdesc{'echo_request_f'}    = 'Recv forwarded Echo Request from Link1';
+
+$endStatus = $V6evalTool::exitPass;
+
+$IF0 = 'Link0';
+$IF1 = 'Link1';
+
+vCapture($IF0);
+
+if($AdvancedFunctionality::HAS_MULTIPLE_INTERFACES) {
+	vCapture($IF1);
+}
+
+if(setup11($IF0) != $CommonSPEC::Success) {
+	$ret = cleanup($IF0);
+	if ($ret == $CommonSPEC::Success) {
+		exit($V6evalTool::exitFail);
+	} else {
+		exit($V6evalTool::exitFatal);
+	}
+}
+
+#----- test
+vClear($IF0);
+if($AdvancedFunctionality::HAS_MULTIPLE_INTERFACES) {
+	vClear($IF1);
+}
+vSend($AdvancedFunctionality::HAS_MULTIPLE_INTERFACES? $IF1: $IF0,
+	'echo_request');
+
+%ret = nd_vRecv_IN($IF0, $CommonSPEC::wait_reply, 0, 0, 'echo_request_f');
+if($ret{'recvFrame'} eq 'echo_request_f') {
+	vLogHTML('OK<BR>');
+} else {	# FAIL
+	vLogHTML('Cannot receive forwarded Echo Request<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+#----- end test
+
+if($AdvancedFunctionality::HAS_MULTIPLE_INTERFACES) {
+	$ret = cleanup($IF0, $IF1);
+} else {
+	$ret = cleanup_tunnel($IF0);
+}
+vStop($IF0);
+
+if($AdvancedFunctionality::HAS_MULTIPLE_INTERFACES) {
+	vStop($IF1);
+}
+
+if ($ret == $CommonSPEC::Success) {
+	exit($endStatus);
+} else {
+	exit($V6evalTool::exitFatal);
+}
+
+
+
+#----------------------------------------------------------------------#
+sub
+cleanup_tunnel($)
+{
+	my ($link) = @_;
+
+	my $ret = cleanup($IF0);
+
+	my $srcaddr   =  vMAC2LLAddr($V6evalTool::NutDef{'Link0_addr'});
+	   $srcaddr   =~ s/fe80::/3ffe:501:ffff:100:/; 
+
+	my $dstaddr   =  vMAC2LLAddr($V6evalTool::NutDef{'Link0_addr'});
+	   $dstaddr   =~ s/fe80::/3ffe:501:ffff:110:/; 
+
+	my $insrcaddr =  vMAC2LLAddr($V6evalTool::TnDef{'Link0_addr'});
+	   $insrcaddr =~ s/fe80::/3ffe:501:ffff:100:/; 
+
+	my $indstaddr =  vMAC2LLAddr($V6evalTool::TnDef{'Link0_addr'});
+	   $indstaddr =~ s/fe80::/3ffe:501:ffff:101:/; 
+
+	my $gateway   =  vMAC2LLAddr($V6evalTool::TnDef{'Link0_addr'});
+
+	my $Link0_device = $V6evalTool::NutDef{'Link0_device'};
+
+	if(vRemote('route.rmt', 'cmd=delete',
+		"prefix=3ffe:501:ffff:110::", 'prefixlen=64',
+		"gateway=$gateway", "if=$Link0_device")) {
+
+		vLogHTML('<FONT COLOR="#FF0000">route.rmt: '.
+			'Can\'t configure the route.</FONT><BR>');
+
+		exit($V6evalTool::exitFatal);
+	}
+
+	if(vRemote('tunnel.rmt',
+		'if=0 '.
+		'deletetunnel '.
+		'prefixlen=64 '.
+		'routeprefixlen=64 '.
+		'addrfamily=inet6 '.
+		"prefix=3ffe:501:ffff:101:: ".
+		"srcaddr=$srcaddr ".
+		"dstaddr=$dstaddr ".
+		"insrcaddr=$insrcaddr ".
+		"indstaddr=$indstaddr ")) {
+
+		vLogHTML('<FONT COLOR="#FF0000">tunnel.rmt: '.
+			'Can\'t configure the tunnel.</FONT><BR>');
+
+		exit($V6evalTool::exitFatal);
+	}
+
+	return($ret);
+}
+
+
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  v6LC_1_1_10_A - IP Forwarding - Source and Destination Address - Intermediate Node
+                  (Request sent to Global Unicast address) (Router Only)
+
+=head1 TARGET
+
+  Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./v6LC_1_1_10_A.seq">v6LC_1_1_10_A.seq</A> [-tooloption ...] -pkt <A HREF="./v6LC_1_1_10_A.def">v6LC_1_1_10_A.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  None
+
+=head1 TEST PROCEDURE
+
+Verify that a node properly forwards the ICMPv6 Echo Requests.
+
+   TN1                         RUT                         TN2
+              (Link0)                     (Link1)
+    |                           |                           |
+    |-------------------------->|                           |
+    |   Echo Request            |                           |
+    |                           |                           |
+    |                           |                           |
+    |                           |-------------------------->|
+    |                           |   Echo Request            |
+    |                           |                           |
+    |                           |                           |
+    v                           v                           v
+
+  1. TN1 transmits an Echo Request to TN2's Global unicast Address with a first hop through the RUT.
+     The source address is TN1's Global address. 
+  2. Observe the packets transmitted by the RUT on Link1.
+
+  Echo Request Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 16
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = TN1 Global Address (Link0)
+            DestinationAddress = TN2 Global unicast Address (Link1)
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = {1, 2, 3, 4, 5, 6, 7, 8}
+
+
+=head1 JUDGEMENT
+
+  PASS: The RUT must forward the Echo Request from TN1 to TN2 with a first hop through the RUT.
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = 0
+            FlowLabel           = 0
+            PayloadLength       = 16
+            NextHeader          = 58 (ICMPv6)
+            SourceAddress       = TN1 Global Address (Link0)
+            DestinationAddress  = TN2 Global unicast Address (Link1)
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff (same as Echo Request)
+            SequenceNumber = 1 (same as Echo Request)
+            PayloadData    = {1, 2, 3, 4, 5, 6, 7, 8} (same as Echo Request)
+
+
+=head1 CLEANUP
+
+Common Test Cleanup
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+# 
+# 3.  IPv6 Header Format
+# 
+#    Traffic Class        8-bit traffic class field.  See section 7.
+# 
+# 7.  Traffic Classes
+# 
+#    The 8-bit Traffic Class field in the IPv6 header is available for use
+#    by originating nodes and/or forwarding routers to identify and
+#    distinguish between different classes or priorities of IPv6 packets.
+#    At the point in time at which this specification is being written,
+#    there are a number of experiments underway in the use of the IPv4
+#    Type of Service and/or Precedence bits to provide various forms of
+#    "differentiated service" for IP packets, other than through the use
+#    of explicit flow set-up.  The Traffic Class field in the IPv6 header
+#    is intended to allow similar functionality to be supported in IPv6.
+#    It is hoped that those experiments will eventually lead to agreement
+#    on what sorts of traffic classifications are most useful for IP
+#    packets.  Detailed definitions of the syntax and semantics of all or
+#    some of the IPv6 Traffic Class bits, whether experimental or intended
+#    for eventual standardization, are to be provided in separate
+#    documents.
+# 
+#    The following general requirements apply to the Traffic Class field:
+# 
+#       o  The service interface to the IPv6 service within a node must
+#          provide a means for an upper-layer protocol to supply the value
+#          of the Traffic Class bits in packets originated by that upper-
+#          layer protocol.  The default value must be zero for all 8 bits.
+# 
+#       o  Nodes that support a specific (experimental or eventual
+#          standard) use of some or all of the Traffic Class bits are
+#          permitted to change the value of those bits in packets that
+#          they originate, forward, or receive, as required for that
+#          specific use.  Nodes should ignore and leave unchanged any bits
+#          of the Traffic Class field for which they do not support a
+#          specific use.
+# 
+#       o  An upper-layer protocol must not assume that the value of the
+#          Traffic Class bits in a received packet are the same as the
+#          value sent by the packet's source.
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

@@ -1,0 +1,391 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+# $TINY: LLA_DADSuccess.seq,v 1.7 2002/03/05 03:04:55 masaxmasa Exp $
+# 
+
+########################################################################
+BEGIN { $V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $ '; }
+use V6evalTool;
+use SAA;
+
+#------------------------------------------------------
+#----- get sequence arguments
+#------------------------------------------------------
+$howto_initNUT="none";
+foreach (@ARGV) {
+
+# How to configure address of NUT?
+# sample: boot, ra, manual+_GLOBAL0A0N_UCAST
+    /^addrconf=(\S+)/ && do {$SAA::howto_addrconf=$1; next; };   
+
+# How to initialize NUT?
+# sample: none, DADSuccess_boot, DADFail_boot
+    /^init=(\S+)/     && do {$howto_initNUT=$1; next; };
+
+# Sequence debug options
+# sample: qR
+    /^sd=(\S+)/       && do {$seqdebugopt=$1; next; };
+    seqERROR("Unknown sequence option '$_'");
+}
+#------------------------------------------------------
+
+#----- test condition
+$IF=Link0;                 # network interface
+
+##########################################################
+#----- Check Target Type
+
+$type=$V6evalTool::NutDef{Type};
+if($type eq host) {
+    vCPP('-DRFLAG=0');
+}
+if($type eq router) {
+    vCPP('-DRFLAG=1');
+}
+if($type eq special) {
+    vCPP('-DRFLAG=any');
+}
+
+#----- Preparetion
+vCapture($IF);
+seqPrepareLLA($IF, $V6evalTool::NutDef{System});
+
+#----- initialize NUT
+vLog("*** Target initialization phase ***");
+if($V6evalTool::NutDef{System} ne "manual"){ vSleep($SAA::test_interval); }
+$rret=vRemote("reboot_async.rmt","","timeout=$SAA::wait_rebootcmd");
+vLog("reboot_async.rmt returned status $rret");
+
+#----- start Capturing
+vLog("*** Target testing phase ***");
+vClear($IF);
+
+#----- wait a DAD NS coming from NUT
+
+%ret=vRecv($IF,$SAA::wait_dadns{$SAA::howto_addrconf},0,$count,DADNS_from_NUT);
+
+#----- if received frame is a DAD NS
+if( $ret{status} == 0) {
+    vLog("TN received the DAD NS sent from NUT.");
+
+    if($SAA::DupAddrDetectTransmits == 0) {
+	vLog("But DupAddrDetectTransmits == 0");
+	seqNG();
+    }else{
+    	vSleep($SAA::wait_addrconf);
+        if( seqCheckNUTAddrConfiguredDAD($IF) eq TRUE ) {
+            seqOK();
+	}else{
+	    vLog("NUT sent DAD NS but not responds to DAD NS to Same address.");
+            seqNG();
+	}
+    }
+} elsif( $ret{status} == 1 ) { #----timeout
+    vLog("TN received no DAD NS sent from NUT. It seems that NUT doesn't perform DAD process.");
+
+    #----- check if NUT's address is configured
+    vSleep($SAA::wait_addrconf);
+    if (seqCheckNUTAddrConfiguredDAD($IF) eq TRUE) {
+	vLog('Without DAD, NUT assigned the address to the interface.');
+	if ($SAA::DupAddrDetectTransmits == 0) {
+	    vLog("Because DupAddrDetectTransmits == 0");
+	    seqOK();
+	}else{
+	    seqNG();
+	}
+    }else{
+	vLog("NUT's interface is down or in strange state.");
+	seqNG();
+    }
+}
+
+#----- error
+if( $ret{status} != 0 ) {
+    seqERROR(vErrmsg(%ret)); #exit
+}
+
+
+#end
+########################################################################
+__END__
+
+
+=head1 NAME
+
+LLA_DADSuccess - Address Autoconfiguration and Duplicate Address Detection
+
+=head1 TARGET
+
+All Node
+
+=head1 SYNOPSIS
+
+LLA_DADSuccess.seq [-tooloption ...] -pkt <packetdef> [addrconf=<addrconfname>] 
+
+  -tooloption   : v6eval tool option
+  <packetdef>   : packet definition file (v6eval tool option)
+  <addrconfname>: how to configure address on NUT; boot/reboot
+
+=begin html
+<PRE>
+ detail of v6eval tool option: see perldoc V6evalTool.pm, perldoc V6evalRemote.pm
+</PRE>
+
+=end html
+
+
+=head1 INITIALIZATION
+
+=begin html
+<PRE>
+ Reboot NUT or Initialize interface of NUT or Initialize IPv6 stack of NUT.
+</PRE>
+
+=end html
+
+=head1 TEST PROCEDURE
+
+Verify that a node can properly initialize on a network using address autoconfiguration and communicate with oter on-link partners.
+
+=over 1
+
+=item Test for Unicast address configuration
+
+The following tests are prepared in this test package. See INDEX file.
+
+B<Test for all node>
+
+   NUT performs DAD for its Link-local unicast address made by stateless address autoconfiguration.
+
+B<Test sequence>
+
+  TN                            NUT
+  ---------------------------------
+  Initialize NUT
+
+  NUT configures address (reboot or interface initialization etc...)
+
+  TN wait the DAD NS sent from NUT
+  <=== Judgement #1: DAD NS =======
+        name: DADNS_from_NUT
+
+  Wait for 5+DupAddrDetectTransmits*(RetransTimer/1000)[sec]
+
+  Check if NUT's address is configured
+  ==== Action #1: DAD NS =========>
+        name: DADNS_from_TN
+
+  <=== Judgement #2: DAD NA =======
+        name: DADNA_from_NUT 
+
+
+=back 1
+
+=head1 JUDGEMENT
+
+=over 1
+
+=item Test for Link-local Unicast address autoconfiguration
+
+B<Test for all NODE>
+
+B<NUT performs Stateless Address Autoconfiguration(Link-local) on its interface>
+
+   Judgement #1. NUT MUST transmit DAD NS for its autoconfigured Link-local address.
+        name: DADNS_from_NUT
+	src: ::0
+	dst: solnode[NUT's tentative Link-local]
+        TargetAddress: NUT's tentative Link-local
+
+   Action #1. TN transmits DAD NS to check if NUT's address is configured
+        name: DADNS_from_TN
+        src: ::0
+	dst: solnode[NUT's Link-local]
+        TargetAddress: NUT's Link-local
+
+   Judgement #2. NUT MUST transmit DAD NA for its autoconfigured  Link-local address.
+        name: DADNA_from_NUT, DADNA_from_NUT_woTLL
+	src: NUT's Link-local
+	dst: allnode
+        TargetAddress: NUT's Link-local
+        RFlag: 0 ( if NUT is a Router then 1)
+        SFlag: 0
+        OFlag: 1
+	TLLOPT: NUT's MAC address
+
+=back 1
+
+=head1 CLEANUP
+
+NONE
+
+=cut
+
+# =head1 REFERENCE
+# 
+# =begin html
+# <PRE>
+# RFC2462
+# <HR>
+#    (omit)
+# <BR>
+# 5.3.  Creation of Link-Local Addresses
+# <BR>
+#    (omit)
+# <BR>
+# <A NAME="REF"><B>
+#    A link-local address is formed by prepending the well-known link-
+#    local prefix FE80::0 [ADDR-ARCH] (of appropriate length) to the
+#    interface identifier</B></A>. If the interface identifier has a length of N
+#    bits, the interface identifier replaces the right-most N zero bits of
+#    the link-local prefix.  If the interface identifier is more than 118
+#    bits in length, autoconfiguration fails and manual configuration is
+#    required. Note that interface identifiers will typically be 64-bits
+#    long and based on EUI-64 identifiers as described in [ADDR-ARCH].
+# <BR>
+#    A link-local address has an infinite preferred and valid lifetime; it
+#    is never timed
+#    out.
+# <BR>
+# 5.4.  Duplicate Address Detection
+# <BR>
+#    <B>Duplicate Address Detection is performed on unicast addresses prior
+#    to assigning them to an interface whose DupAddrDetectTransmits
+#    variable is greater than zero</B>. Duplicate Address Detection MUST take
+#    place on all unicast addresses, regardless of whether they are
+#    obtained through stateful, stateless or manual configuration, with
+#    the exception of the following cases:
+# <BR>
+#    (omit)
+# <BR>
+# 5.4.3.  Receiving Neighbor Solicitation Messages
+# <BR>
+#    On receipt of a valid Neighbor Solicitation message on an interface,
+#    node behavior depends on whether the target address is tentative or
+#    not.  <B>If the target address is not tentative (i.e., it is assigned to
+#    the receiving interface), the solicitation is processed as described
+#    in [DISCOVERY]</B>.  If the target address is tentative, and the source
+#    address is a unicast address, the solicitation's sender is performing
+#    address resolution on the target; the solicitation should be silently
+#    ignored.  Otherwise, processing takes place as described below. In
+#    all cases, a node MUST NOT respond to a Neighbor Solicitation for a
+#    tentative address.
+# <BR>
+#    (omit)
+# <HR>
+# RFC2461
+# <HR>
+# <BR>
+#    (omit)
+# <BR>
+# 7.2.4.  Sending Solicited Neighbor Advertisements
+# <BR>
+#    A node sends a Neighbor Advertisement in response to a valid Neighbor
+#    Solicitation targeting one of the node's assigned addresses.  The
+#    Target Address of the advertisement is copied from the Target Address
+#    of the solicitation.  If the solicitation's IP Destination Address is
+#    not a multicast address, the Target Link-Layer Address option MAY be
+#    omitted; the neighboring node's cached value must already be current
+#    in order for the solicitation to have been received.  If the
+#    solicitation's IP Destination Address is a multicast address, the
+#    Target Link-Layer option MUST be included in the advertisement.
+#    Furthermore, if the node is a router, it MUST set the Router flag to
+#    one; otherwise it MUST set the flag to zero.
+# <BR>
+#    If the Target Address is either an anycast address or a unicast
+#    address for which the node is providing proxy service, or the Target
+#    Link-Layer Address option is not included, the Override flag SHOULD
+#    be set to zero.  Otherwise, the Override flag SHOULD be set to one.
+#    Proper setting of the Override flag ensures that nodes give
+#    preference to non-proxy advertisements, even when received after
+#    proxy advertisements, and also ensures that the first advertisement
+#    for an anycast address "wins".
+# <BR>
+#    <B>If the source of the solicitation is the unspecified address, the
+#    node MUST set the Solicited flag to zero and multicast the
+#    advertisement to the all-nodes address.</B>  Otherwise, the node MUST set
+#    the Solicited flag to one and unicast the advertisement to the Source
+#    Address of the solicitation.
+# <BR>
+#    If the Target Address is an anycast address the sender SHOULD delay
+#    sending a response for a random time between 0 and
+#    MAX_ANYCAST_DELAY_TIME seconds.
+#    Because unicast Neighbor Solicitations are not required to include a
+#    Source Link-Layer Address, it is possible that a node sending a
+#    solicited Neighbor Advertisement does not have a corresponding link-
+#    layer address for its neighbor in its Neighbor Cache.  In such
+#    situations, a node will first have to use Neighbor Discovery to
+#    determine the link-layer address of its neighbor (i.e, send out a
+#    multicast Neighbor Solicitation).
+# <BR>
+#    (omit)
+# </PRE>
+# 
+# =end html
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 4862 - IPv6 Stateless Address Autoconfiguration
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+=begin html
+<PRE>
+ detail of v6eval tool option: see perldoc V6evalTool.pm, perldoc V6evalRemote.pm
+</PRE>
+
+=end html
+
+=cut
+

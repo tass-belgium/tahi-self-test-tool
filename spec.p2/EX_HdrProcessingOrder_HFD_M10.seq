@@ -1,0 +1,263 @@
+#!/usr/bin/perl
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: EX_HdrProcessingOrder_HFD_M10.seq,v 1.7 2008/07/31 02:40:32 hide Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+use CommonSPEC;
+
+$pktdesc{'echo_request_HFD_M_10'}	= 'Send Echo Request (Frg.hdr precedes Dst.hdr, Error from Frg.hdr)';
+$pktdesc{'icmperr'}			= 'Recv ICMP Error (Parameter Problem, erroneous header field encountered)';
+
+$endStatus = $V6evalTool::exitPass;
+$IF = 'Link0';
+
+vCapture($IF);
+
+#----- test
+vSend($IF, 'echo_request_HFD_M_10');
+%ret = nd_vRecv_EN($IF, $CommonSPEC::wait_reply, 0, 0, 'icmperr');
+
+if ($ret{'status'} == 0) {
+	vLogHTML('OK<BR>');
+} else {
+	vLogHTML('Cannot receive ICMP Error message<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+#----- end test
+
+$ret = cleanup($IF);
+vStop($IF);
+if ($ret == $CommonSPEC::Success) {
+	exit($endStatus);
+} else {
+	exit($V6evalTool::exitFatal);
+}
+
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  EX_HdrProcessingOrder_HFD_M10 - Extension Header Processing Order 
+                                  (Fragment Header precedes Destination Options Header, 
+                                  Error from Fragment Header)
+
+=head1 TARGET
+
+  Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./EX_HdrProcessingOrder_HFD_M10.seq">EX_HdrProcessingOrder_HFD_M10.seq</A> [-tooloption ...] -pkt <A HREF="./EX_HdrProcessingOrder_HFD_M10.def">EX_HdrProcessingOrder_HFD_M10.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  None
+
+=head1 TEST PROCEDURE
+
+Verify that a node properly processes the headers of an IPv6 packet in the correct order.
+
+   TN                          NUT
+    |                           |
+    |-------------------------->|
+    |   Test Packet             |
+    |                           |
+    |                           |
+    |<--------------------------|
+    |   ICMP Error              |
+    |                           |
+    v                           v
+
+  1. TN transmits Test Packet, an Echo Request that has a Hop-by-Hop Options header, 
+     Fragment header, and Destination Options header in that order.
+     The IPv6 header has a Payload Length that is not a multiple of 8 octets, 
+     and the Fragment header has the M-bit set.
+     The Destination Options header has an unknown Option Type 135.
+  2. Observe the packets transmitted by the NUT.
+
+  Test Packet Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 37
+            NextHeader         = 0 (Hop-by-Hop Options Header)
+            SourceAddress      = TN Link Local Address
+            DestinationAddress = NUT Link Local Address
+
+        Hop-by-Hop Options Header
+            NextHeader         = 44 (Fragment Header)
+            HeaderExtLength    = 0
+            OptionType         = 1 (PadN)
+            OptDataLength      = 4
+            pad                = {0, 0, 0, 0}
+
+        Fragment Header
+            NextHeader         = 60 (Destination Header)
+            FragmentOffset     = 0
+            MFlag              = 1
+            FragmentID         = 103
+
+        Destination Header
+            NextHeader         = 58 (ICMPv6)
+            HeaderExtLength    = 0
+            OptionType         = 0x87 (unknown, msb:10)
+            OptDataLength      = 4
+            data               = {0, 0, 0, 0}
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = {1, 2, 3, 4, 5}
+
+=head1 JUDGEMENT
+
+  PASS: The NUT should send an ICMPv6 Parameter Problem message to TN.
+        The Code field must be 0(erroneous header field encountered).
+        The Pointer field should be 0x04(offset of Payload Length field in the IPv6 header).
+        The NUT must discard the Echo Request from TN.
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = 0
+            FlowLabel           = 0
+            PayloadLength       = 85
+            NextHeader          = 58 (ICMPv6)
+            SourceAddress       = Target Link Local Address
+            Destination Address = Tester Link Local Address
+
+        ICMP Error
+            Type           = 4 (Parameter Problem)
+            Code           = 0 (erroneous header field encountered)
+            Checksum       = (auto)
+            Pointer        = 4 (Payload Length field in IPv6 Header)
+            PayloadData    = (Sent Packet)
+
+=head1 CLEANUP
+
+Common Test Cleanup
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+# 
+# 4.1  Extension Header Order
+# 
+#    When more than one extension header is used in the same packet, it is
+#    recommended that those headers appear in the following order:
+# 
+#            IPv6 header
+#            Hop-by-Hop Options header
+#            Destination Options header (note 1)
+#            Routing header
+#            Fragment header
+#            Authentication header (note 2)
+#            Encapsulating Security Payload header (note 2)
+#            Destination Options header (note 3)
+#            upper-layer header
+# 
+#            note 1: for options to be processed by the first destination
+#                    that appears in the IPv6 Destination Address field
+#                    plus subsequent destinations listed in the Routing
+#                    header.
+# 
+#            note 2: additional recommendations regarding the relative
+#                    order of the Authentication and Encapsulating
+#                    Security Payload headers are given in [RFC-2406].
+# 
+#            note 3: for options to be processed only by the final
+#                    destination of the packet.
+# 
+# 4.5  Fragment Header
+# 
+#       If the length of a fragment, as derived from the fragment packet's
+#       Payload Length field, is not a multiple of 8 octets and the M flag
+#       of that fragment is 1, then that fragment must be discarded and an
+#       ICMP Parameter Problem, Code 0, message should be sent to the
+#       source of the fragment, pointing to the Payload Length field of
+#       the fragment packet.
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

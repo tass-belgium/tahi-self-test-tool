@@ -1,0 +1,1102 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+# $TINY: acceptTooBigMesg.seq,v 1.10 2002/03/05 02:59:10 masaxmasa Exp $
+# 
+########################################################################
+BEGIN { $V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $ '; }
+use V6evalTool;
+use PMTU;
+
+$IF=Link0;
+$WAIT_TO_FIN_DAD=5;
+$WAIT_TO_SET_PMTU=1;
+$WAIT_TO_SET_NA=1;
+
+%pktdesc = (
+    ns                           => 'TN <--Neighbor Solicitation --------- NUT',
+    ns_srcGlobal                 => 'TN <--Neighbor Solicitation Global--- NUT',
+    echo_request_1500_from_A     => 'TN(A) ---ICMP Echo Request (1500)------> NUT',
+    echo_reply_1500_to_A         => 'TN(A) <--ICMP Echo Reply   (1500)------- NUT',
+    echo_request_1400_from_A     => 'TN(A) ---ICMP Echo Request (1400)------> NUT',
+    echo_reply_1400_to_A         => 'TN(A) <--ICMP Echo Reply   (1400)------- NUT',
+    echo_request_1400_from_B     => 'TN(B) ---ICMP Echo Request (1400)------> NUT',
+    echo_reply_1400_to_B         => 'TN(B) <--ICMP Echo Reply   (1400)------- NUT',
+    echo_request_1500_from_B     => 'TN(B) ---ICMP Echo Request (1500)------> NUT',
+    echo_reply_1500_to_B         => 'TN(B) <--ICMP Echo Reply   (1500)------- NUT',
+    echo_request_1280_from_B     => 'TN(B) ---ICMP Echo Request (1280)------> NUT',
+    echo_reply_1280_to_B         => 'TN(B) <--ICMP Echo Reply   (1280)------- NUT',
+    echo_request_1500_from_C     => 'TN(C) ---ICMP Echo Request (1500)------> NUT',
+    echo_reply_1500_to_C         => 'TN(C) <--ICMP Echo Reply   (1500)------- NUT',
+    echo_request_1492_from_C     => 'TN(C) ---ICMP Echo Request (1492)------> NUT',
+    echo_reply_1492_to_C         => 'TN(C) <--ICMP Echo Reply   (1492)------- NUT',
+    echo_request_1000_from_C     => 'TN(C) ---ICMP Echo Request (1000)------> NUT',
+    echo_reply_1000_to_C         => 'TN(C) <--ICMP Echo Reply   (1000)------- NUT',
+    frag_echo_reply_1400_1st_mtu1304_A => 'TN(A) <--ICMP Echo Reply (1st MTU 1304)- NUT',
+    frag_echo_reply_1400_2nd_mtu1304_A => 'TN(A) <--ICMP Echo Reply (2nd MTU 1304)- NUT',
+    frag_echo_reply_1500_1st_mtu1400_A => 'TN(A) <--ICMP Echo Reply (1st MTU 1400)- NUT',
+    frag_echo_reply_1500_2nd_mtu1400_A => 'TN(A) <--ICMP Echo Reply (2nd MTU 1400)- NUT',
+    frag_echo_reply_1500_1st_mtu1280_B => 'TN(B) <--ICMP Echo Reply (1st MTU 1280)- NUT',
+    frag_echo_reply_1500_2nd_mtu1280_B => 'TN(B) <--ICMP Echo Reply (2nd MTU 1280)- NUT',
+    frag_echo_reply_1400_1st_mtu1280_B => 'TN(B) <--ICMP Echo Reply (1st MTU 1280)- NUT',
+    frag_echo_reply_1400_2nd_mtu1280_B => 'TN(B) <--ICMP Echo Reply (2nd MTU 1280)- NUT',
+    frag_echo_reply_1500_1st_mtu1280_C => 'TN(C) <--ICMP Echo Reply (1st MTU 1280)- NUT', 
+    frag_echo_reply_1500_2nd_mtu1280_C => 'TN(C) <--ICMP Echo Reply (2nd MTU 1280)- NUT',
+    frag_echo_reply_1492_1st_mtu1280_C => 'TN(C) <--ICMP Echo Reply (1st MTU 1280)- NUT', 
+    frag_echo_reply_1492_2nd_mtu1280_C => 'TN(C) <--ICMP Echo Reply (2nd MTU 1280)- NUT',
+    frag_echo_reply_1492_1st_mtu1272_C => 'TN(C) <--ICMP Echo Reply (1st MTU 1272)- NUT',
+    frag_echo_reply_1492_2nd_mtu1272_C => 'TN(C) <--ICMP Echo Reply (2nd MTU 1272)- NUT',
+    frag_echo_reply_1492_1st_mtu1500_C => 'TN(C) <--ICMP Echo Reply (1st MTU 1500)- NUT',
+    frag_echo_reply_1000_1st_mtu1280_C => 'TN(C) <--ICMP Echo Reply (1st MTU 1280)- NUT',
+    icmp6_TooBigMesg_1400_for_1500_A   => 'TN(A) ---ICMP PktTooBig(1400)----------> NUT',
+    icmp6_TooBigMesg_1304_for_1400_A   => 'TN(A) ---ICMP PktTooBig(1304)----------> NUT',
+    icmp6_TooBigMesg_1280_for_1500_B   => 'TN(B) ---ICMP PktTooBig(1280)----------> NUT',
+    icmp6_TooBigMesg_1272_for_1500_C   => 'TN(C) ---ICMP PktTooBig(1272)----------> NUT',
+    icmp6_TooBigMesg_1400_for_1280_B   => 'TN(B) ---ICMP PktTooBig(1400 Increase)-> NUT'
+);
+
+vLogHTML("Packet Too Big acception test");
+
+# Initialize
+flushtables($V6evalTool::NutDef{System});
+
+
+# Test start
+vCapture($IF);
+vClear($IF);
+
+if ($V6evalTool::NutDef{Type} eq "router"){
+	initNUT();
+}else{
+	vSend($IF,ra);
+	vLogHTML("Ignoring DAD packets");
+	vSleep($WAIT_TO_FIN_DAD);
+#	vSend($IF,na);
+}
+
+#
+# Test for Packet Too Big size=1400
+#
+
+# Send Triger Packet
+
+vClear($IF);
+vSend($IF, echo_request_1500_from_A);
+
+%ret=vRecv($IF, 5,0,0,
+	echo_reply_1500_to_A,
+	frag_echo_reply_1500_1st_mtu1280_A,
+	frag_echo_reply_1500_2nd_mtu1280_A,
+	ns_srcGlobal,
+	ns);
+
+if( $ret{status} !=0) {
+    vLogHTML("TN COULD NOT receive Echo Reply nor ns from NUT<BR>");
+    vLogHTML(vErrmsg(%ret));
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    exit $V6evalTool::exitFail;  
+}
+if($ret{recvFrame} eq 'ns' || $ret{recvFrame} eq 'ns_srcGlobal') {
+    if( $ret{recvFrame} eq 'ns') {
+        PMTU::sendNA();
+    }elsif( $ret{recvFrame} eq 'ns_srcGlobal') {
+        PMTU::sendNA_srcGlobal();
+    }
+
+    vSleep($WAIT_TO_SET_NA);
+    vClear($IF);
+    vSend($IF, echo_request_1500_from_A);
+
+    %ret=vRecv($IF, 5,0,0,
+            echo_reply_1500_to_A,
+	    frag_echo_reply_1500_1st_mtu1280_A,
+	    frag_echo_reply_1500_2nd_mtu1280_A,
+	);
+
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive Echo Reply from NUT<BR>");  
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1280_A') {
+        vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1280) from NUT");
+        %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1280_A);
+        if( $ret{status} != 0) {
+            vLogHTML("TN COULDN'T receive Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+            vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+            vClear($IF);
+            exit $V6evalTool::exitFail;
+        }else{
+            vLogHTML("TN received Fragmented Echo Reply (2/2 MTU1280) from NUT");
+            vClear($IF);
+            exit $V6evalTool::exitWarn;
+        }
+    }elsif( $ret{recvFrame} eq 'echo_reply_1500_to_A') {
+# Correct Case
+        vLogHTML("TN received Echo Reply (Size=1500) from NUT<BR>");
+        vLogHTML('OK');
+    }
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1280_A') {
+    vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1280) from NUT");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1280_A);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULDN'T receive Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }else{
+        vLogHTML("TN received Fragmented Echo Reply (2/2 MTU1280) from NUT");
+        vClear($IF);
+        exit $V6evalTool::exitWarn;
+    }
+}elsif( $ret{recvFrame} eq 'echo_reply_1500_to_A') {
+# Correct Case
+    vLogHTML("TN received Echo Reply (Size=1500) from NUT<BR>");
+    vLogHTML('OK');
+}
+
+#
+# Send Packet Too Big Message MTU=1400
+#
+
+vSend($IF,icmp6_TooBigMesg_1400_for_1500_A);
+vSleep($WAIT_TO_SET_PMTU);
+
+vLogHTML("TN send ICMP echo Request again");
+vClear($IF);
+vSend($IF, echo_request_1500_from_A);
+
+#-------------
+%ret=vRecv($IF, 5,0,0,
+	echo_reply_1500_to_A,
+	frag_echo_reply_1500_1st_mtu1400_A,
+	frag_echo_reply_1500_2nd_mtu1400_A,
+	frag_echo_reply_1500_1st_mtu1280_A,
+	frag_echo_reply_1500_2nd_mtu1280_A
+	);
+
+if( $ret{status} != 0) {
+    vLogHTML("TN COULD NOT receive Echo Reply from NUT");  
+    vClear($IF);
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1280_A') {
+    vLogHTML("TN received Echo Reply from NUT fragmented in 1280");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1280_A);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive another Echo Reply from NUT<BR>");  
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }else {
+# Correct Case
+        vLogHTML("TN  received Echo Reply from NUT Fragmented in 1280<BR>");  
+        vLogHTML('OK');
+        vClear($IF);
+    }
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1400_A') {
+    vLogHTML("TN received Echo Reply from NUT fragmented in 1400");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1400_A);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive another Echo Reply from NUT<BR>");  
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }else {
+# Correct Case
+        vLogHTML("TN received Echo Reply from NUT Fragmented in 1400<BR>");  
+        vLogHTML('OK');
+        vClear($IF);
+    }
+}elsif( $ret{recvFrame} eq 'echo_reply_1500_to_A') {
+    vLogHTML("TN received Echo Reply from NUT which is not fragmented<BR>");
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}
+
+#-------------------------------------------------------------------------
+
+#
+# Test for MTU1280
+#
+
+# Send Triger Packet
+
+vClear($IF);
+vSend($IF, echo_request_1500_from_B);
+
+%ret=vRecv($IF, 5,0,0,
+	echo_reply_1500_to_B,
+	frag_echo_reply_1500_1st_mtu1280_B,
+	frag_echo_reply_1500_2nd_mtu1280_B,
+	frag_echo_reply_1500_1st_mtu1400_B,
+	frag_echo_reply_1500_2nd_mtu1400_B,
+	ns_srcGlobal,
+	ns);
+
+if( $ret{status} !=0) {
+    vLogHTML("TN COULD NOT receive Echo Reply nor ns from NUT<BR>");
+    vLogHTML(vErrmsg(%ret));
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    exit $V6evalTool::exitFail;  
+}
+if($ret{recvFrame} eq 'ns' || $ret{recvFrame} eq 'ns_srcGlobal') {
+    if( $ret{recvFrame} eq 'ns') {
+        PMTU::sendNA();
+    }elsif( $ret{recvFrame} eq 'ns_srcGlobal') {
+        PMTU::sendNA_srcGlobal();
+    }
+
+    vSleep($WAIT_TO_SET_NA);
+    vClear($IF);
+    vSend($IF, echo_request_1500_from_B);
+
+    %ret=vRecv($IF, 5,0,0,
+            echo_reply_1500_to_B,
+	    frag_echo_reply_1500_1st_mtu1280_B,
+	    frag_echo_reply_1500_2nd_mtu1280_B,
+	    frag_echo_reply_1500_1st_mtu1400_B,
+	    frag_echo_reply_1500_2nd_mtu1400_B
+	);
+
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive Echo Reply from NUT<BR>");  
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1280_B') {
+        vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1280) from NUT");
+        %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1280_B);
+        if( $ret{status} != 0) {
+            vLogHTML("TN COULDN'T receive Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+            vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+            vClear($IF);
+            exit $V6evalTool::exitFail;
+        }else{
+            vLogHTML("TN received Fragmented Echo Reply (2/2 MTU1280) from NUT");
+            vClear($IF);
+            exit $V6evalTool::exitWarn;
+        }
+    }elsif( $ret{recvFrame} eq 'echo_reply_1500_to_B') {
+# Correct Case
+        vLogHTML("TN received Echo Reply (Size=1500) from NUT<BR>");
+        vLogHTML('OK');
+    }
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1280_B') {
+    vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1280) from NUT");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1280_B);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULDN'T receive Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }else{
+        vLogHTML("TN received Fragmented Echo Reply (2/2 MTU1280) from NUT");
+        exit $V6evalTool::exitWarn;
+    }
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1400_B') {
+    vLogHTML("TN received Echo Reply from NUT fragmented in 1400");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1400_B);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive another Echo Reply from NUT<BR>");  
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        exit $V6evalTool::exitFail;
+    }else {
+        vLogHTML("TN received Echo Reply from NUT Fragmented in 1400");  
+        exit $V6evalTool::exitWarn;
+    }
+}elsif( $ret{recvFrame} eq 'echo_reply_1500_to_B') {
+# Correct Case
+    vLogHTML("TN received Echo Reply (Size=1500) from NUT<BR>");
+    vLogHTML('OK');
+}
+
+#
+# Send Packet Too Big Message MTU=1280
+#
+
+vSend($IF,icmp6_TooBigMesg_1280_for_1500_B);
+vSleep($WAIT_TO_SET_PMTU);
+
+vLogHTML("TN send ICMP echo Request again");
+vClear($IF);
+vSend($IF, echo_request_1500_from_B);
+
+#-------------
+%ret=vRecv($IF, 5,0,0,
+	echo_reply_1500_to_B,
+	frag_echo_reply_1500_1st_mtu1280_B,
+	frag_echo_reply_1500_2nd_mtu1280_B
+	);
+
+if( $ret{status} != 0) {
+    vLogHTML("TN COULD NOT receive Echo Reply from NUT<BR>");  
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1280_B') {
+    vLogHTML("TN received Echo Reply from NUT fragmented in 1280");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1280_B);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive another Echo Reply from NUT<BR>");  
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        exit $V6evalTool::exitFail;
+    }else {
+# Correct Case
+        vLogHTML("TN  received Echo Reply from NUT Fragmented in 1280<BR>");  
+        vLogHTML('OK');
+    }
+}elsif( $ret{recvFrame} eq 'echo_reply_1500_to_B') {
+    vLogHTML("TN received Echo Reply from NUT which is not fragmented<BR>");
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    exit $V6evalTool::exitFail;
+}
+
+#-------------------------------------------------------------------------
+
+#
+# Test for Re-changing the MTU size 1400 -> 1304
+#
+
+
+# Send Triger Packet
+
+vClear($IF);
+vSend($IF, echo_request_1400_from_A);
+
+%ret=vRecv($IF, 5,0,0,
+	echo_reply_1400_to_A,
+	frag_echo_reply_1400_1st_mtu1280_A,
+	frag_echo_reply_1400_2nd_mtu1280_A,
+	ns_srcGlobal,
+	ns);
+
+if( $ret{status} !=0) {
+    vLogHTML("TN COULD NOT receive Echo Reply nor ns from NUT<BR>");
+    vLogHTML(vErrmsg(%ret));
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    exit $V6evalTool::exitFail;  
+}
+if($ret{recvFrame} eq 'ns' || $ret{recvFrame} eq 'ns_srcGlobal') {
+    if( $ret{recvFrame} eq 'ns') {
+        PMTU::sendNA();
+    }elsif( $ret{recvFrame} eq 'ns_srcGlobal') {
+        PMTU::sendNA_srcGlobal();
+    }
+
+    vSleep($WAIT_TO_SET_NA);
+    vClear($IF);
+    vSend($IF, echo_request_1400_from_A);
+
+    %ret=vRecv($IF, 5,0,0,
+            echo_reply_1400_to_A,
+	    frag_echo_reply_1400_1st_mtu1280_A,
+	    frag_echo_reply_1400_2nd_mtu1280_A,
+	);
+
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive Echo Reply from NUT<BR>");  
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }elsif( $ret{recvFrame} eq 'frag_echo_reply_1400_1st_mtu1280_A') {
+        vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1280) from NUT");
+        %ret=vRecv($IF, 5,0,0,frag_echo_reply_1400_2nd_mtu1280_A);
+        if( $ret{status} != 0) {
+            vLogHTML("TN COULDN'T receive Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+            vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+            vClear($IF);
+            exit $V6evalTool::exitFail;
+        }else{
+            vLogHTML('<FONT COLOR="#FF0000">Warn</FONT>');
+            vLogHTML("TN received Fragmented Echo Reply (2/2 MTU1280) from NUT");
+            vLogHTML("So I COULD NOT continue this kind of test");
+            vClear($IF);
+            exit $V6evalTool::exitWarn;
+        }
+    }elsif( $ret{recvFrame} eq 'echo_reply_1400_to_A') {
+# Correct Case
+        vLogHTML("TN received Echo Reply (Size=1400) from NUT<BR>");
+        vLogHTML('OK');
+    }
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1400_1st_mtu1280_A') {
+    vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1280) from NUT");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1400_2nd_mtu1280_A);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULDN'T receive Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }else{
+        vLogHTML("TN received Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+        vLogHTML("So I COULD NOT continue this kind of test<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }
+}elsif( $ret{recvFrame} eq 'echo_reply_1400_to_A') {
+# Correct Case
+    vLogHTML("TN received Echo Reply (Size=1400) from NUT<BR>");
+    vLogHTML('OK');
+}
+
+#
+# Send Packet Too Big Message MTU=1304
+#
+
+vSend($IF,icmp6_TooBigMesg_1304_for_1400_A);
+vSleep($WAIT_TO_SET_PMTU);
+
+vLogHTML("TN send ICMP echo Request again");
+vClear($IF);
+vSend($IF, echo_request_1400_from_A);
+
+#-------------
+%ret=vRecv($IF, 5,0,0,
+	echo_reply_1400_to_A,
+	frag_echo_reply_1400_1st_mtu1304_A,
+	frag_echo_reply_1400_2nd_mtu1304_A,
+	frag_echo_reply_1400_1st_mtu1280_A,
+	frag_echo_reply_1400_2nd_mtu1280_A
+	);
+
+if( $ret{status} != 0) {
+    vLogHTML("TN COULD NOT receive Echo Reply from NUT");  
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1400_1st_mtu1280_A') {
+    vLogHTML("TN received Echo Reply from NUT fragmented in 1280");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1400_2nd_mtu1280_A);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive another Echo Reply from NUT<BR>");  
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }else {
+# Correct Case
+        vLogHTML("TN received Echo Reply from NUT Fragmented in 1280<BR>");  
+        vLogHTML('OK');
+    }
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1400_1st_mtu1304_A') {
+    vLogHTML("TN received Echo Reply from NUT fragmented in 1304");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1400_2nd_mtu1304_A);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive another Echo Reply from NUT<BR>");  
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }else {
+# Correct Case
+        vLogHTML("TN received Echo Reply from NUT Fragmented in 1304<BR>");  
+        vLogHTML('OK');
+    }
+}elsif( $ret{recvFrame} eq 'echo_reply_1400_A') {
+    vLogHTML("TN received Echo Reply from NUT which is not fragmented<BR>");
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}
+
+#-------------------------------------------------------------------------
+
+#
+# Test for Re-changing the MTU size 1280 -> 1400
+#
+
+
+# Send Triger Packet
+
+vClear($IF);
+vSend($IF, echo_request_1280_from_B);
+
+%ret=vRecv($IF, 5,0,0,
+	echo_reply_1280_to_B,
+	ns_srcGlobal,
+	ns);
+
+if( $ret{status} !=0) {
+    vLogHTML("TN COULD NOT receive Echo Reply nor ns from NUT<BR>");
+    vLogHTML(vErrmsg(%ret));
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    exit $V6evalTool::exitFail;  
+}
+if($ret{recvFrame} eq 'ns' || $ret{recvFrame} eq 'ns_srcGlobal') {
+    if( $ret{recvFrame} eq 'ns') {
+        PMTU::sendNA();
+    }elsif( $ret{recvFrame} eq 'ns_srcGlobal') {
+        PMTU::sendNA_srcGlobal();
+    }
+
+    vSleep($WAIT_TO_SET_NA);
+    vClear($IF);
+    vSend($IF, echo_request_1280_from_B);
+
+    %ret=vRecv($IF, 5,0,0,
+            echo_reply_1280_to_B
+	);
+
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive Echo Reply from NUT<BR>");  
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }elsif( $ret{recvFrame} eq 'echo_reply_1280_to_B') {
+# Correct Case
+        vLogHTML("TN received Echo Reply (Size=1280) from NUT<BR>");
+        vLogHTML('OK');
+    }
+}elsif( $ret{recvFrame} eq 'echo_reply_1280_to_B') {
+# Correct Case
+    vLogHTML("TN received Echo Reply (Size=1280) from NUT<BR>");
+    vLogHTML('OK');
+}
+
+#
+# Send Packet Too Big Message MTU=1400
+#
+
+vSend($IF,icmp6_TooBigMesg_1400_for_1280_B);
+vSleep($WAIT_TO_SET_PMTU);
+
+vLogHTML("TN send ICMP echo Request again");
+vClear($IF);
+vSend($IF, echo_request_1400_from_B);
+
+#-------------
+%ret=vRecv($IF, 5,0,0,
+	echo_reply_1400_to_B,
+	frag_echo_reply_1400_1st_mtu1280_B,
+	frag_echo_reply_1400_2nd_mtu1280_B
+	);
+
+if( $ret{status} != 0) {
+    vLogHTML("TN COULD NOT receive Echo Reply from NUT");  
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1400_1st_mtu1280_B') {
+    vLogHTML("TN received Echo Reply from NUT fragmented in 1280");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1400_2nd_mtu1280_B);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive another Echo Reply from NUT<BR>");  
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }else {
+# Correct Case
+        vLogHTML("TN received Echo Reply from NUT Fragmented in 1280");  
+    }
+}elsif( $ret{recvFrame} eq 'echo_reply_1400_to_B') {
+    vLogHTML("TN received Echo Reply from NUT which is not fragmented<BR>");
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}
+
+#-------------------------------------------------------------------------
+
+#
+# Test for MTU1272
+#
+
+# Send Triger Packet
+
+vClear($IF);
+vSend($IF, echo_request_1500_from_C);
+
+%ret=vRecv($IF, 5,0,0,
+	echo_reply_1500_to_C,
+	frag_echo_reply_1500_1st_mtu1280_C,
+	frag_echo_reply_1500_2nd_mtu1280_C,
+	frag_echo_reply_1500_1st_mtu1400_C,
+	frag_echo_reply_1500_2nd_mtu1400_C,
+	ns_srcGlobal,
+	ns);
+
+if( $ret{status} !=0) {
+    vLogHTML("TN COULD NOT receive Echo Reply nor ns from NUT<BR>");
+    vLogHTML(vErrmsg(%ret));
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    vClear($IF);
+    exit $V6evalTool::exitFail;  
+}
+if($ret{recvFrame} eq 'ns' || $ret{recvFrame} eq 'ns_srcGlobal') {
+    if( $ret{recvFrame} eq 'ns') {
+        PMTU::sendNA();
+    }elsif( $ret{recvFrame} eq 'ns_srcGlobal') {
+        PMTU::sendNA_srcGlobal();
+    }
+
+    vSleep($WAIT_TO_SET_NA);
+    vClear($IF);
+    vSend($IF, echo_request_1500_from_C);
+
+    %ret=vRecv($IF, 5,0,0,
+            echo_reply_1500_to_C,
+	    frag_echo_reply_1500_1st_mtu1280_C,
+	    frag_echo_reply_1500_2nd_mtu1280_C,
+	    frag_echo_reply_1500_1st_mtu1400_C,
+	    frag_echo_reply_1500_2nd_mtu1400_C
+	);
+
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive Echo Reply from NUT<BR>");  
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1280_C') {
+        vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1280) from NUT");
+        %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1280_C);
+        if( $ret{status} != 0) {
+            vLogHTML("TN COULDN'T receive Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+            vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+            vClear($IF);
+            exit $V6evalTool::exitFail;
+        }else{
+            vLogHTML("TN received Fragmented Echo Reply (2/2 MTU1280) from NUT");
+            vClear($IF);
+            exit $V6evalTool::exitWarn;
+        }
+    }elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1400_C') {
+        vLogHTML("TN received Echo Reply from NUT fragmented in 1400");
+        %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1400_C);
+        if( $ret{status} != 0) {
+            vLogHTML("TN COULD NOT receive another Echo Reply from NUT<BR>");  
+            vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        }else {
+            vLogHTML("TN received Echo Reply from NUT Fragmented in 1400<BR>");  
+            vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        }
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }elsif( $ret{recvFrame} eq 'echo_reply_1500_to_C') {
+# Correct Case
+        vLogHTML("TN received Echo Reply (Size=1500) from NUT");
+    }
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1280_C') {
+    vLogHTML("TN received Fragmented Echo Reply (1/2 MTU1280) from NUT");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1280_C);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULDN'T receive Fragmented Echo Reply (2/2 MTU1280) from NUT<BR>");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }else{
+        vLogHTML("TN received Fragmented Echo Reply (2/2 MTU1280) from NUT");
+        vClear($IF);
+        exit $V6evalTool::exitWarn;
+    }
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1400_C') {
+    vLogHTML("TN received Echo Reply from NUT fragmented in 1400");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1500_2nd_mtu1400_C);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive another Echo Reply from NUT<BR>");  
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    }else {
+        vLogHTML("TN received Echo Reply from NUT Fragmented in 1400<BR>");  
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    }
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}elsif( $ret{recvFrame} eq 'echo_reply_1500_to_C') {
+# Correct Case
+    vLogHTML("TN received Echo Reply (Size=1500) from NUT");
+}
+
+#
+# Send Packet Too Big Message MTU=1272
+#
+
+vSend($IF,icmp6_TooBigMesg_1272_for_1500_C);
+vSleep($WAIT_TO_SET_PMTU);
+
+vLogHTML("TN send ICMP echo Request again");
+vClear($IF);
+vSend($IF, echo_request_1492_from_C);
+
+#-------------
+%ret=vRecv($IF, 5,0,0,
+	echo_reply_1492_to_C,
+	frag_echo_reply_1492_1st_mtu1280_C,
+	frag_echo_reply_1492_2nd_mtu1280_C,
+	frag_echo_reply_1492_1st_mtu1272_C,
+	frag_echo_reply_1492_2nd_mtu1272_C,
+	frag_echo_reply_1492_1st_mtu1500_C
+	);
+
+if( $ret{status} != 0) {
+    vLogHTML("TN COULD NOT receive Echo Reply from NUT");  
+    vClear($IF);
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1492_1st_mtu1280_C') {
+    vLogHTML("TN received Echo Reply from NUT fragmented in 1280");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1492_2nd_mtu1280_C);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive another Echo Reply from NUT<BR>");  
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }else {
+# Correct Case
+        vLogHTML("TN received Echo Reply from NUT Fragmented in 1280<BR>");  
+        vLogHTML("OK");
+    }
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1492_1st_mtu1272_C') {
+    vLogHTML("TN received Echo Reply from NUT fragmented in 1272");
+    %ret=vRecv($IF, 5,0,0,frag_echo_reply_1492_2nd_mtu1272_C);
+    if( $ret{status} != 0) {
+        vLogHTML("TN COULD NOT receive another Echo Reply from NUT<BR>");  
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }else {
+        vLogHTML("TN  received Echo Reply from NUT Fragmented in 1272<BR>");  
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }
+}elsif( $ret{recvFrame} eq 'echo_reply_1492_to_C') {
+    vLogHTML("TN received Echo Reply from NUT without fragmented<BR>");
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1492_1st_mtu1500_C') {
+    vLogHTML("TN received Echo Reply from NUT with fragment header<BR>");
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}
+
+#-------------
+vClear($IF);
+vSend($IF, echo_request_1000_from_C);
+vLogHTML("TN send ICMP echo Request again");
+
+#-------------
+%ret=vRecv($IF, 5,0,0,
+	echo_reply_1000_to_C,
+	frag_echo_reply_1000_1st_mtu1280_C
+	);
+
+if( $ret{status} != 0) {
+    vLogHTML("TN COULD NOT receive Echo Reply from NUT<BR>");  
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1000_1st_mtu1280_C') {
+# Correct Case
+    vLogHTML("TN received Echo Reply from NUT with fragment header<BR>");
+    vLogHTML("OK");
+    vClear($IF);
+}elsif( $ret{recvFrame} eq 'echo_reply_1000_to_C') {
+    vLogHTML("TN received Echo Reply from NUT without fragment header<BR>");
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}
+
+exit $V6evalTool::exitPass;
+
+
+########################################################################
+__END__
+
+=head1 NAME
+
+	acceptTooBigMesg - Verify changing Path MTU w/ received Too Big Message 
+
+=head1 TARGET
+
+	Host
+
+=head1 SYNOPSIS
+
+	TBM.seq [-tooloption ...] -p TBM.def
+
+=head1 NETWORK CONFIGURATION
+
+	This test evaluate the behavior of NUT when it receive the ICMP
+	Packet Too Big Message.
+	In this test, NUT is a host and TN plays a Roll of Router and 
+	other host.
+	
+	Phisical Network configuration
+	
+	--------+---------------+----------
+		|		|
+		NUT		TN
+
+
+
+	Logical Network Configuration
+
+				NUT
+				|
+	----------------+-------+--------
+			|
+			Router-A
+			|
+	--------+-------+-------+--------
+		|               | 
+             Router-B         HOST-A
+	        |
+	--------+-------+-------+--------
+			|       |
+		     Router-C  HOST-B 
+			|
+	----------------+-------+--------
+			        | 
+			      HOST-C 
+
+	In this test, NUT receives variable Packet Too Big Message. 
+	- Decrease PMTU for A from 1500 to 1400
+	- Decrease PMTU for B from 1500 to 1280
+	- Re-decrease PMTU for A from 1400 to 1304
+	- Increase PMTU for B from 1280 to 1400
+	- Incorrect PMTU value for B 1272
+
+
+=head1 INITIALIZATION
+
+        The TN send a RA to assign global address prefix.
+
+           TN          NUT
+	   |		|
+        ---+------------+------
+
+        ===multicast RA===>
+        src=TN's link-local
+        dst=LinkLocal-all-node                                                  
+        M=0, O=0,
+        Lifetime=3600, ReachableTime=60000, RetransTimer=1005
+        Prefix:
+           L=1, A=1,                       
+           ValidLifetime=3600005, PreferredLifetime=3600005
+           Prefix=3ffe:501:ffff:100::, PrefixLength=64                      
+   
+          Wait (5 sec.)
+                 Ignoring DAD packets for global address.                 
+
+
+=head1 TEST PROCEDURE
+
+	"acceptTooBigMesg" verify NUT's behavior when it receives 
+	 ICMP Packet Too Big Mesg.
+
+           TN          NUT
+	   |		|
+        ---+------------+------
+
+	1. PKT TOO BIG (MTU=1400) ------------------------------
+	1.1
+	TN send Echo Request.  
+        TN(A) === echo request(1500) ===> NUT
+
+	1.2
+	NUT send Echo Reply.
+
+        TN(A) <=== echo reply(1500) === NUT
+
+	1.3
+	TN send ICMPv6 Too Big Mesg include MTU (1400).
+	
+        TN(A) === ICMPv6 Too Big Mesg(MTU=1400) ===> NUT
+
+	1.4
+	TN send Echo Request.  
+        TN(A) === echo request(1500) ===> NUT
+
+	1.5
+        NUT send Echo Reply 
+	<< JUDGEMENT 1 >>
+        TN(A) <=== echo reply(1400 1/2) === NUT
+        TN(A) <=== echo reply( 156 2/2) === NUT
+
+	2. PKT TOO BIG (MTU=1280) ------------------------------
+	2.1
+	TN send Echo Request.  
+        TN(B) === echo request(1500) ===> NUT
+
+	2.2
+	NUT send Echo Reply.
+
+        TN(B) <=== echo reply(1500) === NUT
+
+	2.3
+	TN send ICMPv6 Too Big Mesg include MTU (1280).
+	
+        TN(B) === ICMPv6 Too Big Mesg(MTU=1280) ===> NUT
+
+	2.4
+	TN send Echo Request.  
+        TN(B) === echo request(1500) ===> NUT
+
+	2.5
+        NUT send Echo Reply 
+	<< JUDGEMENT 2 >>
+        TN(B) <=== echo reply(1280 1/2) === NUT
+        TN(B) <=== echo reply( 276 2/2) === NUT
+
+
+	3. PKT TOO BIG (MTU=1304) ------------------------------
+	3.1
+	TN send Echo Request.  
+        TN(A) === echo request(1400) ===> NUT
+
+	3.2
+	NUT send Echo Reply.
+
+        TN(A) <=== echo reply(1400) === NUT
+
+	3.3
+	TN send ICMPv6 Too Big Mesg include MTU (1304).
+	
+        TN(A) === ICMPv6 Too Big Mesg(MTU=1304) ===> NUT
+
+	3.4
+	TN send Echo Request.  
+        TN(A) === echo request(1400) ===> NUT
+
+	3.5
+        NUT send Echo Reply 
+	<< JUDGEMENT 3 >>
+        TN(A) <=== echo reply(1304 1/2) === NUT
+        TN(A) <=== echo reply( 152 2/2) === NUT
+
+
+	4. PKT TOO BIG (MTU=1400 INCREASE) ------------------------------
+	4.1
+	TN send Echo Request.  
+        TN(B) === echo request(1280) ===> NUT
+
+	4.2
+	NUT send Echo Reply.
+
+        TN(B) <=== echo reply(1280) === NUT
+
+	4.3
+	TN send ICMPv6 Too Big Mesg include MTU (1400).
+	
+        TN(B) === ICMPv6 Too Big Mesg(MTU=1400) ===> NUT
+
+	4.4
+	TN send Echo Request.  
+        TN(B) === echo request(1400) ===> NUT
+
+	4.5
+        NUT send Echo Reply 
+	<< JUDGEMENT 4 >>
+        TN(B) <=== echo reply(1280 1/2) === NUT
+        TN(B) <=== echo reply( 176 2/2) === NUT
+
+
+	5. PKT TOO BIG (MTU=1272) ------------------------------
+	5.1
+	TN send Echo Request.  
+        TN(C) === echo request(1500) ===> NUT
+
+	5.2
+	NUT send Echo Reply.
+
+        TN(C) <=== echo reply(1500) === NUT
+
+	5.3
+	TN send ICMPv6 Too Big Mesg include MTU (1272).
+	
+        TN(C) === ICMPv6 Too Big Mesg(MTU=1272) ===> NUT
+
+	5.4
+	TN send Echo Request.  
+        TN(C) === echo request(1492) ===> NUT
+
+	5.5
+        NUT send Echo Reply 
+	<< JUDGEMENT 5 >>
+        TN(C) <=== echo reply(1280 1/2) === NUT
+        TN(C) <=== echo reply( 268 2/2) === NUT
+
+	5.6
+	TN send Echo Request.  
+        TN(C) === echo request(1000) ===> NUT
+
+	5.7
+        NUT send Echo Reply 
+        TN(C) <=== echo reply(1008 w/ FH) === NUT
+
+
+=head1 JUDGEMENT
+
+	<< JUDGEMENT 1 -PASS- >>
+		NUT send Echo Reply
+
+		"PASS" means that NUT set valid MTU in received Packet Too Big message.
+		And fragmented packets are correct.
+
+
+	<< JUDGEMENT 2 -PASS- >>
+		NUT send Echo Reply
+
+		"PASS" means that NUT set valid MTU in received Packet Too Big message.
+		And fragmented packets are correct.
+
+	<< JUDGEMENT 3 -PASS- >>
+		NUT send Echo Reply
+
+		"PASS" means that NUT set decreased size of valid MTU in received Packet Too Big message.
+		And fragmented packets are correct.
+
+	<< JUDGEMENT 4 -PASS- >>
+		NUT send Echo Reply
+
+		"PASS" means that NUT doesn't set increased size of valid MTU in received Packet Too Big message.
+		And fragmented packets are correct.
+
+	<< JUDGEMENT 5 -PASS- >>
+		NUT send Echo Reply
+		"PASS" means that NUT set Minimum MTU, rather than MTU in received Packet Too Big Message, that is smaller than Minimum MTU.
+		And NUT add Fragment header even though the packet is smaller than Minimu MTU.
+
+
+=head1 SEE ALSO
+
+	perldoc V6evalTool
+	perldoc V6evalRemote
+
+=cut
+

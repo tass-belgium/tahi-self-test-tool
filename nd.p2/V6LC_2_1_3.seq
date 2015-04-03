@@ -1,0 +1,265 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/nd.p2/V6LC_2_1_3.seq,v 1.10 2009/12/28 05:55:17 akisada Exp $
+#
+########################################################################
+
+use nd;
+
+BEGIN {}
+END   {}
+
+if($V6evalTool::NutDef{'Type'} ne 'host') {
+	exitHostOnly();
+	#NOTREACHED
+}
+
+
+
+$pktdesc{'ra_local_Lset'}
+	= '    Send RA w/o SLL (on-link flag=1): '.
+		'TR1 (link-local) -&gt; all-nodes multicast address';
+
+$pktdesc{'ra_local_Lclear'}
+	= '    Send RA w/o SLL (on-link flag=0): '.
+		'TR1 (link-local) -&gt; all-nodes multicast address',
+
+my @frames = ('tr1_mcast_ns_sll_LG', 'tr1_mcast_ns_sll_GG');
+
+my $got_ns = 0;
+
+
+
+startNdiscWorld($Link0);
+
+
+
+vLogHTML('<FONT COLOR="#FF0000" SIZE="5"><U><B>Procedure</B></U></FONT><BR>');
+
+# 1. TR1 transmits Router Advertisement A.
+vClear($Link0);
+vSend($Link0, 'ra_local_Lset');
+ignoreDAD($Link0);
+
+$NEED_COMMON_CLEANUP = 1;
+$tr1_default = 1;
+
+
+
+# 2. TR1 transmits Packet A.
+#    TR1 should not respond to Neighbor Solicitations from the HUT.
+vClear($Link0);
+vSend($Link0, 'tr1_ereq_global');
+
+
+
+# 3. Observe the packets transmitted by the HUT.
+my %ret = vRecv($Link0, $RETRANS_TIMER * $MAX_MULTICAST_SOLICIT + 1,
+		0, 0, @frames);
+
+if($ret{'recvCount'}) {
+	foreach my $frame (@frames) {
+		if($ret{'recvFrame'} eq $frame) {
+			$got_ns ++;
+			flushBuffer($Link0, $TimeOut, $TimeOut);
+		}
+	}
+}
+
+unless($got_ns) {
+	vLogHTML('<FONT COLOR="#FF0000"><B>Could\'t observe NS</B></FONT><BR>');
+	exitInitFail();
+}
+
+
+
+# 4. TR1 transmits Router Advertisement A with the on-link (L) flag clear.
+vClear($Link0);
+vSend($Link0, 'ra_local_Lclear');
+ignoreDAD($Link0);
+
+
+
+# 5. TR1 transmits Packet A.
+#    TR1 should not respond to Neighbor Solicitations from the HUT.
+$got_ns = 0;
+vClear($Link0);
+vSend($Link0, 'tr1_ereq_global');
+
+
+
+# 6. Observe the packets transmitted by the HUT.
+vRecv($Link0, $RETRANS_TIMER * $MAX_MULTICAST_SOLICIT + 1, 0, 0, @frames);
+
+if($ret{'recvCount'}) {
+	foreach my $frame (@frames) {
+		if($ret{'recvFrame'} eq $frame) {
+			$got_ns ++;
+			flushBuffer($Link0, $TimeOut, $TimeOut);
+		}
+	}
+}
+
+unless($got_ns) {
+	vLogHTML('<FONT COLOR="#FF0000"><B>Could\'t observe NS</B></FONT><BR>');
+	exitFail();
+}
+
+exitPass();
+#NOTREACHED
+
+
+
+#
+# perldoc
+#
+########################################################################
+__END__
+
+=head1 NAME
+
+  Test v6LC.2.1.3 - Prefix Information Option Processing, On-link Flag (Hosts Only)
+
+=head1 Purpose
+
+   Verify that a host properly processes the on-link flag of a Prefix Information Option.
+
+=head1 References
+
+  * [ND]  Section 6.3.4
+
+=head1 Resource Requirements
+
+  * Packet generator
+  * Monitor to capture packets
+
+=head1 Test Setup
+
+  No Common Test Setup is performed. Wait at least 3 seconds
+  (MAX_MULTICAST_SOLICIT * RETRANS_TIMER) after any previous cleanup to make sure all
+  previous NCE's are in state No NCE. The Common Test Cleanup procedure is performed.
+
+=begin html
+
+<BLOCKQUOTE>
+
+<TABLE BORDER>
+<Caption>Router Advertisement A</Caption>
+<TR>
+<TD>
+	IPv6 Header<br>
+	Next Header: 58<br>
+	Source Address: TR1's Link-local Address<br>
+	Destination Address:<br>
+	All-nodes Multicast Address
+</TD>
+</TR>
+<TR>
+<TD>
+	Router Advertisement<br>
+	Router Lifetime: 100 seconds<br>
+	Reachable Time: 10 seconds<br>
+	Retransmit Interval: 1 second<br>
+</TD>
+</TR>
+
+<TR>
+<TD>
+        Prefix Option<br>
+	"on-link" (L) flag: 1<br>
+	Valid Lifetime: 20 seconds<br>
+	Preferred Lifetime: 20 seconds<br>
+	Prefix: TR1's Global Prefix<br>
+</TD>
+</TR>
+</TABLE>
+
+<br>
+
+<TABLE BORDER>
+<Caption>Neighbor Advertisement C</Caption>
+<TR>
+<TD>
+        IPv6 Header<br>
+        Next Header: 58<br>
+	Source Address: TR1's Global Address<br>
+	Destination Address: HUT's Link-local Address
+</TD>
+</TR>
+<TR>
+<TD>ICMPv6 Echo Request</TD>
+</TR>
+</TABLE>
+
+</BLOCKQUOTE>
+
+=end html
+
+
+=head1 Procedure
+
+  1. TR1 transmits Router Advertisement A.
+  2. TR1 transmits Packet A. TR1 should not respond to Neighbor Solicitations from the HUT.
+  3. Observe the packets transmitted by the HUT.
+  4. TR1 transmits Router Advertisement A with the on-link (L) flag clear.
+  5. TR1 transmits Packet A. TR1 should not respond to Neighbor Solicitations from the HUT.
+  6. Observe the packets transmitted by the HUT.
+
+=head1 Observable Results
+
+  Step 3: 
+  In response to Packet A, the HUT should transmit 3 Neighbor Solicitations with a Target
+  Address of TR1's global address.
+
+  Step 6: 
+  In response to Packet A, the HUT should transmit 3 Neighbor Solicitations with a Target
+  Address of TR1's global address.
+
+=head1 Possible Problems
+
+  * None. 
+
+=cut
+

@@ -1,0 +1,573 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+# $TINY: RA_mGA_sRAmPXsRT.seq,v 1.7 2002/03/05 17:13:55 miyata Exp $
+# 
+
+########################################################################
+BEGIN { $V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $ '; }
+use V6evalTool;
+use SAA;
+
+#------------------------------------------------------
+#----- get sequence arguments
+#------------------------------------------------------
+$howto_initNUT="none";
+$send = "ok";
+$dad_recv_count=0;
+$rs_recv_count=0;
+
+foreach (@ARGV) {
+# How to configure address of NUT?
+# sample: boot, ra, manual+_GLOBAL0A0N_UCAST
+    /^addrconf=(\S+)/ && do {$SAA::howto_addrconf=$1; next; };
+
+# How to initialize NUT?
+# sample: none, DADSuccess_boot, DADFail_boot
+    /^init=(\S+)/     && do {$howto_initNUT=$1; next; };
+
+# "none" if send no pakcet to NUT in state DADPostSendNS
+# sample: ok, none
+    /^send=(\S+)/     && do {$send=$1; next; };
+
+# sequence debug options
+# sample: qR
+    /^sd=(\S+)/       && do {$seqdebugopt=$1; next; };
+    seqERROR("Unknown sequence option '$_'");
+}
+#------------------------------------------------------
+
+#----- test condition
+$IF=Link0;                 # network interface
+
+$max_retry_count = 10;     # retry if NUT state becomes DADPostSendNS
+$max_retry_count = 2 if $SAA::sd =~ /q/;    # quick retry
+$send_interval  = 1;
+	       # 1[sec] time between DAD NS and DAD NS, send to NUT
+               #     (RandomDelay is 0-1sec  e.g. default RetransTimer 1000msec)
+
+
+$DAD_GA = $SAA::DADTransmitsGA;
+$DAD_GA =~ tr/a-z/A-Z/ ;
+ 
+$recvGA0=0;
+$recvGA1=0;
+
+##########################################################
+#----- Check Target Type
+
+$type=$V6evalTool::NutDef{Type};
+if($type eq router) {
+    vLogHTML("This test is for the host only<BR>");
+    exit $V6evalTool::exitHostOnly;
+}
+
+if($type ne host) {
+    vLogHTML(ndErrmsg("ERROR: $V6evalTool::NutDef{Type}: ".
+		      "Unknown target type<BR>"));
+    exit $V6evalTool::exitFail;
+}
+
+##########################################################
+#----- initialize NUT
+vLog("*** Target initialization phase ***");
+if($V6evalTool::NutDef{System} ne "manual"){ vSleep($SAA::test_interval); }
+$rret=vRemote("reboot_async.rmt","","timeout=$SAA::wait_rebootcmd");
+vLog("reboot_async.rmt returned status $rret");
+
+#----- start Capturing
+vLog("*** Target testing phase ***");
+vCapture($IF);
+
+
+#----- LLA PHASE
+#----- Wait DAD NS from NUT or timeout
+vLog("TN wait DAD NS(DADNS_from_NUT) from NUT for $SAA::wait_dadns{$SAA::howto_addrconf} [sec],");
+
+%ret1=vRecv($IF,$SAA::wait_dadns{$SAA::howto_addrconf},0,$dad_recv_count,DADNS_from_NUT);
+
+if ($ret1{status} != 0){
+    vLog("TN wait DAD NS from NUT for $SAA::wait_dadns{$SAA::howto_addrconf}, but NUT had not transmit DAD NS");
+    seqNG();
+}
+
+#----- RA PHASE
+vLog("TN received DAD NS from NUT.");
+vLog("OK! Let's go ahead!");
+%ret2=vRecv($IF,$SAA::wait_rs,0,$rs_recv_count,RS_from_NUT,RS_from_NUT_wSLL);
+
+if ($ret2{status} != 0){
+    vLog("Though TN had waited RS from NUT for $SAA::wait_rs,");
+    vLog(" NUT seems not to send RS.");
+    vLog(" Anyway TN is sending Unsolicited RA (Prefix=Global)");
+}else{
+    vLog("TN received RS from NUT.");
+    vLog("TN is sending RA (Prefix=Global)");
+}
+
+#----- Send RA
+vSend($IF, RA_GA0GA1);
+
+#----- Wait DAD NS from NUT or timeout
+for ($loopcount=0; $loopcount<2; $loopcount++){
+    vLog("TN wait DAD NS for Global from NUT for $SAA::wait_dadns{ra} [sec],");
+
+    %ret3=vRecv($IF,$SAA::wait_dadns{"ra"},0,0,DADNS_from_NUT_GA0Tgt,DADNS_from_NUT_GA1Tgt);
+    if ($ret3{status} == 0 and $ret3{recvFrame} eq DADNS_from_NUT_GA0Tgt){
+        $recvGA0=1;
+    }elsif ($ret3{status} == 0 and $ret3{recvFrame} eq DADNS_from_NUT_GA1Tgt){
+        $recvGA1=1;
+    }
+}
+
+if ( $recvGA0 == 1 and $recvGA1 == 1 ){
+#----- check if NUT's address is configured
+    vLog("NUT transmitted DAD NS for its Global address.");
+    vSleep($SAA::wait_addrconf_with_RA);
+
+    if (seqCheckNUTAddrConfiguredGA($IF,
+	SOLNS_from_TN_GA0Tgt, 
+	NA_from_NUT_GA0Tgt, 
+	NA_from_NUT_GA0Tgt_woTLL, 
+	NA_from_GA0NUT_GA0Tgt, 
+	NA_from_GA0NUT_GA0Tgt_woTLL, 
+	NA_from_GA1NUT_GA0Tgt, 
+	NA_from_GA1NUT_GA0Tgt_woTLL) eq TRUE) {
+        vLog(" NUT assigned Global address 0.");
+        $assign_ga0=1;
+    }else{
+        vLog(" NUT did not assign Global address.");
+        $assign_ga0=0;
+    }
+    if (seqCheckNUTAddrConfiguredGA($IF,
+	SOLNS_from_TN_GA1Tgt, 
+	NA_from_GA0NUT_GA1Tgt, 
+	NA_from_GA0NUT_GA1Tgt_woTLL, 
+	NA_from_NUT_GA1Tgt, 
+	NA_from_NUT_GA1Tgt_woTLL, 
+	NA_from_GA1NUT_GA1Tgt, 
+	NA_from_GA1NUT_GA1Tgt_woTLL) eq TRUE) {
+        vLog(" NUT assigned Global address 1.");
+        $assign_ga1=1;
+    }else{
+        vLog(" NUT did not assign Global address 1.");
+        $assign_ga1=0;
+    }
+
+    if ($DAD_GA eq "NO") {
+        vLog("NUT transmit DAD NS though DADTransmitsGA == NO");
+        seqNG();
+    }else{
+        if ($assign_ga0 == 1 and $assign_ga1 == 1){
+            vLog("NUT assigned Both addresses!");
+            seqOK();
+	}else{
+            seqNG();
+        }
+    }
+}else{
+    vLog("NUT did not transmit DAD NS for Both Global addresses.");
+
+    if (seqCheckNUTAddrConfiguredGA($IF,
+	SOLNS_from_TN_GA0Tgt, 
+	NA_from_NUT_GA0Tgt, 
+	NA_from_NUT_GA0Tgt_woTLL, 
+	NA_from_GA0NUT_GA0Tgt, 
+	NA_from_GA0NUT_GA0Tgt_woTLL, 
+	NA_from_GA1NUT_GA0Tgt, 
+	NA_from_GA1NUT_GA0Tgt_woTLL) eq TRUE) {
+        vLog(" NUT assigned Global address.");
+        $assign_ga0=1;
+    }else{
+        vLog(" NUT did not assign Global address.");
+        $assign_ga0=0;
+    }
+    if (seqCheckNUTAddrConfiguredGA($IF,
+	SOLNS_from_TN_GA1Tgt, 
+	NA_from_GA0NUT_GA1Tgt, 
+	NA_from_GA0NUT_GA1Tgt_woTLL, 
+	NA_from_NUT_GA1Tgt, 
+	NA_from_NUT_GA1Tgt_woTLL, 
+	NA_from_GA1NUT_GA1Tgt, 
+	NA_from_GA1NUT_GA1Tgt_woTLL) eq TRUE) {
+        vLog(" NUT assigned Global address.");
+        $assign_ga1=1;
+    }else{
+        vLog(" NUT did not assign Global address.");
+        $assign_ga1=0;
+    }
+
+    if ($DAD_GA eq "YES") {
+        vLog("NUT did not transmit DAD NS though DADTransmitsGA == YES");
+        seqNG();
+    }else{
+        if ($assign_ga0 == 1 and $assign_ga1 == 1){
+            vLog("NUT assigned Both addresses!");
+            seqOK();
+	}else{
+            seqNG();
+        }
+    }
+}
+
+##########################################################
+
+
+#end
+########################################################################
+__END__
+
+=head1 NAME
+
+RA_mGA_sRAmPXsRT - check the process when NUT receives RA which contains two Global Prefixes.(Assigning two Glboal addresses)
+
+=head1 TARGET
+
+All Node
+
+=head1 SYNOPSIS
+
+RA_mGA_sRAmPXsRT.seq [-tooloption ...] -pkt <packetdef> [addrconf=<addrconfname>] 
+
+  -tooloption   : v6eval tool option
+  <packetdef>   : packet definition file (v6eval tool option)
+  <addrconfname>: how to configure address on NUT; boot/reboot
+
+=begin html
+<PRE>
+ detail of v6eval tool option: see perldoc V6evalTool.pm, perldoc V6evalRemote.pm
+</PRE>
+
+=end html
+
+
+=head1 INITIALIZATION
+
+=begin html
+<PRE>
+ Reboot NUT or Initialize interface of NUT or Initialize IPv6 stack of NUT.
+</PRE>
+
+=end html
+
+=head1 TEST PROCEDURE
+
+=over 1
+
+=item Test for Unicast address configuration
+
+The following tests are prepared in this test package. See INDEX file.
+
+B<Test for all node>
+
+   When NUT receives RA which contains Global Prefixes, 
+   NUT assignes autoconfigured addresses. NUT MAY perform DAD for its Global
+   addresses prior to assigning them.
+
+B<Test sequence>
+
+  TN                            NUT
+  ---------------------------------
+  Initialize NUT
+
+  Configure address of NUT (reboot or interface initialization etc...)
+
+  TN wait the DAD NS sent from NUT
+  <=== Judgement #1: DAD NS =======
+        name: DADNS_from_NUT
+
+  <=== Judgement #2: RS ===========
+        name: RS_from_NUT, RS_from_NUT_wSLL
+
+  ==== Action #1: RA =============>
+        name: RA_GA0GA1
+
+  <=== Judgement #3: DAD NS =======
+        name: DADNS_from_NUT_GA0Tgt
+
+  <=== Judgement #4: DAD NS =======
+        name: DADNS_from_NUT_GA1Tgt
+
+  Wait for 5+DupAddrDetectTransmits*(RetransTimer/1000)[sec]
+
+  Check if NUT's address is configured
+  ==== Action #2: SOL NS =========>
+        name: SOLNS_from_TN_GA0Tgt
+
+  <=== Judgement #5: SOL NA =======
+        name: 
+	      NA_from_NUT_GA0Tgt, 
+	      NA_from_NUT_GA0Tgt_woTLL, 
+	      NA_from_GA0NUT_GA0Tgt, 
+	      NA_from_GA0NUT_GA0Tgt_woTLL, 
+	      NA_from_GA1NUT_GA0Tgt, 
+	      NA_from_GA1NUT_GA0Tgt_woTLL
+
+  ==== Action #3: SOL NS =========>
+        name: SOLNS_from_TN_GA1Tgt
+
+  <=== Judgement #6: SOL NA =======
+        name: 
+	      NA_from_GA0NUT_GA1Tgt, 
+	      NA_from_GA0NUT_GA1Tgt_woTLL, 
+	      NA_from_NUT_GA1Tgt, 
+	      NA_from_NUT_GA1Tgt_woTLL, 
+	      NA_from_GA1NUT_GA1Tgt, 
+	      NA_from_GA1NUT_GA1Tgt_woTLL
+
+=back 1
+
+=head1 JUDGEMENT
+
+=over 1
+
+=item Test for multiple Global Unicast address autoconfiguration
+
+B<Test for all NODE>
+
+B<NUT performs Stateless Address Autoconfiguration(2 Global) on its interface>
+
+   Judgement #1. NUT MUST transmit DAD NS for its autoconfigured Link-local address.
+        name: DADNS_from_NUT
+	src: ::0
+	dst: solnode[NUT's tentative Link-local]
+        TargetAddress: NUT's tentative Link-local
+
+   Judgement #2. NUT SHOULD transmit RS.
+        name: RS_from_NUT
+	src: NUT's Link-local
+	dst: allrouter
+
+   Action #1. TN transmits RA which contains 2 Global Prefixes.
+        name: RA_GA0GA1
+	src: TN's Link-local
+	dst: allnode
+	PXOPT: GA0
+	PXOPT: GA1
+
+   Judgement #3. NUT MUST transmit DAD NS for its autoconfigured Global address.
+		 (* If the address is consisits of EUI64, as same as Link-local
+		 address, This DAD MAY be omitted.)
+        name: DADNS_from_NUT_GA0Tgt
+        src: ::0
+	dst: solnode[NUT's tentative Global0]
+        TargetAddress: NUT's tentative Global0
+
+   Judgement #4. NUT MUST transmit DAD NS for its autoconfigured Global address.
+		 (* If the address is consisits of EUI64, as same as Link-local
+		 address, This DAD MAY be omitted.)
+        name: DADNS_from_NUT_GA1Tgt
+        src: ::0
+	dst: solnode[NUT's tentative Global1]
+        TargetAddress: NUT's tentative Global1
+
+   Action #2. TN transmits SOL NS to check if NUT's address is configured.
+        name: SOLNS_from_TN_GA0Tgt
+        src: TN's Link-local
+	dst: solnode[NUT's Global0]
+        TargetAddress: NUT's Global0
+
+   Judgement #5. NUT MUST transmit SOL NA for its autoconfigured Global address.
+        name: 
+	      NA_from_NUT_GA0Tgt, 
+	      NA_from_NUT_GA0Tgt_woTLL, 
+	      NA_from_GA0NUT_GA0Tgt, 
+	      NA_from_GA0NUT_GA0Tgt_woTLL, 
+	      NA_from_GA1NUT_GA0Tgt, 
+	      NA_from_GA1NUT_GA0Tgt_woTLL
+	src: NUT's any Unicast Address
+	dst: TN's Link-local
+        TargetAddress: NUT's Global0
+        RFlag: 0
+        SFlag: 1
+        OFlag: 1
+	TLLOPT: NUT's MAC address
+	(* TLLOPT may be omitted)
+
+   Action #3. TN transmits SOL NS to check if NUT's address is configured.
+        name: SOLNS_from_TN_GA1Tgt
+        src: TN's Link-local
+	dst: solnode[NUT's Global1]
+        TargetAddress: NUT's Global1
+
+   Judgement #6. NUT MUST transmit SOL NA for its autoconfigured Global address.
+        name: 
+	      NA_from_GA0NUT_GA1Tgt, 
+	      NA_from_GA0NUT_GA1Tgt_woTLL, 
+	      NA_from_NUT_GA1Tgt, 
+	      NA_from_NUT_GA1Tgt_woTLL, 
+	      NA_from_GA1NUT_GA1Tgt, 
+	      NA_from_GA1NUT_GA1Tgt_woTLL
+	src: NUT's any Unicast Address
+	dst: TN's Link-local
+        TargetAddress: NUT's Global1
+        RFlag: 0
+        SFlag: 1
+        OFlag: 1
+	TLLOPT: NUT's MAC address
+	(* TLLOPT may be omitted)
+
+
+=back 1
+
+=cut
+
+# =head1 REFERENCE
+# 
+# =begin html
+# <PRE>
+# RFC2462
+# <HR>
+#    (omit)
+# <BR>
+# 5.5.3.  Router Advertisement Processing
+# <BR>
+#    (omit)
+# <BR>
+#    For each Prefix-Information option in the Router Advertisement:
+# <BR>
+#     a) If the Autonomous flag is not set, silently ignore the
+#        Prefix Information
+#        option.
+# <BR>
+#     b) If the prefix is the link-local prefix, silently ignore the
+#        Prefix Information option.
+# <BR>
+#     c) If the preferred lifetime is greater than the valid lifetime,
+#        silently ignore the Prefix Information option. A node MAY wish to
+#        log a system management error in this case.
+# <BR>
+#     d) <B>If the prefix advertised does not match the prefix of an address
+#        already in the list, and the Valid Lifetime is not 0, form an
+#        address (and add it to the list) by combining the advertised
+#        prefix with the link's interface identifier as follows</B>:
+# <BR>
+#    |            128 - N bits               |       N bits           |
+#    +---------------------------------------+------------------------+
+#    |            link prefix                |  interface identifier  |
+#    +----------------------------------------------------------------+
+# <BR>
+# <BR>
+#        If the sum of the prefix length and interface identifier length
+#        does not equal 128 bits, the Prefix Information option MUST be
+#        ignored.  An implementation MAY wish to log a system management
+#        error in this case. It is the responsibility of the system
+#        administrator to insure that the lengths of prefixes contained in
+#        Router Advertisements are consistent with the length of interface
+#        identifiers for that link type. Note that interface identifiers
+#        will typically be 64-bits long and based on EUI-64 identifiers as
+#        described in [ADDR-ARCH].
+# <BR>
+#        <B>If an address is formed successfully, the host adds it to the
+#        list of addresses assigned to the interface, initializing its
+#        preferred and valid lifetime values from the Prefix Information
+#        option.</B>
+# <BR>
+#    (omit)
+# <HR>
+# RFC2461
+# <HR>
+# <BR>
+#    (omit)
+# <BR>
+# 4.2.  Router Advertisement Message Format
+# <BR>
+#    (omit)
+# <BR>
+#    Possible options:
+# <BR>
+#       Source link-layer address
+#                      The link-layer address of the interface from which
+#                      the Router Advertisement is sent.  Only used on
+#                      link layers that have addresses.  A router MAY omit
+#                      this option in order to enable inbound load sharing
+#                      across multiple link-layer addresses.
+# <BR>
+#       MTU            SHOULD be sent on links that have a variable MTU
+#                      (as specified in the document that describes how to
+#                      run IP over the particular link type).  MAY be sent
+#                      on other links.
+# <BR>
+#       <B>Prefix Information
+#                      These options specify the prefixes that are on-link
+#                      and/or are used for address autoconfiguration.  A
+#                      router SHOULD include all its on-link prefixes
+#                      (except the link-local prefix) so that multihomed
+#                      hosts have complete prefix information about on-
+#                      link destinations for the links to which they
+#                      attach.</B>  If complete information is lacking, a
+#                      multihomed host may not be able to choose the
+#                      correct outgoing interface when sending traffic to
+#                      its neighbors.
+# <BR>
+#    (omit)
+# <BR>
+# </PRE>
+# 
+# =end html
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 4862 - IPv6 Stateless Address Autoconfiguration
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+=begin html
+<PRE>
+ detail of v6eval tool option: see perldoc V6evalTool.pm, perldoc V6evalRemote.pm
+</PRE>
+
+=end html
+
+=cut
+

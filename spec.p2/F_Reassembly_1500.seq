@@ -1,0 +1,457 @@
+#!/usr/bin/perl
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: F_Reassembly_1500.seq,v 1.11 2010/03/30 01:19:01 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+use CommonSPEC;
+
+$discard_te = $CommonSPEC::exceed_max;
+
+$pktdesc{'echo_request1500_1st'}	= 'Send Echo Request (1st fragment)';
+$pktdesc{'echo_request1500_2nd'}	= 'Send Echo Request (2nd fragment)';
+$pktdesc{'echo_request1500_3rd'}	= 'Send Echo Request (3rd fragment)';
+$pktdesc{'echo_reply1500'}		= 'Recv Echo Reply';
+
+#----------------------------------------------------------------------#
+# Resolution Wait Queue Issue                                          #
+#----------------------------------------------------------------------#
+$pktdesc{'echo_request_small'}	= 'Send Echo Request';
+$pktdesc{'echo_reply_small'}	= 'Recv Echo Reply';
+#----------------------------------------------------------------------#
+
+$endStatus = $V6evalTool::exitPass;
+
+#----- create Fragment ID
+$id = time & 0x00000fff;
+$fid = sprintf("0x0%07x", $id);
+$rid = sprintf("0x0%03x", $id);
+$sno = 0;
+
+################################################################
+$IF = 'Link0';
+
+vCapture($IF);
+
+#======================================================================
+if (setup11($IF) != $CommonSPEC::Success) {
+	$ret = cleanup($IF);
+	if ($ret == $CommonSPEC::Success) {
+		exit($V6evalTool::exitFail);
+	} else {
+		exit($V6evalTool::exitFatal);
+	}
+}
+#======================================================================
+
+#----------------------------------------------------------------------#
+# Resolution Wait Queue Issue                                          #
+#----------------------------------------------------------------------#
+vClear($IF);
+vSend($IF, 'echo_request_small');
+%ret = nd_vRecv_EN($IF, $CommonSPEC::wait_reply, 0, 0, 'echo_reply_small');
+
+if($ret{'status'}) {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+} else {
+	if($ret{'recvFrame'} eq 'echo_reply_small'){
+		vLogHTML('OK<BR>');
+	} else {
+		vLogHTML('Cannot receive Echo Reply<BR>');
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+		$endStatus = $V6evalTool::exitFail;
+	}
+}
+
+vClear($IF);
+#----------------------------------------------------------------------#
+
+#----- test
+
+# start creating fragment packets
+$mtu_diff_min = $CommonPMTU::default_mtu - 1280;
+vCPP("-DMTU_DIFF_MIN=$mtu_diff_min");
+
+
+#fake data
+$fragment_id = 0;
+$PTB_payload = '_PACKET_IPV6_echo_reply1500';
+$packet_len = 1500;
+
+$original_name = "echo_reply1500"; #must same echo reply packet
+$MTU_value = 1500; #MTU value, fixed
+$PKT_size = 1500; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8;
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+#$header_ether = '_hether_nut_to_onlinkTN1';
+#$ip_src = 'NUT_GL0_ADDR';
+#$ip_dst = 'TN1_GL0_ADDR';
+$header_ether = '_HETHER_nut2tn';
+$ip_src = 'nutv6()';
+$ip_dst = 'tnv6()';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef($def_file, $original_name, $MTU_value,$PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF -DFRAG_ID=any");
+
+# finish creating fragment packets
+
+vSend($IF, 'echo_request1500_1st');
+vSend($IF, 'echo_request1500_2nd');
+vSend($IF, 'echo_request1500_3rd');
+
+
+#%ret = nd_vRecv_EN($IF, $CommonSPEC::wait_reply, 0, 0, 'echo_reply1500');
+%ret = nd_vRecv_EN($IF, $CommonSPEC::wait_reply, 0, 0, 'echo_reply1500', @CommonSPEC::fragment_1st_name);
+
+if ($ret{'status'} == 0) {
+	if($ret{'recvFrame'} eq 'echo_reply1500'){
+		vLogHTML('OK<BR>');
+	}
+	else{
+		vLogHTML('OK. recive 1st fragment.<BR>');
+		$pkt_name = $ret{'recvFrame'};
+		$pkt_name =~ /^echo_reply(\d+)_1st_(\d+)$/;
+		$size_2nd_frag = $1-$2-40;
+		$name_2nd_frag = "echo_reply$1"."_2nd_$size_2nd_frag";
+		
+		%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+		if ($ret{'status'} == 0) {
+			vLogHTML('OK. recive 2nd fragment.<BR>');
+			
+		}
+		else {
+			vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+			$endStatus = $V6evalTool::exitFail;
+		}
+	}
+	
+	
+}else {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+
+#----- end test
+unlink($def_file);
+
+$ret = cleanup($IF);
+vStop($IF);
+if ($ret == $CommonSPEC::Success) {
+	exit($endStatus);
+} else {
+	exit($V6evalTool::exitFatal);
+}
+
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  F_Reassembly_1500 - Fragment Reassembly (Reassemble to 1500)
+
+=head1 TARGET
+
+  Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./F_Reassembly_1500.seq">F_Reassembly_1500.seq</A> [-tooloption ...] -pkt <A HREF="./F_Reassembly_1500.def">F_Reassembly_1500.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  None
+
+=head1 TEST PROCEDURE
+
+Verify that a node correctly reassembles fragmented packets and distinguishes between packet fragments using the Source Address, Destination Address and Fragment ID.
+
+    TN                         NUT
+    |                           |
+    |-------------------------->|
+    |   Echo Request            |
+    |                           |
+    |<--------------------------|
+    |   Echo Reply              |
+    |                           |
+    |-------------------------->|
+    |   Echo Request (1st)      |
+    |                           |
+    |-------------------------->|
+    |   Echo Request (2nd)      |
+    |                           |
+    |-------------------------->|
+    |   Echo Request (3rd)      |
+    |                           |
+    |<--------------------------|
+    |   Echo Reply              |
+    |                           |
+    |                           |
+    v                           v
+
+
+
+  1. TN transmits an Echo Request to the NUT. TN answers any NS with a NA.
+  2. Observe the packets transmitted by the NUT.
+ 
+  3. TN transmits 1st, 2nd and 3rd Fragments in order. 
+     All fragments have the same Source Address, Destination Address, and Fragment ID,
+     however, the payloads of each fragment are modified so that the reassembled packet size is 1500.
+  4. Observe the packets transmitted by the NUT.
+
+  Echo Request Data (original) is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 1460
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = TN Link Local Address
+            DestinationAddress = NUT Link Local Address
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = (auto)
+            SequenceNumber = 0
+            PayloadData    = data repeat{0x1, 512}
+                             data repeat{0x2, 512}
+                             data repeat{0x3, 428}
+
+  Echo Request Data (1st fragment) is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 520
+            NextHeader         = 44 (Fragment Header)
+            SourceAddress      = TN Link Local Address
+            DestinationAddress = NUT Link Local Address
+
+        Fragment Header
+            NextHeader         = 58 (ICMPv6)
+            FragmentOffset     = 0
+            MFlag              = 1
+            Identification     = 32bit (Automatic generation)
+
+        Payload
+            data               = 520 octets from the head of ICMP Echo request
+
+  Echo Request Data (2nd fragment) is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 520
+            NextHeader         = 44 (Fragment Header)
+            SourceAddress      = TN Link Local Address
+            DestinationAddress = NUT Link Local Address
+
+        Fragment Header
+            NextHeader         = 58 (ICMPv6)
+            FragmentOffset     = 65
+            MFlag              = 1
+            Identification     = 32bit (Automatic generation)
+
+        Payload
+            data               = 520 octets from the back of ICMP Echo request
+
+  Echo Request Data (3rd fragment) is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 420
+            NextHeader         = 44 (Fragment Header)
+            SourceAddress      = TN Link Local Address
+            DestinationAddress = NUT Link Local Address
+
+        Fragment Header
+            NextHeader         = 58 (ICMPv6)
+            FragmentOffset     = 130
+            MFlag              = 0
+            Identification     = 32bit (Automatic generation)
+
+        Payload
+            data               = 420 octets from the back of ICMP Echo request
+
+=head1 JUDGEMENT
+
+  PASS: The NUT must respond to the Echo Request from TN in Step 2.
+        The NUT must respind to the Echo Request from TN in Step 4 (see below).
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = 0
+            FlowLabel           = 0
+            PayloadLength       = 1460
+            NextHeader          = 58 (ICMPv6)
+            SourceAddress       = NUT Link Local Address
+            Destination Address = TN Link Local Address
+
+        ICMP Echo Reply
+            Type           = 129 (Echo Reply)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = (same as Echo Request)
+            SequenceNumber = (same as Echo Request)
+            PayloadData    = (same as Echo Request)
+
+=head1 CLEANUP
+
+Common Test Cleanup
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+# 
+# 5. Packet Size Issues
+# 
+#    IPv6 requires that every link in the internet have an MTU of 1280
+#    octets or greater.  On any link that cannot convey a 1280-octet
+#    packet in one piece, link-specific fragmentation and reassembly must
+#    be provided at a layer below IPv6.
+# 
+#    Links that have a configurable MTU (for example, PPP links [RFC-
+#    1661]) must be configured to have an MTU of at least 1280 octets; it
+#    is recommended that they be configured with an MTU of 1500 octets or
+#    greater, to accommodate possible encapsulations (i.e., tunneling)
+#    without incurring IPv6-layer fragmentation.
+# 
+#    From each link to which a node is directly attached, the node must be
+#    able to accept packets as large as that link's MTU.
+# 
+#    It is strongly recommended that IPv6 nodes implement Path MTU
+#    Discovery [RFC-1981], in order to discover and take advantage of path
+#    MTUs greater than 1280 octets.  However, a minimal IPv6
+#    implementation (e.g., in a boot ROM) may simply restrict itself to
+#    sending packets no larger than 1280 octets, and omit implementation
+#    of Path MTU Discovery.
+# 
+#    In order to send a packet larger than a path's MTU, a node may use
+#    the IPv6 Fragment header to fragment the packet at the source and
+#    have it reassembled at the destination(s).  However, the use of such
+#    fragmentation is discouraged in any application that is able to
+#    adjust its packets to fit the measured path MTU (i.e., down to 1280
+#    octets).
+# 
+# =begin html
+# <PRE>
+#    <B>A node must be able to accept a fragmented packet that, after
+#    reassembly, is as large as 1500 octets.  A node is permitted to
+#    accept fragmented packets that reassemble to more than 1500 octets.
+#    An upper-layer protocol or application that depends on IPv6
+#    fragmentation to send packets larger than the MTU of a path should
+#    not send packets larger than 1500 octets unless it has assurance that
+#    the destination is capable of reassembling packets of that larger
+#    size.</B>
+# </PRE>
+# 
+# =end html
+# 
+#    In response to an IPv6 packet that is sent to an IPv4 destination
+#    (i.e., a packet that undergoes translation from IPv6 to IPv4), the
+#    originating IPv6 node may receive an ICMP Packet Too Big message
+#    reporting a Next-Hop MTU less than 1280.  In that case, the IPv6 node
+#    is not required to reduce the size of subsequent packets to less than
+#    1280, but must include a Fragment header in those packets so that the
+#    IPv6-to-IPv4 translating router can obtain a suitable Identification
+#    value to use in resulting IPv4 fragments.  Note that this means the
+#    payload may have to be reduced to 1232 octets (1280 minus 40 for the
+#    IPv6 header and 8 for the Fragment header), and smaller still if
+#    additional extension headers are used.
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

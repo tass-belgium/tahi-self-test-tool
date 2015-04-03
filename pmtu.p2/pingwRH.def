@@ -1,0 +1,253 @@
+//
+// Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+// Yokogawa Electric Corporation.
+// All rights reserved.
+// 
+// Redistribution and use of this software in source and binary
+// forms, with or without modification, are permitted provided that
+// the following conditions and disclaimer are agreed and accepted
+// by the user:
+// 
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in
+//    the documentation and/or other materials provided with
+//    the distribution.
+// 
+// 3. Neither the names of the copyrighters, the name of the project
+//    which is related to this software (hereinafter referred to as
+//    "project") nor the names of the contributors may be used to
+//    endorse or promote products derived from this software without
+//    specific prior written permission.
+// 
+// 4. No merchantable use may be permitted without prior written
+//    notification to the copyrighters.
+// 
+// 5. The copyrighters, the project and the contributors may prohibit
+//    the use of this software at any time.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+// CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+// BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+// FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+// COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+// IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+//
+// $Name: V6LC_5_0_0 $
+//
+// $TINY $
+//
+
+//
+// Network topology
+//                                                  TN   (Link0)  NUT
+//     HostB -----> Router1 -----> HOST(NUT) -----> Router1 -----> HostA
+//
+
+#include "PMTU.def"
+
+#define HOSTA_ADDR v6("3ffe:501:ffff:10a0::1")
+#define HOSTB_ADDR v6("3ffe:501:ffff:10b0::1")
+
+//
+// Routing Header
+//
+
+Hdr_Routing rh_HB_to_NUT {
+	NextHeader = 58;	// ICMP
+	SegmentsLeft = 1;
+	Address = HOSTA_ADDR;
+}
+
+Hdr_Routing rh_NUT_to_HA {
+	NextHeader = 58;	// ICMP
+	SegmentsLeft = 0;
+	Address = NUT_GLOBAL_ADDRESS;
+}
+
+Hdr_Routing rh_NUT_to_HA_nxt_frag {
+	NextHeader = 44;	// ICMP
+	SegmentsLeft = 0;
+	Address = NUT_GLOBAL_ADDRESS;
+}
+
+Hdr_Fragment frag_1st {
+        NextHeader = 58;
+        FragmentOffset = 0;
+        MFlag = 1;
+        Identification = 0x00000e60;
+}
+
+Hdr_Fragment frag_2nd {
+        NextHeader = 58;
+        FragmentOffset = 166;
+        MFlag = 0;
+        Identification = 0x00000e60;
+}
+
+
+//======================================================================
+//
+// Echo Request Data
+//
+
+Payload ping_data_1320 {
+     data=repeat(0xff,1320);
+}
+
+Payload ping_data_32 {
+     data=repeat(0xff,32);
+}
+
+//======================================================================
+//
+// Echo Request with RH
+//
+
+FEM_icmp6_echo_request_exth(
+	echo_request_1400_plus_RH_from_B_to_A_via_NUT,
+	_HETHER_tn2nut,
+	{
+		_SRC(HOSTB_ADDR);
+		_DST(NUT_GLOBAL_ADDRESS);
+	},
+	{
+		header = _HDR_IPV6_NAME(echo_request_1400_plus_RH_from_B_to_A_via_NUT);
+		exthdr = rh_HB_to_NUT;
+		upper = _ICMPV6_NAME(echo_request_1400_plus_RH_from_B_to_A_via_NUT);
+	},
+	{
+		payload = ping_data_1352;
+	}
+)
+
+//======================================================================
+//
+// Echo Request with RH
+//
+
+FEM_icmp6_echo_request_exth(
+	echo_request_1400_plus_RH_from_B_to_A_fwd,
+	_HETHER_nut2tn,
+	{
+		_SRC(HOSTB_ADDR);
+		_DST(HOSTA_ADDR);
+	},
+	{
+		header = _HDR_IPV6_NAME(echo_request_1400_plus_RH_from_B_to_A_fwd);
+		exthdr = rh_NUT_to_HA;
+		upper = _ICMPV6_NAME(echo_request_1400_plus_RH_from_B_to_A_fwd);
+	},
+	{
+		payload = ping_data_1352;
+	}
+)
+
+//======================================================================
+//
+// Fragmented Echo Request with RH
+//
+
+FEM_icmp6_echo_request_exth(
+	frag_echo_request_1400_plus_RH_1st_mtu1400_from_B_to_A,
+	_HETHER_nut2tn,
+	{
+		_SRC(HOSTB_ADDR);
+		_DST(HOSTA_ADDR);
+	},
+	{
+		header = _HDR_IPV6_NAME(frag_echo_request_1400_plus_RH_1st_mtu1400_from_B_to_A);
+		exthdr = rh_NUT_to_HA_nxt_frag;
+		exthdr = frag_1st;
+		upper = _ICMPV6_NAME(frag_echo_request_1400_plus_RH_1st_mtu1400_from_B_to_A);
+	},
+	{
+		payload = ping_data_1320;
+	}
+)
+
+FEM_icmp6_echo_request_exth(
+	frag_echo_request_1400_plus_RH_2nd_mtu1400_from_B_to_A,
+	_HETHER_nut2tn,
+	{
+		_SRC(HOSTB_ADDR);
+		_DST(HOSTA_ADDR);
+	},
+	{
+		header = _HDR_IPV6_NAME(frag_echo_request_1400_plus_RH_2nd_mtu1400_from_B_to_A);
+		exthdr = rh_NUT_to_HA_nxt_frag;
+		exthdr = frag_2nd;
+		upper = _ICMPV6_NAME(frag_echo_request_1400_plus_RH_2nd_mtu1400_from_B_to_A);
+	},
+	{
+		payload = ping_data_32;
+	}
+)
+
+
+///////////////////////////////////
+//
+// Packets for HOST A or related A
+//
+///////////////////////////////////
+
+
+// size 1500
+
+
+FEM_icmp6_echo_request(
+         echo_request_1500_from_A,
+         _HETHER_tn2nut,
+        {
+                 _SRC(HOSTA_ADDR);
+                 _DST(NUT_GLOBAL_ADDRESS);
+        },
+        {
+                 payload=ping_data_1452;
+        }
+)
+
+
+FEM_icmp6_echo_reply(
+         echo_reply_1500_to_A,
+         _HETHER_nut2tn,
+        {
+                 _SRC(NUT_GLOBAL_ADDRESS);
+                 _DST(HOSTA_ADDR);
+        },
+        {
+                 payload=ping_data_1452;
+        }
+)
+
+///////////////////////////////////
+//
+// Packets Too Big Message for HOST A or related A
+//
+
+FEM_icmp6_packet_too_big(
+        icmp6_TooBigMesg_1400_for_1500_A,
+        _HETHER_tn2nut,
+                {
+                _SRC(v6("3ffe:501:ffff:10a1::1"));
+                _DST(NUT_GLOBAL_ADDRESS);
+        },
+                {
+                MTU     = 1400;
+                payload = TooBigData_1500_A;
+        }
+)
+
+Payload TooBigData_1500_A {
+    data=substr(_PACKET_IPV6_NAME(echo_reply_1500_to_A),0,1232);
+}
+
+

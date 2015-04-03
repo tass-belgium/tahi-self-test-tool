@@ -1,0 +1,241 @@
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: INDEX_p1_router,v 1.12 2009/01/22 09:13:06 akisada Exp $
+#
+# <seq>:<def>:[<opt>]:[<log>]:<desc>
+#
+
+
+
+./Reboot.seq:/dev/null:::Initialization:2
+
+
+
+&print:Group 1: IPv6 Header
+
+
+
+&print:Test v6LC.1.1.1: Version Field
+&#./IP_Version.seq:./IP_Version.def:::Version Field:2
+
+
+
+&print:Test v6LC.1.1.2: Traffic Class Non-Zero - End Node
+&#./IP_TC_NonZeroEN.seq:./IP_TC_NonZeroEN.def:::Traffic Class Non-Zero - End Node:2
+
+
+
+&print:Test v6LC.1.1.3: Traffic Class Non-Zero - Intermediate Node (Routers Only)
+&#./IP_TC_NonZeroIN.seq:./IP_TC_NonZeroIN.def:::Traffic Class Non-Zero - Intermediate Node (Routers Only):2
+
+
+
+&print:Test v6LC.1.1.4: Flow Label Non-Zero
+&#./IP_FL_NonZeroEN.seq:./IP_FL_NonZeroEN.def:::Part A&#58; NUT receives Non-Zero Flow Label:2
+&#./IP_FL_NonZeroIN.seq:./IP_FL_NonZeroIN.def:::Part B&#58; RUT forwards Non-Zero Flow Label (Routers Only):2
+
+
+
+&print:Test v6LC.1.1.5: Payload Length
+./IP_PL_Odd.seq:./IP_PL_Odd.def:::Part A&#58; Payload Length Odd:2
+./v6LC_1_1_5_B.seq:./v6LC_1_1_5_B.def:::Part B&#58; RUT forwards Payload Length Odd (Routers Only)
+&#./IP_PL_Even.seq:./IP_PL_Even.def:::Part C&#58; Payload Length Even:2
+
+
+
+&print:Test v6LC.1.1.6: No Next Header after IPv6 Header
+&#./IP_NH_NoneEN.seq:./IP_NH_NoneEN.def:::Part A&#58; NUT Receives No Next Header:2
+./IP_NH_NoneIN.seq:./IP_NH_NoneIN.def:::Part B&#58; RUT Forwards No Next Header - (Routers Only):2
+
+
+
+&print:Test v6LC.1.1.7: Unrecognized Next Header
+&#./IP_NH_Unrecognized.seq:./IP_NH_Unrecognized.def:::Part A&#58; Unrecognized Next Header in IPv6 Header (Multiple Values):2
+&#./IP_NH_Unexpected.seq:./IP_NH_Unexpected.def:::Part B&#58; Unexpected Next Header in IPv6 Header:2
+
+
+
+&print:Test v6LC.1.1.8: Hop Limit Zero - End Node
+&#./IP_HL_ZeroEN.seq:./IP_HL_ZeroEN.def:::Hop Limit Zero - End Node:2
+
+
+
+&print:Test v6LC.1.1.9: Hop Limit Decrement - Intermediate Node (Routers Only)
+./IP_HL_DecrementIN.seq:./IP_HL_DecrementIN.def:::Hop Limit Decrement - Intermediate Node (Routers Only):2
+
+
+
+&print:Test v6LC.1.1.10: Source and Destination Address - Intermediate Node (Routers Only)
+./v6LC_1_1_10_A.seq:./v6LC_1_1_10_A.def:::Part A&#58; Request sent to Global Unicast address:2
+./v6LC_1_1_10_B.seq:./v6LC_1_1_10_B.def:::Part B&#58; Request sent to Global Unicast address (prefix end in zero-valued fields):2
+./v6LC_1_1_10_C.seq:./v6LC_1_1_10_C.def:::Part C&#58; Request sent from unspecified address:2
+./v6LC_1_1_10_D.seq:./v6LC_1_1_10_D.def:::Part D&#58; Request sent to Lookback address:2
+./v6LC_1_1_10_E.seq:./v6LC_1_1_10_E.def:::Part E&#58; Request sent from Link Local address:2
+./v6LC_1_1_10_F.seq:./v6LC_1_1_10_F.def:::Part F&#58; Request sent to Link Local address:2
+./v6LC_1_1_10_G.seq:./v6LC_1_1_10_G.def:::Part G&#58; Request sent to Site-Local address:2
+&#./v6LC_1_1_10_H.seq:./v6LC_1_1_10_H.def:::Part H&#58; Request sent to Global Scope multicast address:2
+&#./v6LC_1_1_10_I.seq:./v6LC_1_1_10_I.def:::Part I&#58; Request sent to Link-local Scope multicast address:2
+&#./v6LC_1_1_10_J.seq:./v6LC_1_1_10_J.def:::Part J&#58; Request sent to Multicast address (Reserved Value = 0):2
+&#./v6LC_1_1_10_K.seq:./v6LC_1_1_10_K.def:::Part K&#58; Request sent to Multicast address (Reserved Value = F):2
+
+
+
+########################################################################
+&print:Group 2: Extension Headers and Options
+
+
+
+&print:Test v6LC.1.2.1: Next Header Zero
+&#./EX_NH_Zero.seq:./EX_NH_Zero.def:::Next Header Zero:2
+
+
+
+&print:Test v6LC.1.2.2: No Next Header after Extension Header
+&#./EX_NH_NoneEN.seq:./EX_NH_NoneEN.def:::Part A&#58; End Node:2
+&#./EX_NH_NoneIN.seq:./EX_NH_NoneIN.def:::Part B&#58; Intermediate Node (Routers Only):2
+
+
+
+&print:Test v6LC.1.2.3: Unrecognized Next Header in Extension Header - End Node
+&#./EX_NH_UnrecognizedEN.seq:./EX_NH_UnrecognizedEN.def:::Part A&#58; Unrecognized Next Header in Extension Header (Multiple Values):2
+&#./EX_NH_UnexpectedEN.seq:./EX_NH_UnexpectedEN.def:::Part B&#58; Unexpected Next Header in Extension Header:2
+
+
+
+&print:Test v6LC.1.2.4: Extension Header Processing Order
+&#./EX_HdrProcessingOrder_HDF_10M.seq:./EX_HdrProcessingOrder_HDF_10M.def:::Part A&#58; Destination Options Header precedes Fragment Header, Error from Destination Options Header:2
+&#./EX_HdrProcessingOrder_HDF_00M.seq:./EX_HdrProcessingOrder_HDF_00M.def:::Part B&#58; Destination Options Header precedes Fragment Header, Error from Fragment Header:2
+&#./EX_HdrProcessingOrder_HFD_M10.seq:./EX_HdrProcessingOrder_HFD_M10.def:::Part C&#58; Fragment Header precedes Destination Options Header, Error from Fragment Header:2
+&#./EX_HdrProcessingOrder_HFD_10.seq:./EX_HdrProcessingOrder_HFD_10.def:::Part D&#58; Fragment Header precedes Destination Options Header, Error from Destination Options Header:2
+
+
+
+&print:Test v6LC.1.2.5: Option Processing Order
+&#./EX_OptProcessingOrder_01.seq:./EX_OptProcessingOrder_01.def:::Part A&#58; First Option has Most Significant Bits 00b, Next has Most Significant Bits 01b:2
+&#./EX_OptProcessingOrder_10.seq:./EX_OptProcessingOrder_10.def:::Part B&#58; First Option has Most Significant Bits 00b, Next has Most Significant Bits 10b:2
+&#./EX_OptProcessingOrder_11.seq:./EX_OptProcessingOrder_11.def:::Part C&#58; First Option has Most Significant Bits 00b, Next has Most Significant Bits 11b:2
+
+
+
+&print:Test v6LC.1.2.6: Options Processing, Hop-by-Hop Options Header - End Node
+./HHO_Pad1_EN.seq:./HHO_Pad1_EN.def:::Part A&#58; Pad1 Option:2
+./HHO_PadN_EN.seq:./HHO_PadN_EN.def:::Part B&#58; PadN Option:2
+./HHO_MSB00_EN.seq:./HHO_MSB00_EN.def:::Part C&#58; Most Significant Bits 00b:2
+./HHO_MSB01_EN.seq:./HHO_MSB01_EN.def:::Part D&#58; Most Significant Bits 01b:2
+./HHO_MSB10_EN.seq:./HHO_MSB10_EN.def:::Part E&#58; Most Significant Bits 10b, unicast destination:2
+./HHO_MSB11_EN.seq:./HHO_MSB11_EN.def:::Part F&#58; Most Significant Bits 11b, unicast destination:2
+./HHO_MSB10mc_EN.seq:./HHO_MSB10mc_EN.def:::Part G&#58; Most Significant Bits 10b, multicast destination:2
+./HHO_MSB11mc_EN.seq:./HHO_MSB11mc_EN.def:::Part H&#58; Most Significant Bits 11b, multicast destination:2
+
+
+
+&print:Test v6LC.1.2.7: Options Processing, Hop-by-Hop Options Header - Intermediate Node (Routers Only)
+&#./HHO_Pad1_IN.seq:./HHO_Pad1_IN.def:::Part A&#58; Pad1 Option:2
+&#./HHO_PadN_IN.seq:./HHO_PadN_IN.def:::Part B&#58; PadN Option:2
+&#./HHO_MSB00_IN.seq:./HHO_MSB00_IN.def:::Part C&#58; Most Significant Bits 00b:2
+&#./HHO_MSB01_IN.seq:./HHO_MSB01_IN.def:::Part D&#58; Most Significant Bits 01b:2
+&#./HHO_MSB10_IN.seq:./HHO_MSB10_IN.def:::Part E&#58; Most Significant Bits 10b, unicast destination:2
+&#./HHO_MSB11_IN.seq:./HHO_MSB11_IN.def:::Part F&#58; Most Significant Bits 11b, unicast destination:2
+&#./HHO_MSB10mc_IN.seq:./HHO_MSB10mc_IN.def:::Part G&#58; Most Significant Bits 10b, off-link multicast destination:2
+&#./HHO_MSB11mc_IN.seq:./HHO_MSB11mc_IN.def:::Part H&#58; Most Significant Bits 11b, on-link multicast destination:2
+
+
+
+&print:Test v6LC.1.2.8: Option Processing, Destination Options Header
+./DO_Pad1.seq:./DO_Pad1.def:::Part A&#58; Pad1 Option:2
+./DO_PadN.seq:./DO_PadN.def:::Part B&#58; PadN Option:2
+./DO_MSB00.seq:./DO_MSB00.def:::Part C&#58; Most Significant Bits 00b:2
+./DO_MSB01.seq:./DO_MSB01.def:::Part D&#58; Most Significant Bits 01b:2
+./DO_MSB10.seq:./DO_MSB10.def:::Part E&#58; Most Significant Bits 10b, unicast destination:2
+./DO_MSB11.seq:./DO_MSB11.def:::Part F&#58; Most Significant Bits 11b, unicast destination:2
+./DO_MSB10mc.seq:./DO_MSB10mc.def:::Part G&#58; Most Significant Bits 10b, multicast destination:2
+./DO_MSB11mc.seq:./DO_MSB11mc.def:::Part H&#58; Most Significant Bits 11b, multicast destination:2
+
+
+
+&print:Test v6LC.1.2.9: Unrecognized Routing Type - End Node
+./R_UnrecognizedRoutingTypeEN.seq:./R_UnrecognizedRoutingTypeEN.def:::Part A&#58; Unrecognized Routing Type 33:2
+./R_UnrecognizedRoutingTypeEN_RH0.seq:./R_UnrecognizedRoutingTypeEN_RH0.def:::Part B&#58; Unrecognized Routing Type 0:2
+
+
+
+&print:Test v6LC.1.2.10: Unrecognized Routing Type - Intermediate Node
+./R_UnrecognizedRoutingTypeIN.seq:./R_UnrecognizedRoutingTypeIN.def:::Part A&#58; Unrecognized Routing Type 33:2
+./R_UnrecognizedRoutingTypeIN_RH0.seq:./R_UnrecognizedRoutingTypeIN_RH0.def:::Part B&#58; Unrecognized Routing Type 0:2
+
+
+
+########################################################################
+&print:Group 3: Fragmentation
+
+
+
+&print:Test v6LC.1.3.1: Fragment Reassembly
+./F_Reassembly_Valid.seq:./F_Reassembly_Valid.def:::Part A&#58; All Fragments are Valid:2
+./F_Reassembly_reverse.seq:./F_Reassembly_reverse.def:::Part B&#58; All Fragments are Valid, reverse order:2
+./F_Reassembly_FID.seq:./F_Reassembly_FID.def:::Part C&#58; Fragment IDs Differ Between Fragments:2
+&#./F_Reassembly_src.seq:./F_Reassembly_src.def:::Part D&#58; Source Addresses Differ Between Fragments:2
+&#./F_Reassembly_dst.seq:./F_Reassembly_dst.def:::Part E&#58; Destination Address Differ Between Fragments:2
+&#./F_Reassembly_1500.seq:./F_Reassembly_1500.def:::Part F&#58; Reassemble to 1500:2
+
+
+
+&print:Test v6LC.1.3.2: Reassembly Time Exceeded
+&#./F_TX_intime.seq:./F_TX_intime.def:::Part A&#58; Time Elapsed Between Fragments less than Sixty Seconds:2
+&#./F_TX_expire.seq:./F_TX_expire.def:::Part B&#58; Time Exceeded Before Last Fragments Arrive:2
+./F_TX_only1st.seq:./F_TX_only1st.def:::Part C&#58; Time Exceeded (Global), Only First Fragment Received:2
+./v6LC_1_3_2_D.seq:./v6LC_1_3_2_D.def:::Part D&#58; Time Exceeded (Link-local), Only First Fragment Received
+./F_TX_only2nd.seq:./F_TX_only2nd.def:::Part E&#58; Time Exceeded, Only Second Fragment Received:2
+
+
+
+&print:Test v6LC.1.3.3: Fragment Header M-Bit Set, Payload Length Invalid
+./F_PLinvalid.seq:./F_PLinvalid.def:::Fragment Header M-Bit Set, Payload Length Invalid:2
+
+
+
+&print:Test v6LC.1.3.4: Stub Fragment Header
+./F_Stub.seq:./F_Stub.def:::Stub Fragment Header:2

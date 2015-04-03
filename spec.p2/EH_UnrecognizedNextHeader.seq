@@ -1,0 +1,216 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/spec.p2/EH_UnrecognizedNextHeader.seq,v 1.4 2005/04/11 08:27:20 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+
+%pktdesc = (
+	unrecog		=> 'Send Unrecognized Next Header in Extension Header',
+	icmperr		=> 'Recv ICMP Error (Parameter Problem, unrecognized Next Header type encountered)',
+	ns		=> 'Recv Neighbor Solicitation',
+	na		=> 'Send Neighbor Advertisement',
+);
+
+$IF = Link0;
+
+vCapture($IF);
+
+vSend($IF, unrecog);
+
+%ret = vRecv($IF, 5, 0, 0, ns, icmperr);
+if ($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+if ($ret{recvFrame} eq 'ns') {
+
+	vSend($IF, na);
+
+	%ret = vRecv($IF, 5, 0, 0, icmperr);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} ne 'icmperr') {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+
+vLogHTML('OK');
+exit $V6evalTool::exitPass;
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  EH_UnrecognizedNextHeader - check Unrecognized Next Header in Extension Header
+
+=head1 TARGET
+
+  Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./EH_UnrecognizedNextHeader.seq">EH_UnrecognizedNextHeader.seq</A> [-tooloption ...] -pkt <A HREF="./EH_UnrecognizedNextHeader.def">EH_UnrecognizedNextHeader.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  None
+
+=head1 TEST PROCEDURE
+
+  Tester                      Target
+    |                           |
+    |-------------------------->|
+    |   Test Packet             |
+    |                           |
+    |                           |
+    |<--------------------------|
+    |   Neighbor Solicitation   |
+    |                           |
+    |                           |
+    |-------------------------->|
+    |   Neighbor Advertisement  |
+    |                           |
+    |                           |
+    |<--------------------------|
+    |   ICMP Error              |
+    |                           |
+    v                           v
+
+  1. Send Test Packet (Unrecognized Next Header in Extension Header)
+  2. Wait ICMP Error or NS
+  3. If NS received then send NA, and wait ICMP Error again
+  4. Receive ICMP Error
+
+  Test Packet to Target Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 16
+            NextHeader         = 60 (Destination Options Header)
+            SourceAddress      = Tester Address
+            DestinationAddress = Target Address
+
+        Destination Options Header
+            NextHeader      = 128 (Unrecognized value)
+            HeaderExtLength = 0
+            OptionType      = 1 (PadN)
+            OptDataLength   = 4
+            pad             = {0,0,0,0}
+
+=head1 JUDGEMENT
+
+  PASS: ICMP Error Received
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 56
+            NextHeader         = 58 (ICMP)
+            SourceAddress      = Target Address
+            DestinationAddress = Tester Address
+
+        ICMP Error
+            Type           = 4 (Parameter Problem)
+            Code           = 1 (unrecognized Next Header type encountered)
+            Checksum       = (auto)
+            Pointer        = 40 (Offset to Next Header type)
+            PayloadData    = (Sent Packet)
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+# 
+# 4.  IPv6 Extension Headers
+# 
+#    If, as a result of processing a header, a node is required to proceed
+#    to the next header but the Next Header value in the current header is
+#    unrecognized by the node, it should discard the packet and send an
+#    ICMP Parameter Problem message to the source of the packet, with an
+#    ICMP Code value of 1 ("unrecognized Next Header type encountered")
+#    and the ICMP Pointer field containing the offset of the unrecognized
+#    value within the original packet.  The same action should be taken if
+#    a node encounters a Next Header value of zero in any header other
+#    than an IPv6 header.
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

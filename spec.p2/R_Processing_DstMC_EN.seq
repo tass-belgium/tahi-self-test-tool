@@ -1,0 +1,262 @@
+#!/usr/bin/perl
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: R_Processing_DstMC_EN.seq,v 1.4 2005/04/11 08:27:21 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+use CommonSPEC;
+
+$pktdesc{'echo_request_rh_dstMC'}	= 'Send Echo Request with Routing Header, Dst.addr is Multicast';
+$pktdesc{'echo_reply'}			= 'Recv Echo Reply';
+
+$endStatus = $V6evalTool::exitPass;
+$IF = 'Link0';
+
+vCapture($IF);
+#======================================================================
+if (setup11($IF) != $CommonSPEC::Success) {
+	$ret = cleanup($IF);
+	if ($ret == $CommonSPEC::Success) {
+		exit($V6evalTool::exitFail);
+	} else {
+		exit($V6evalTool::exitFatal);
+	}
+}
+#======================================================================
+vSend($IF, 'echo_request_rh_dstMC');
+%ret = nd_vRecv_EN($IF, $CommonSPEC::wait_reply, 0, 0, 'echo_reply');
+
+if ($ret{'status'} == 0) {
+	vLogHTML('OK<BR>');
+} else {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+#----- end test
+
+$ret = cleanup($IF);
+vStop($IF);
+if ($ret == $CommonSPEC::Success) {
+	exit($endStatus);
+} else {
+	exit($V6evalTool::exitFatal);
+}
+
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  R_Processing_DstMC_EN - Routing Header Processing - End Node (Destination is Multicast)
+
+=head1 TARGET
+
+  Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./R_Processing_DstMC_EN.seq">R_Processing_DstMC_EN.seq</A> [-tooloption ...] -pkt <A HREF="./R_Processing_DstMC_EN.def">R_Processing_DstMC_EN.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  Common Test Setup 1.1
+    1. Send Router Advertisement
+    2. Send Echo Request
+    3. Wait Echo Reply
+
+=head1 TEST PROCEDURE
+
+  Tester                      Target
+    |                           |
+    |-------------------------->|
+    |   ICMP Echo Request       |
+    |                           |
+    |<--------------------------|
+    |   ICMP Echo Reply         |
+    |                           |
+    v                           v
+
+  1. Send Echo Request
+  2. Receive Echo Reply
+
+  Network topology
+
+                                                      (Link0)
+                                               Tester         Target
+    Host1 ------ Router1 ------ Router2 ------ Router3 ------ Host2
+         Global 6       Global 4       Global 2       Global 0
+
+  ICMP Echo Request is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 72
+            NextHeader         = 43 (Routing Header)
+            SourceAddress      = Global 6 Address (Host1)
+            DestinationAddress = Solicited-Node Multicast of Global 0 Address (Host2)
+
+        Routing Header
+            NextHeader      = 58 (ICMPv6)
+            HeaderExtLength = 6 
+            RoutingType     = 0 
+            SegmentsLeft    = 0 
+            Address[1]      = Global 6 Address (Router1)
+            Address[2]      = Global 4 Address (Router2)
+            Address[3]      = Global 2 Address (Router3)
+
+        ICMP Echo Request
+            Type = 128 (Echo Request)
+
+=head1 JUDGEMENT
+
+  PASS: ICMP Echo Reply received
+
+    ICMP Echo Reply is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 16
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = Global 0 Address (Host2)
+            DestinationAddress = Global 6 Address (Host1)
+
+        ICMP Echo Reply
+            Type = 129 (Echo Reply)
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+# 
+# 4.4  Routing Header
+# 
+#    If, while processing a received packet, a node encounters a Routing
+#    header with an unrecognized Routing Type value, the required behavior
+#    of the node depends on the value of the Segments Left field, as
+#    follows:
+# 
+# =begin html
+# <PRE>
+#       <B>If Segments Left is zero, the node must ignore the Routing header
+#       and proceed to process the next header in the packet, whose type
+#       is identified by the Next Header field in the Routing header.</B>
+# </PRE>
+# 
+# =end html
+# 
+#       If Segments Left is non-zero, the node must discard the packet and
+#       send an ICMP Parameter Problem, Code 0, message to the packet's
+#       Source Address, pointing to the unrecognized Routing Type.
+# 
+# 8.4 Responding to Packets Carrying Routing Headers
+# 
+#    When an upper-layer protocol sends one or more packets in response to
+#    a received packet that included a Routing header, the response
+#    packet(s) must not include a Routing header that was automatically
+#    derived by "reversing" the received Routing header UNLESS the
+#    integrity and authenticity of the received Source Address and Routing
+#    header have been verified (e.g., via the use of an Authentication
+#    header in the received packet).  In other words, only the following
+#    kinds of packets are permitted in response to a received packet
+#    bearing a Routing header:
+# 
+# =begin html
+# <PRE>
+#       o  <B>Response packets that do not carry Routing headers.</B>
+# </PRE>
+# 
+# =end html
+# 
+#       o  Response packets that carry Routing headers that were NOT
+#          derived by reversing the Routing header of the received packet
+#          (for example, a Routing header supplied by local
+#          configuration).
+# 
+#       o  Response packets that carry Routing headers that were derived
+#          by reversing the Routing header of the received packet IF AND
+#          ONLY IF the integrity and authenticity of the Source Address
+#          and Routing header from the received packet have been verified
+#          by the responder.
+# 
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

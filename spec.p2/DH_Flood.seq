@@ -1,0 +1,391 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/spec.p2/DH_Flood.seq,v 1.3 2005/01/06 06:49:56 akisada Exp $
+#
+######################################################################
+
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+
+%pktdesc = (
+	echo_request        => 'Send Echo Request',
+	echo_request_ex     => 'Send Echo Request (Destination Options Header)',
+	echo_request_ex_16  => 'Send Echo Request (16 Destination Options Headers)',
+	echo_request_ex_32  => 'Send Echo Request (32 Destination Options Headers)',
+	echo_request_ex_64  => 'Send Echo Request (64 Destination Options Headers)',
+	echo_request_ex_128 => 'Send Echo Request (128 Destination Options Headers)',
+	echo_reply          => 'Recv Echo Reply',
+	echo_reply_ex       => 'Recv Echo Reply (Destination Options Header)',
+	echo_reply_ex_16    => 'Recv Echo Reply (16 Destination Options Headers)',
+	echo_reply_ex_32    => 'Recv Echo Reply (32 Destination Options Headers)',
+	echo_reply_ex_64    => 'Recv Echo Reply (64 Destination Options Headers)',
+	echo_reply_ex_128   => 'Recv Echo Reply (128 Destination Options Headers)',
+        multicast_ns        => 'Recv Multicast Neighbor Solicitation',
+	unicast_ns          => 'Recv Unicast Neighbor Solicitation',
+        na                  => 'Send Neighbor Advertisement',
+);
+
+######################################################################
+
+$IF = Link0;
+$warn_flag = 0;
+
+vCapture($IF);
+
+vLogHTML('<B> -- Test Preparation (ICMPv6 Echo) --</B>');
+
+vSend($IF, echo_request);
+
+%ret = vRecv($IF, 5, 0, 0, multicast_ns, unicast_ns, echo_reply);
+
+if($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">No response from NUT</FONT><BR>');
+	goto fail;
+}
+
+if($ret{recvFrame} eq 'multicast_ns') {
+	vSend($IF, na);
+
+	%ret = vRecv($IF, 5, 0, 0, echo_reply);
+	if($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">Cannot receive Echo Reply</FONT><BR>');
+		goto fail;
+	}
+}
+
+if($ret{recvFrame} eq 'unicast_ns') {
+	vSend($IF, na);
+
+	%ret = vRecv($IF, 5, 0, 0, echo_reply);
+	if($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">Cannot receive Echo Reply</FONT><BR>');
+		goto fail;
+	}
+}
+
+if($ret{recvFrame} eq 'echo_reply') {
+	vLogHTML('<FONT COLOR="#008000">Receive Echo Reply</FONT><BR>');
+	vLogHTML('<B>OK</B>');
+}
+
+######################################################################
+
+vSend($IF, na);
+vLogHTML('Make NCE certainly');
+
+vClear($IF);
+
+vLogHTML('<B> -- Test Preparation (ICMPv6 Echo, Destination Options Header) --</B>');
+
+vSend($IF, echo_request_ex);
+
+%ret = vRecv($IF, 5, 0, 0, echo_reply, echo_reply_ex);
+
+if($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">No response from NUT</FONT><BR>');
+	goto fail;
+}
+
+if($ret{recvFrame} eq 'echo_reply') {
+	vLogHTML('<FONT COLOR="#008000">Receive Echo Reply</FONT><BR>');
+	vLogHTML('<B>OK</B>');
+}
+
+if($ret{recvFrame} eq 'echo_reply_ex') {
+	vLogHTML('<FONT COLOR="#008000">Receive Echo Reply with Extension Header</FONT><BR>');
+	vLogHTML('<B>OK</B>');
+}
+
+######################################################################
+
+vSend($IF, na);
+vLogHTML('Make NCE certainly');
+
+vClear($IF);
+
+vLogHTML('<B> -- Test (ICMPv6 Echo, 16 Destination Options Headers) --</B>');
+
+vSend($IF, echo_request_ex_16);
+%ret = vRecv($IF, 5, 0, 0, echo_reply, echo_reply_ex_16);
+
+if($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">No response from NUT</FONT><BR>');
+	$warn_flag = 1;
+}
+
+if($ret{recvFrame} eq 'echo_reply') {
+	vLogHTML('<FONT COLOR="#008000">Receive Echo Reply</FONT><BR>');
+}
+
+if($ret{recvFrame} eq 'echo_reply_ex_16') {
+	vLogHTML('<FONT COLOR="#008000">Receive Echo Reply</FONT><BR>');
+}
+
+######################################################################
+
+vSend($IF, na);
+vLogHTML('Make NCE certainly');
+
+vClear($IF);
+
+vLogHTML('<B> -- Test (ICMPv6 Echo, 32 Destination Options Headers) --</B>');
+
+vSend($IF, echo_request_ex_32);
+%ret = vRecv($IF, 5, 0, 0, echo_reply, echo_reply_ex_32);
+
+if($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">No response from NUT</FONT><BR>');
+	$warn_flag = 1;
+}
+
+if($ret{recvFrame} eq 'echo_reply') {
+	vLogHTML('<FONT COLOR="#008000">Receive Echo Reply</FONT><BR>');
+}
+
+if($ret{recvFrame} eq 'echo_reply_ex_32') {
+	vLogHTML('<FONT COLOR="#008000">Receive Echo Reply</FONT><BR>');
+}
+
+######################################################################
+
+vSend($IF, na);
+vLogHTML('Make NCE certainly');
+
+vClear($IF);
+
+vLogHTML('<B> -- Test (ICMPv6 Echo, 64 Destination Options Headers) --</B>');
+
+vSend($IF, echo_request_ex_64);
+%ret = vRecv($IF, 5, 0, 0, echo_reply, echo_reply_ex_64);
+
+if($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">No response from NUT</FONT><BR>');
+	$warn_flag = 1;
+}
+
+if($ret{recvFrame} eq 'echo_reply') {
+	vLogHTML('<FONT COLOR="#008000">Receive Echo Reply</FONT><BR>');
+}
+
+if($ret{recvFrame} eq 'echo_reply_ex_32') {
+	vLogHTML('<FONT COLOR="#008000">Receive Echo Reply</FONT><BR>');
+}
+
+######################################################################
+
+vSend($IF, na);
+vLogHTML('Make NCE certainly');
+
+vClear($IF);
+
+vLogHTML('<B> -- Test (ICMPv6 Echo, 128 Destination Options Headers) --</B>');
+
+vSend($IF, echo_request_ex_128);
+%ret = vRecv($IF, 5, 0, 0, echo_reply, echo_reply_ex_128);
+
+if($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">No response from NUT</FONT><BR>');
+	$warn_flag = 1;
+}
+
+if($ret{recvFrame} eq 'echo_reply') {
+	vLogHTML('<FONT COLOR="#008000">Receive Echo Reply</FONT><BR>');
+}
+
+if($ret{recvFrame} eq 'echo_reply_ex_128') {
+	vLogHTML('<FONT COLOR="#008000">Receive Echo Reply</FONT><BR>');
+}
+
+######################################################################
+
+vSend($IF, na);
+vLogHTML('Make NCE certainly');
+
+vClear($IF);
+
+vLogHTML('<B> -- Check --</B>');
+
+vSend($IF, echo_request);
+
+%ret = vRecv($IF, 5, 0, 0, multicast_ns, unicast_ns, echo_reply);
+
+if($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">No response from NUT</FONT><BR>');
+	goto fail;
+}
+
+if($ret{recvFrame} eq 'echo_reply') {
+	vLogHTML('<FONT COLOR="#008000">Receive Echo Reply</FONT><BR>');
+	if($warn_flag == 0) {
+		goto pass;
+	} else {
+		goto exit_warn;
+	}
+}
+
+goto fail;
+
+######################################################################
+
+pass:
+	vLogHTML('<B>OK</B>');
+	exit $V6evalTool::exitPass;
+
+fail:
+	vLogHTML('<B><FONT COLOR="#FF0000">NG</FONT></B>');
+	exit $V6evalTool::exitFail;
+
+exit_warn:
+	vLogHTML('<B><FONT COLOR="#00FF00">WARN</FONT></B>');
+	exit $V6evalTool::exitWarn;
+
+######################################################################
+__END__
+
+=head1 NAME
+
+    DH_Flood - Many Destination Options
+
+=head1 TARGET
+
+    Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+    <PRE>
+    <A HREF="./DH_Flood.seq">DH_Flood.seq</A> [-tooloption ...] -pkt <A HREF="./DH_Flood.def">DH_Flood.def</A>
+        -tooloption: v6eval tool option
+    </PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+    1. Check Link0 Link Local address Reachability
+    2. Check support of Destination Options
+
+=head1 TEST PROCEDURE
+
+    1. Send Echo Request with 16 Destination Options Headers
+    2. Receive Echo Reply
+    3. Send Echo Request with 32 Destination Options Headers
+    4. Receive Echo Reply
+    5. Send Echo Request with 64 Destination Options Headers
+    6. Receive Echo Reply
+    7. Send Echo Request with 128 Destination Options Headers
+    8. Receive Echo Reply
+    9. Send Echo Request
+    11. Receive Echo Reply
+
+    Echo Request with Destination Options Headers Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 144, 272, 528, 1040
+            NextHeader         = 60 (Destination Option)
+            HopLimit           = 64
+            SourceAddress      = Tester Link Local Address
+            DestinationAddress = Target Link Local Address
+
+        Destination Options
+            NextHeader         = 60 (Destination Options)
+            HeaderExtLength    = 0
+
+            Opt_PadN
+                OptionType     = 1
+                OptDataLength  = 4
+                pad            = {0, 0, 0, 0}
+
+        Destination Options
+            NextHeader         = 60 (Destination Option)
+            HeaderExtLength    = 0
+
+            Opt_PadN
+                OptionType     = 1
+                OptDataLength  = 4
+                pad            = {0, 0, 0, 0}
+
+                .
+                . (Total number of Destination Option is 16, 32, 64, 128)
+                .
+
+        Destination Options
+            NextHeader         = 58 (ICMPv6)
+            HeaderExtLength    = 0
+
+            Opt_PadN
+                OptionType     = 1
+                OptDataLength  = 4
+                pad            = {0, 0, 0, 0}
+
+        ICMPv6 Echo Request
+            Type               = 128 (Echo Request)
+            Code               = 0
+            Checksum           = (auto)
+            Identifier         = 0
+            SequenceNumber     = 0
+            PayloadData        = {1, 2, 3, 4, 5, 6, 7, 8}
+
+=head1 JUDGEMENT
+
+    PASS : echo reply packet received for Destination Option completely,
+           and echo reply packet received.
+
+    WARN : don't echo reply packet received for Destination Option completely,
+           but echo reply packet received.
+
+    FAIL : don't received echo reply packet.
+
+=head1 SEE ALSO
+
+    perldoc V6evalTool
+
+=cut

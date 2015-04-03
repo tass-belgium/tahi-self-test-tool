@@ -1,0 +1,269 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/nd.p2/V6LC_2_1_18_A.seq,v 1.10 2009/12/28 05:55:16 akisada Exp $
+#
+########################################################################
+
+use nd;
+
+BEGIN {}
+END   {}
+
+my $ereq = 'ndisc_ereq_LL';
+
+startNdiscWorld($Link0);
+
+vLogHTML('<FONT COLOR="#FF0000" SIZE="5"><U><B>Procedure</B></U></FONT><BR>');
+
+$NEED_COMMON_CLEANUP = 1;
+$tn1_cache = 1;
+
+if(ndiscNone2Reachable($Link0, $ereq) < 0) {
+	exitFail();
+	#NOTREACHED
+}
+
+if(ndSendNaReachable2Reachable($Link0, $ereq, 'nd_ucast_na_rso') < 0) {
+	exitFail();
+	#NOTREACHED
+}
+
+exitPass();
+#NOTREACHED
+
+
+
+#
+# perldoc
+#
+########################################################################
+__END__
+
+=head1 NAME
+
+  Test v6LC.2.1.18 - Neighbor Advertisement Processing, NCE State REACHABLE
+  Part A
+
+=head1 Purpose
+
+  Verify that a node properly updates its Neighbor Cache from the REACHABLE state upon
+  receipt of a Neighbor Advertisement.
+
+=head1 References
+
+  * [ND]  Section 7.3.3 and 7.2.5
+
+=begin html
+
+<BLOCKQUOTE>
+
+<TABLE BORDER>
+<TR>
+<TD>Destination</TD>
+<TD>Solicited flag</TD>
+<TD>Override flag</TD>
+<TD>TLLA</TD>
+<TD>New State</TD>
+<TD>Update Link-Layer Address</TD>
+<TD>Part</TD>
+</TR>
+<TR>
+<TD>Unicast</TD>
+<TD>clear</TD>
+<TD>clear</TD>
+<TD>none</TD>
+<TD>REACHABLE</TD>
+<TD>no</TD>
+<TD>A</TD>
+</TR>
+</TABLE>
+
+</BLOCKQUOTE>
+
+=end html
+
+=head1 Resource Requirements
+
+  * Packet generator
+  * Monitor to capture packets
+
+=head1 Test Setup
+
+  No Common Test Setup is performed. Wait at least 3 seconds
+  (MAX_MULTICAST_SOLICIT * RETRANS_TIMER) after any previous cleanup to make sure all
+  previous NCE's are in state No NCE. The Common Test Cleanup procedure is performed after each part.
+
+
+=begin html
+
+<BLOCKQUOTE>
+
+<TABLE BORDER>
+<Caption>Echo Request A</Caption>
+<TR>
+<TD>
+	IPv6 Header<br>
+	Next Header: 58<br>
+	Source Address: TN1's Link-local Address<br>
+	Destination Address: NUT's Link-local Address<br>
+	
+</TD>
+</TR>
+<TR>
+<TD>
+        ICMPv6 Echo Request
+</TD>
+</TR>
+</TABLE>
+
+<br>
+
+<TABLE BORDER>
+<Caption>Neighbor Adv. (A-H)</Caption>
+<TR>
+<TD>
+        IPv6 Header<br>
+        Next Header: 58<br>
+        Source Address: TN1's Link-local Address<br>
+        Destination Address: see table
+</TD>
+</TR>
+<TR>
+<TD>
+        Neighbor Adv.<br>
+	Solicited flag: see table<br>
+	Override flag: see table
+</TD>
+</TR>
+<TR>
+<TD>
+        Target LLA Option: see table<br>
+</TD>
+</TR>
+</TABLE>
+
+</BLOCKQUOTE>
+
+=end html
+
+
+=head1 Procedure
+
+   1. TN1 transmits Echo Request A.
+   2. Observe the packets transmitted by the NUT and the NCE of TN1.
+   3. TN1 transmits a solicited Neighbor Advertisement to the NUT.
+   4. Observe the packets transmitted by the NUT and the NCE of TN1.
+   5. TN1 transmits Neighbor Advertisement A. The Solicited and Override flags are set according to
+       Part A entry of the table in the discussion above. Similarly, the address in the Target Link Layer
+       Address Option is provided as it is indicated.
+   6. TN1 transmits an Echo Request.
+   7. Check the NCE of TN1 on the NUT and observe the packets transmitted by the NUT.
+   8. Perform the common cleanup procedure.
+   9. Repeat Steps 1 through 8 for Parts B through R.
+
+=head1 Observable Results
+
+  Parts A through R
+   Step 2:
+   The NUT should create a Neighbor Cache Entry for TN1 and set the state of the
+   Entry to INCOMPLETE. The NUT should send a multicast Neighbor Solicitation to TN1.
+
+   Step 4:
+   Because the NUT is now in state REACHABLE, after receiving the Echo Request
+   from TN1, the NUT should send an Echo Reply. After DELAY_FIRST_PROBE_TIME, the
+   NUT should not send a unicast Neighbor Solicitation to TN1.
+
+   Step 7:
+   The NUT MUST update the state of TN1's NCE and the LLA according to the table
+   in the discussion above. After receiving the Echo Request from TN1 in step 6, the NUT
+   should react according to the following:
+
+=begin html
+
+<BLOCKQUOTE>
+
+<TABLE BORDER>
+<Caption>Parts A-H,L-N and Q-R to REACHABLE</Caption>
+<TR>
+<TD>
+After receiving the Echo Request from TN1, the NUT should send an Echo<br>
+Reply. After DELAY_FIRST_PROBE_TIME, the NUT should not send a<br>
+unicast Neighbor Solicitation to TN1.<br>
+<br>
+Part L<br>
+ The NUT's Echo Reply should be sent to the new updated link-layer<br>
+ destination address of TN1.
+</TD>
+</TR>
+</TABLE>
+
+<br>
+
+<TABLE BORDER>
+<Caption>Parts I-K and O-P to STALE</Caption>
+<TR>
+<TD>
+After receiving the Echo Request from TN1, the NUT should send an Echo<br>
+Reply. After DELAY_FIRST_PROBE_TIME, the NUT should send a unicast_<br>
+Neighbor Solicitation to TN1.<br>
+<br>
+Parts J and P<br>
+ The NUT's Echo Reply should be sent to the new updated link-layer<br>
+ destination address of TN1. The Neighbor Solicitation should use the new link-<br>
+ layer address in the Target field.<br>
+</TD>
+</TR>
+</TABLE>
+
+</BLOCKQUOTE>
+
+=end html
+
+=head1 Possible Problems
+
+  * None. 
+
+=cut
+

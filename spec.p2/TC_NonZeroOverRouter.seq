@@ -1,0 +1,324 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/spec.p2/TC_NonZeroOverRouter.seq,v 1.4 2005/04/11 08:27:22 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+
+if ($V6evalTool::NutDef{Type} ne 'router') {
+    vLogHTML("This test is for the router only<BR>");
+    exit $V6evalTool::exitRouterOnly;
+}
+
+%pktdesc = (
+	echo_request_to_link0	=> 'Send Echo Request to Link0 (Non-Zero Traffic Class)',
+	echo_reply_from_link0	=> 'Recv Echo Reply from Link0 (Non-Zero Traffic Class)',
+	echo_reply_from_link0_any	=> 'Recv Echo Reply from Link0 (Non-Zero Traffic Class(modified))',
+	ns_from_link0_ll	=> 'Recv Neighbor Solicitation from Link0 (Link Local Address)',
+	na_to_link0_ll		=> 'Send Neighbor Advertisement to Link0 (Link Local Address)',
+	ns_from_link0		=> 'Recv Neighbor Solicitation from Link0 (Global Address)',
+	na_to_link0		=> 'Send Neighbor Advertisement to Link0 (Global Address)',
+	echo_reply_to_link1	=> 'Send Echo Reply to Link1 (Non-Zero Traffic Class)',
+	echo_request_from_link1	=> 'Recv Echo Request from Link1 (Non-Zero Traffic Class)',
+	ns_from_link1_ll	=> 'Recv Neighbor Solicitation from Link1 (Link Local Address)',
+	na_to_link1_ll		=> 'Send Neighbor Advertisement to Link1 (Link Local Address)',
+	ns_from_link1		=> 'Recv Neighbor Solicitation from Link1 (Global Address)',
+	na_to_link1		=> 'Send Neighbor Advertisement to Link1 (Global Address)',
+);
+
+$IF0 = Link0;
+$IF1 = Link1;
+
+#----- start capturing
+
+vCapture($IF0);
+vCapture($IF1);
+
+#======================================================================
+# ping over router
+
+vSend($IF0, echo_request_to_link0);
+
+%ret = vRecv($IF1, 5, 0, 0, ns_from_link1, ns_from_link1_ll, echo_request_from_link1);
+if ($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+if ($ret{recvFrame} eq 'ns_from_link1') {
+	vSend($IF1, na_to_link1);
+
+	%ret = vRecv($IF1, 5, 0, 0, echo_request_from_link1);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} eq 'ns_from_link1_ll') {
+	vSend($IF1, na_to_link1_ll);
+	%ret = vRecv($IF1, 5, 0, 0, echo_request_from_link1);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} ne 'echo_request_from_link1') {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+
+vSend($IF1, echo_reply_to_link1);
+
+%ret = vRecv($IF0, 5, 0, 0, ns_from_link0, ns_from_link0_ll, echo_reply_from_link0, echo_reply_from_link0_any);
+if ($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+if ($ret{recvFrame} eq 'ns_from_link0') {
+	vSend($IF0, na_to_link0);
+	%ret = vRecv($IF0, 5, 0, 0, echo_reply_from_link0, echo_reply_from_link0_any);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} eq 'ns_from_link0_ll') {
+	vSend($IF0, na_to_link0_ll);
+	%ret = vRecv($IF0, 5, 0, 0, echo_reply_from_link0, echo_reply_from_link0_any);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} ne 'echo_reply_from_link0' && $ret{recvFrame} ne 'echo_reply_from_link0_any') {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+
+vLogHTML('OK');
+exit $V6evalTool::exitPass;
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  TC_NonZeroOverRouter - check Traffic Class Non-Zero over Router
+
+=head1 TARGET
+
+  Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./TC_NonZeroOverRouter.seq">TC_NonZeroOverRouter.seq</A> [-tooloption ...] -pkt <A HREF="./TC_NonZeroOverRouter.def">TC_NonZeroOverRouter.def</A>
+    -tooloption : v6eval tool option
+  See also <A HREF="./IH_Router.def">IH_Router.def</A>
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  None
+
+=head1 TEST PROCEDURE
+
+  Tester                      Target                      Tester
+              (Link0)                     (Link1)
+    |                           |                           |
+    |-------------------------->|                           |
+    |   Echo Request to Link0   |                           |
+    |                           |                           |
+    |                           |-------------------------->|
+    |                           |   Neighbor Solicitation   |
+    |                           |                           |
+    |                           |<--------------------------|
+    |                           |   Neighbor Advertisement  |
+    |                           |                           |
+    |                           |-------------------------->|
+    |                           |   Echo Request from Link1 |
+    |                           |                           |
+    |                           |                           |
+    |                           |<--------------------------|
+    |                           |   Echo Reply to Link1     |
+    |                           |                           |
+    |<--------------------------|                           |
+    |   Neighbor Solicitation   |                           |
+    |                           |                           |
+    |-------------------------->|                           |
+    |   Neighbor Advertisement  |                           |
+    |                           |                           |
+    |<--------------------------|                           |
+    |   Echo Reply from Link0   |                           |
+    |                           |                           |
+    v                           v                           v
+
+  1. Send Echo Request to Link0
+  2. Wait Echo Reply from Link1 or NS from Link1
+  3. If NS received then send NA to Link1, and wait Echo Reply form Link1 again
+  4. Receive Echo Reply from Link1
+  5. Send Echo Request to Link1
+  6. Wait Echo Reply from Link0 or NS from Link0
+  7. If NS received then send NA to Link0, and wait Echo Reply form Link0 again
+  8. Receive Echo Reply from Link0
+
+  Echo Request to Link0 Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0x12 (8 bit)
+            FlowLabel          = 0
+            PayloadLength      = 16
+            NextHeader         = 58 (ICMP)
+            SourceAddress      = Tester Global Address (Link0)
+            DestinationAddress = Tester Global Address (Link1)
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = {1,2,3,4,5,6,7,8}
+
+  Neighbor Solicitation packet's IP source Address selection may be:
+    - Link Local Address
+    - Global Address
+  This test is NOT the Neighbor Discovery test, so admit both implementation.
+
+=head1 JUDGEMENT
+
+  PASS: Echo Reply Received from Link0
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = any (8 bit): (nodes do not support the Traffic Class field: 0x12)
+            FlowLabel           = 0
+            PayloadLength       = 16
+            NextHeader          = 58 (ICMP)
+            SourceAddress      = Tester Global Address (Link1)
+            DestinationAddress = Tester Global Address (Link0)
+
+        ICMP Echo Reply
+            Type           = 129 (Echo Reply)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff (same as Echo Request)
+            SequenceNumber = 1 (same as Echo Request)
+            PayloadData    = {1,2,3,4,5,6,7,8} (same as Echo Request)
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+#         
+# 3.  IPv6 Header Format
+# 
+#    Traffic Class        8-bit traffic class field.  See section 7.
+# 
+# 7.  Traffic Classes
+# 
+#    The 8-bit Traffic Class field in the IPv6 header is available for use
+#    by originating nodes and/or forwarding routers to identify and
+#    distinguish between different classes or priorities of IPv6 packets.
+#    At the point in time at which this specification is being written,
+#    there are a number of experiments underway in the use of the IPv4
+#    Type of Service and/or Precedence bits to provide various forms of
+#    "differentiated service" for IP packets, other than through the use
+#    of explicit flow set-up.  The Traffic Class field in the IPv6 header
+#    is intended to allow similar functionality to be supported in IPv6.
+#    It is hoped that those experiments will eventually lead to agreement
+#    on what sorts of traffic classifications are most useful for IP
+#    packets.  Detailed definitions of the syntax and semantics of all or
+#    some of the IPv6 Traffic Class bits, whether experimental or intended
+#    for eventual standardization, are to be provided in separate
+#    documents.
+# 
+#    The following general requirements apply to the Traffic Class field:
+# 
+#       o  The service interface to the IPv6 service within a node must
+#          provide a means for an upper-layer protocol to supply the value
+#          of the Traffic Class bits in packets originated by that upper-
+#          layer protocol.  The default value must be zero for all 8 bits.
+# 
+#       o  Nodes that support a specific (experimental or eventual
+#          standard) use of some or all of the Traffic Class bits are
+#          permitted to change the value of those bits in packets that
+#          they originate, forward, or receive, as required for that
+#          specific use.  Nodes should ignore and leave unchanged any bits
+#          of the Traffic Class field for which they do not support a
+#          specific use.
+# 
+#       o  An upper-layer protocol must not assume that the value of the
+#          Traffic Class bits in a received packet are the same as the
+#          value sent by the packet's source.
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

@@ -1,0 +1,279 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/spec.p2/HL_OneToRouter.seq,v 1.4 2005/04/11 08:27:21 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+
+if ($V6evalTool::NutDef{Type} ne 'router') {
+    vLogHTML("This test is for the router only<BR>");
+    exit $V6evalTool::exitRouterOnly;
+}
+
+%pktdesc = (
+	echo_request_to_link0	=> 'Send Echo Request to Link0 (Hop Limit 1)',
+	icmp_type3_code0	=> 'Recv ICMP Error at Link0 (Time Exceeded, hop limit exceeded in transit)',
+	icmp_type3_code0_link1	=> 'Recv ICMP Error at Link1 (Time Exceeded, hop limit exceeded in transit)',
+	icmp_type3_code0_hoplimit0		=> 'Recv ICMP Error at Link0 HopLimit decreased (Time Exceeded, hop limit exceeded in transit)',
+	icmp_type3_code0_link1_hoplimit0	=> 'Recv ICMP Error at Link1 HopLimit decreased (Time Exceeded, hop limit exceeded in transit)',
+	ns_from_link0		=> 'Recv Neighbor Solicitation from Link0 (Global Address)',
+	na_to_link0		=> 'Send Neighbor Advertisement to Link0 (Global Address)',
+);
+
+$IF0 = Link0;
+
+#----- start capturing
+
+vCapture($IF0);
+
+#======================================================================
+
+vSend($IF0, echo_request_to_link0);
+
+%ret = vRecv($IF0, 5, 0, 0, ns_from_link0, icmp_type3_code0, icmp_type3_code0_link1,
+			icmp_type3_code0_hoplimit0, icmp_type3_code0_link1_hoplimit0);
+if ($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+
+if ($ret{recvFrame} eq 'ns_from_link0') {
+
+	vSend($IF0, na_to_link0);
+
+	%ret = vRecv($IF0, 5, 0, 0, icmp_type3_code0, icmp_type3_code0_link1,
+			icmp_type3_code0_hoplimit0, icmp_type3_code0_link1_hoplimit0);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} eq 'icmp_type3_code0') {
+	vLogHTML('OK');
+	exit $V6evalTool::exitPass;
+}
+if ($ret{recvFrame} eq 'icmp_type3_code0_link1') {
+	vLogHTML('OK');
+	exit $V6evalTool::exitPass;
+}
+if ($ret{recvFrame} eq 'icmp_type3_code0_hoplimit0') {
+	vLogHTML('OK');
+	exit $V6evalTool::exitPass;
+}
+if ($ret{recvFrame} eq 'icmp_type3_code0_link1_hoplimit0') {
+	vLogHTML('OK');
+	exit $V6evalTool::exitPass;
+}
+
+vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+exit $V6evalTool::exitFail;
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  HL_OneToRouter - check Hop Limit 1 to Router
+
+=head1 TARGET
+
+  Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./HL_OneToRouter.seq">HL_OneToRouter.seq</A> [-tooloption ...] -pkt <A HREF="./HL_OneToRouter.def">HL_OneToRouter.def</A>
+    -tooloption : v6eval tool option
+  See also <A HREF="./IH_Router.def">IH_Router.def</A>
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  None
+
+=head1 TEST PROCEDURE
+
+  Tester                      Target                      Tester
+              (Link0)                     (Link1)
+    |                           |                           |
+    |-------------------------->|                           |
+    |   Echo Request to Link0   |                           |
+    |                           |     (no forwarding)       |
+    |                           |                           |
+    |<--------------------------|                           |
+    |   Neighbor Solicitation   |                           |
+    |                           |                           |
+    |-------------------------->|                           |
+    |   Neighbor Advertisement  |                           |
+    |                           |                           |
+    |<--------------------------|                           |
+    |    ICMP Error at Link0    |                           |
+    |            or             |                           |
+    |    ICMP Error at Link1    |                           |
+    |                           |                           |
+    v                           v                           v
+
+  1. Send Echo Request to Link0
+  2. Wait ICMP Error or NS from Link0
+  3. If NS received then send NA to Link0, and wait ICMP Error again
+  4. Receive ICMP Error
+
+  Echo Request to Link0 Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 16
+            NextHeader         = 58 (ICMP)
+            HopLimit           = 1
+            SourceAddress      = Tester Global Address (Link0)
+            DestinationAddress = Tester Global Address (Link1)
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = {1,2,3,4,5,6,7,8}
+
+=head1 JUDGEMENT
+
+  PASS: ICMP Error at Link0 Received
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = 0
+            FlowLabel           = 0
+            PayloadLength       = 16
+            NextHeader          = 58 (ICMP)
+            SourceAddress      = Target Global Address (Link0)
+            DestinationAddress = Tester Global Address (Link0)
+
+        ICMP Error
+            Type           = 3 (Time Exceeded)
+            Code           = 0 (hop limit exceeded in transit)
+            Checksum       = (auto)
+            PayloadData    = (Echo Request, HopLimit is 1 or 0)
+
+  PASS: ICMP Error at Link1 Received
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = 0
+            FlowLabel           = 0
+            PayloadLength       = 16
+            NextHeader          = 58 (ICMP)
+            SourceAddress      = Target Global Address (Link1)
+            DestinationAddress = Tester Global Address (Link0)
+
+        ICMP Error
+            Type           = 3 (Time Exceeded)
+            Code           = 0 (hop limit exceeded in transit)
+            Checksum       = (auto)
+            PayloadData    = (Echo Request, HopLimit is 1 or 0)
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+# 
+# 3.  IPv6 Header Format
+# 
+#    Hop Limit            8-bit unsigned integer.  Decremented by 1 by
+#                         each node that forwards the packet. The packet
+# 
+# RFC2463
+# 
+# 3.3 Time Exceeded Message
+# 
+#    ICMPv6 Fields:
+# 
+#    Type           3
+# 
+#    Code           0 - hop limit exceeded in transit
+# 
+#    Description
+# 
+# =begin html
+# <PRE>
+#    <B>If a router receives a packet with a Hop Limit of zero, or a router
+#    decrements a packet's Hop Limit to zero, it MUST discard the packet
+#    and send an ICMPv6 Time Exceeded message with Code 0 to the source of
+#    the packet.  This indicates either a routing loop or too small an
+#    initial Hop Limit value.</B>
+# </PRE>
+# 
+# =end html
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

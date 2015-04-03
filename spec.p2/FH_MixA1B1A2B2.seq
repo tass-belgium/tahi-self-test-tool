@@ -1,0 +1,478 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/spec.p2/FH_MixA1B1A2B2.seq,v 1.4 2005/04/11 08:27:20 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+
+%pktdesc = (
+	echo_request		=> 'Send Echo Request (Preparation)',
+	echo_reply		=> 'Recv Echo Reply',
+	ns			=> 'Recv Neighbor Solicitation',
+	na			=> 'Send Neighbor Advertisement',
+	echo_request_A_1st	=> 'Send Echo Request (1st fragment of packet A)',
+	echo_request_A_2nd	=> 'Send Echo Request (2nd fragment of packet A)',
+	echo_request_B_1st	=> 'Send Echo Request (1st fragment of packet B)',
+	echo_request_B_2nd	=> 'Send Echo Request (2nd fragment of packet B)',
+	echo_reply_A		=> 'Recv Echo Reply (packet A)',
+	echo_reply_B		=> 'Recv Echo Reply (packet B)',
+	unicast_ns		=> 'Recv Unicast Neighbor Solicitation',
+	unicast_ns_wsll		=> 'Recv Unicast Neighbor Solicitation (without SLL)',
+);
+ 
+%nd = (
+	'ns'		=> 'Recv Neighbor Solicitation',
+	'unicast_ns'	=> 'Recv Unicast Neighbor Solicitation',
+	'unicast_ns_wsll'=> 'Recv Unicast Neighbor Solicitation (without SLL)',
+);
+
+$IF = Link0;
+
+vCapture($IF);
+
+#----- preparation
+
+vLogHTML('<B>Begin Preparation</B>');
+
+vSend($IF, echo_request);
+
+%ret = vRecv($IF, 5, 0, 0, ns, echo_reply);
+if ($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+if ($ret{recvFrame} eq 'ns') {
+	vSend($IF, na);
+
+	%ret = vRecv($IF, 5, 0, 0, echo_reply);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} ne 'echo_reply') {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+
+vLogHTML('<B>End Preparation</B>');
+
+#----- main test
+
+vSend($IF, echo_request_A_1st);
+
+vSend($IF, echo_request_B_1st);
+
+vSend($IF, echo_request_A_2nd);
+
+vSend($IF, echo_request_B_2nd);
+
+%ret = vRecv($IF, 5, 0, 0, sort(keys(%nd)), echo_reply_A, echo_reply_B);
+if ($ret{status} == 0 && $ret{recvFrame} ne 'echo_reply_A' && $ret{recvFrame} ne 'echo_reply_B') {
+	while(($recv, $send) = each(%nd)){
+		if ($ret{recvFrame} eq $recv) {
+			vSend($IF, na);
+			%ret = vRecv($IF, 5, 0, 0, echo_reply_A, echo_reply_B);
+			last;
+		}
+	}
+}
+if ($ret{status} == 0 && $ret{recvFrame} eq 'echo_reply_A') {
+	%ret = vRecv($IF, 5, 0, 0, sort(keys(%nd)), echo_reply_B);
+	if ($ret{status} == 0 && $ret{recvFrame} ne 'echo_reply_B') {
+		while(($recv, $send) = each(%nd)){
+			if ($ret{recvFrame} eq $recv) {
+				vSend($IF, na);
+				%ret = vRecv($IF, 5, 0, 0, echo_reply_B);
+				last;
+			}
+		}
+	}
+	if ($ret{status} == 0 && $ret{recvFrame} eq 'echo_reply_B') {
+		vLogHTML('OK');
+		exit $V6evalTool::exitPass;
+	}
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	vSleep(65, "Discard Unexpected 'ICMP Time Exceeded' message (60+5 sec)");
+	exit $V6evalTool::exitFail;
+}
+if ($ret{status} == 0 && $ret{recvFrame} eq 'echo_reply_B') {
+	%ret = vRecv($IF, 5, 0, 0, sort(keys(%nd)), echo_reply_A);
+	if ($ret{status} == 0 && $ret{recvFrame} ne 'echo_reply_A') {
+		while(($recv, $send) = each(%nd)){
+			if ($ret{recvFrame} eq $recv) {
+				vSend($IF, na);
+				%ret = vRecv($IF, 5, 0, 0, echo_reply_A);
+				last;
+			}
+		}
+	}
+	if ($ret{status} == 0 && $ret{recvFrame} eq 'echo_reply_A') {
+		vLogHTML('OK');
+		exit $V6evalTool::exitPass;
+	}
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	vSleep(65, "Discard Unexpected 'ICMP Time Exceeded' message (60+5 sec)");
+	exit $V6evalTool::exitFail;
+}
+
+vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+vSleep(65, "Discard Unexpected 'ICMP Time Exceeded' message (60+5 sec)");
+exit $V6evalTool::exitFail;
+
+######################################################################
+__END__
+
+
+=head1 NAME
+
+  FH_MixA1B1A2B2 - check Mixed 2 Fragment Reassembly (A1->B1->A2->B2)
+
+=head1 TARGET
+
+  Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./FH_MixA1B1A2B2.seq">FH_MixA1B1A2B2.seq</A> [-tooloption ...] -pkt <A HREF="./Fragment.def">Fragment.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  1. Ping to Target (create Neighbor Cache Entries, if not exist)
+  2. Override Neighbor Cache Entries
+
+=head1 TEST PROCEDURE
+
+  Tester                      Target
+    |                           |
+    |-------------------------->|
+    |   Echo Request (1st A)    |
+    |                           |
+    |                           |
+    |-------------------------->|
+    |   Echo Request (1st B)    |
+    |                           |
+    |                           |
+    |-------------------------->|
+    |   Echo Request (2nd A)    |
+    |                           |
+    |                           |
+    |-------------------------->|
+    |   Echo Request (2nd B)    |
+    |                           |
+    |                           |
+    |<--------------------------|
+    |   Echo Reply (A or B)     |
+    |                           |
+    |                           |
+    |<--------------------------|
+    |   Echo Reply (rest)       |
+    |                           |
+    |                           |
+    v                           v
+
+
+  1. Send Echo Request (1st fragment of packet A)
+  2. Send Echo Request (1st fragment of packet B)
+  3. Send Echo Request (2nd fragment of packet A)
+  4. Send Echo Request (2nd fragment of packet B)
+  5. Receive Echo Reply (packet A)
+  6. Receive Echo Reply (packet B)
+
+  Packet A: Echo Request Data (original) is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 1032
+            NextHeader         = 58 (ICMP)
+            SourceAddress      = Tester Link Local Address
+            DestinationAddress = Target Link Local Address
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = (auto)
+            SequenceNumber = 0
+            PayloadData    = data repeat{0xa1, 512}
+                             data repeat{0xa2, 512}
+
+  Packet A: Echo Request Data (1st fragment) is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 528
+            NextHeader         = 44 (Fragment Header)
+            SourceAddress      = Tester Link Local Address
+            DestinationAddress = Target Link Local Address
+
+        Fragment Header
+            NextHeader         = 58 (ICMP)
+            FragmentOffset     = 0
+            MFlag              = 1
+            Identification     = 32bit (Automatic generation)
+  
+        Payload
+            data               = 520 octets from the head of ICMP Echo request
+
+  Packet A: Echo Request Data (2nd fragment) is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 520 
+            NextHeader         = 44 (Fragment Header)
+            SourceAddress      = Tester Link Local Address
+            DestinationAddress = Target Link Local Address
+
+        Fragment Header  
+            NextHeader         = 58 (ICMP)
+            FragmentOffset     = 65
+            MFlag              = 0
+            Identification     = 32bit (Automatic generation)
+
+        Payload
+            data               = 512 octets from the back of ICMP Echo request
+
+  Packet B: Echo Request Data (original) is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 1032
+            NextHeader         = 58 (ICMP)
+            SourceAddress      = Tester Link Local Address
+            DestinationAddress = Target Link Local Address
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = (auto)
+            SequenceNumber = 0
+            PayloadData    = data repeat{0xb1, 512}
+                             data repeat{0xb2, 512}
+
+  Packet B: Echo Request Data (1st fragment) is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 528
+            NextHeader         = 44 (Fragment Header)
+            SourceAddress      = Tester Link Local Address
+            DestinationAddress = Target Link Local Address
+
+        Fragment Header
+            NextHeader         = 58 (ICMP)
+            FragmentOffset     = 0
+            MFlag              = 1
+            Identification     = 32bit (Automatic generation)
+  
+        Payload
+            data               = 520 octets from the head of ICMP Echo request
+
+  Packet B: Echo Request Data (2nd fragment) is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 520 
+            NextHeader         = 44 (Fragment Header)
+            SourceAddress      = Tester Link Local Address
+            DestinationAddress = Target Link Local Address
+
+        Fragment Header  
+            NextHeader         = 58 (ICMP)
+            FragmentOffset     = 65
+            MFlag              = 0
+            Identification     = 32bit (Automatic generation)
+
+        Payload
+            data               = 512 octets from the back of ICMP Echo request
+
+=head1 JUDGEMENT
+
+  PASS: Both Echo Reply Received
+
+    Echo Reply Received responding to Packet A
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = 0
+            FlowLabel           = 0
+            PayloadLength       = 1032
+            NextHeader          = 58 (ICMP)
+            SourceAddress       = Target Link Local Address
+            Destination Address = Tester Link Local Address
+
+        ICMP Echo Reply
+            Type           = 129 (Echo Reply)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = (same as Packet A (Echo Request))
+            SequenceNumber = (same as Packet A (Echo Request))
+            PayloadData    = (same as Packet A (Echo Request))
+
+    Echo Reply Received responding to Packet B
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = 0
+            FlowLabel           = 0
+            PayloadLength       = 1032
+            NextHeader          = 58 (ICMP)
+            SourceAddress       = Target Link Local Address
+            Destination Address = Tester Link Local Address
+
+        ICMP Echo Reply
+            Type           = 129 (Echo Reply)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = (same as Packet B (Echo Request))
+            SequenceNumber = (same as Packet B (Echo Request))
+            PayloadData    = (same as Packet B (Echo Request))
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+# 
+# 4.5  Fragment Header
+# 
+#                         :
+# 
+#    At the destination, fragment packets are reassembled into their
+#    original, unfragmented form, as illustrated:
+# 
+#    reassembled original packet:
+# 
+#    +------------------+----------------------//------------------------+
+#    |  Unfragmentable  | 2-bit reserved fFragmentablealized to zero for |
+#    |       Part       | transmission; ignorePart                       |
+#    +------------------+----------------------//------------------------+
+# 
+#    The following rules govern reassembly:
+# 
+#       An original packet is reassembled only from fragment packets that
+#       have the same Source Address, Destination Address, and Fragment
+#       Identification.
+# 
+#       The Unfragmentable Part of the reassembled packet consists of all
+#       headers up to, but not including, the Fragment header of the first
+#       fragment packet (that is, the packet whose Fragment Offset is
+#       zero), with the following two changes:
+# 
+#          The Next Header field of the last header of the Unfragmentable
+#          Part is obtained from the Next Header field of the first
+#          fragment's Fragment header.
+# 
+#          The Payload Length of the reassembled packet is computed from
+#          the length of the Unfragmentable Part and the length and offset
+#          of the last fragment.  For example, a formula for computing the
+#          Payload Length of the reassembled original packet is:
+# 
+#            PL.orig = PL.first - FL.first - 8 + (8 * FO.last) + FL.last
+# 
+#            where
+#            PL.orig  = Payload Length field of reassembled packet.
+#            PL.first = Payload Length field of first fragment packet.
+#            FL.first = length of fragment following Fragment header of
+#                       first fragment packet.
+#            FO.last  = Fragment Offset field of Fragment header of
+#                       last fragment packet.
+#            FL.last  = length of fragment following Fragment header of
+#                       last fragment packet.
+# 
+#       The Fragmentable Part of the reassembled packet is constructed
+#       from the fragments following the Fragment headers in each of the
+#       fragment packets.  The length of each fragment is computed by
+#       subtracting from the packet's Payload Length the length of the
+#       headers between the IPv6 header and fragment itself; its relative
+#       position in Fragmentable Part is computed from its Fragment Offset
+#       value.
+# 
+#       The Fragment header is not present in the final, reassembled
+#       packet.
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

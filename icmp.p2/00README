@@ -1,0 +1,40 @@
+				README of
+		IPv6 Conformance Test for ICMPv6
+
+			      TAHI Project
+
+		     $Date: 2004/08/13 04:09:19 $
+
+* First of all
+
+	This is a set of conformance tests for ICMPv6 that is 
+	based upon RFC2463.
+
+* Test coverage
+
+	The test coverage is the followings:
+
+					
+			| the NUT type			|
+	Category	| host		| router	| comments
+	----------------+---------------+---------------+-------------------
+	ICMPv6	 	 host		 router
+					
+
+	----------------+---------------+---------------+-------------------
+
+
+* How to run the tests
+
+	# vi /usr/local/v6eval/etc/tn.def
+	# vi /usr/local/v6eval/etc/nut.def
+	% cp -Rp /usr/local/v6eval/ct $SOMEWHERE
+	% cd $SOMEWHERE
+	% make test
+	% netscape index.html
+
+	If you know more about it,
+	please see /usr/local/v6eval/doc/INSTALL.ct.
+
+
+							[end of README]

@@ -1,0 +1,420 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TAHI: ct/spec.p2/PingOverRouter.seq,v 1.4 2005/04/11 08:27:21 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+
+if ($V6evalTool::NutDef{Type} ne 'router') {
+    vLogHTML("This test is for the router only<BR>");
+    exit $V6evalTool::exitRouterOnly;
+}
+
+%pktdesc = (
+	echo_request_on_link0	=> 'Send Echo Request on Link0 (for Check)',
+	echo_reply_on_link0	=> 'Recv Echo Reply on Link0 (for Check)',
+	echo_request_on_link1	=> 'Send Echo Request on Link1 (for Check)',
+	echo_reply_on_link1	=> 'Recv Echo Reply on Link1 (for Check)',
+
+	echo_request_to_link0	=> 'Send Echo Request to Link0',
+	echo_reply_from_link0	=> 'Recv Echo Reply from Link0',
+	ns_from_link0_ll	=> 'Recv Neighbor Solicitation from Link0 (Link Local Address)',
+	na_to_link0_ll		=> 'Send Neighbor Advertisement to Link0 (Link Local Address)',
+	ns_from_link0		=> 'Recv Neighbor Solicitation from Link0 (Global Address)',
+	na_to_link0		=> 'Send Neighbor Advertisement to Link0 (Global Address)',
+	echo_reply_to_link1	=> 'Send Echo Reply to Link1',
+	echo_request_from_link1	=> 'Recv Echo Request from Link1',
+	ns_from_link1_ll	=> 'Recv Neighbor Solicitation from Link1 (Link Local Address)',
+	na_to_link1_ll		=> 'Send Neighbor Advertisement to Link1 (Link Local Address)',
+	ns_from_link1		=> 'Recv Neighbor Solicitation from Link1 (Global Address)',
+	na_to_link1		=> 'Send Neighbor Advertisement to Link1 (Global Address)',
+);
+
+$IF0 = Link0;
+$IF1 = Link1;
+
+#----- start capturing
+
+vCapture($IF0);
+vCapture($IF1);
+
+#======================================================================
+# ping on link0 global
+
+vLogHTML('<B>Preparation: Check Link0 Global</B>');
+
+vSend($IF0, echo_request_on_link0);
+
+%ret = vRecv($IF0, 5, 0, 0, ns_from_link0, ns_from_link0_ll, echo_reply_on_link0);
+if ($ret{status} != 0) {
+	vLogHTML('No response from NUT, Configuration Problem ?<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+if ($ret{recvFrame} eq 'ns_from_link0') {
+	vSend($IF0, na_to_link0);
+	%ret = vRecv($IF0, 5, 0, 0, echo_reply_on_link0);
+	if ($ret{status} != 0) {
+		vLogHTML('Cannot receive Echo Reply<BR>');
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} eq 'ns_from_link0_ll') {
+	vSend($IF0, na_to_link0_ll);
+	%ret = vRecv($IF0, 5, 0, 0, echo_reply_on_link0);
+	if ($ret{status} != 0) {
+		vLogHTML('Cannot receive Echo Reply<BR>');
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} ne 'echo_reply_on_link0') {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+
+#======================================================================
+# ping on link1 global
+
+vLogHTML('<B>Preparation: Check Link1 Global</B>');
+
+vSend($IF1, echo_request_on_link1);
+
+%ret = vRecv($IF1, 5, 0, 0, ns_from_link1, ns_from_link1_ll, echo_reply_on_link1);
+if ($ret{status} != 0) {
+	vLogHTML('No response from NUT, Configuration Problem ?<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+if ($ret{recvFrame} eq 'ns_from_link1') {
+	vSend($IF1, na_to_link1);
+	%ret = vRecv($IF1, 5, 0, 0, echo_reply_on_link1);
+	if ($ret{status} != 0) {
+		vLogHTML('Cannot receive Echo Reply<BR>');
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} eq 'ns_from_link1_ll') {
+	vSend($IF1, na_to_link1_ll);
+	%ret = vRecv($IF1, 5, 0, 0, echo_reply_on_link1);
+	if ($ret{status} != 0) {
+		vLogHTML('Cannot receive Echo Reply<BR>');
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} ne 'echo_reply_on_link1') {
+	vLogHTML('Cannot receive Echo Reply<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+
+#======================================================================
+# ping over router
+
+vLogHTML('<B>Main Test</B>');
+
+vSend($IF0, echo_request_to_link0);
+
+%ret = vRecv($IF1, 5, 0, 0, ns_from_link1, ns_from_link1_ll, echo_request_from_link1);
+if ($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+if ($ret{recvFrame} eq 'ns_from_link1') {
+	vSend($IF1, na_to_link1);
+
+	%ret = vRecv($IF1, 5, 0, 0, echo_request_from_link1);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} eq 'ns_from_link1_ll') {
+	vSend($IF1, na_to_link1_ll);
+	%ret = vRecv($IF1, 5, 0, 0, echo_request_from_link1);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} ne 'echo_request_from_link1') {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+
+vSend($IF1, echo_reply_to_link1);
+
+%ret = vRecv($IF0, 5, 0, 0, ns_from_link0, ns_from_link0_ll, echo_reply_from_link0);
+if ($ret{status} != 0) {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+if ($ret{recvFrame} eq 'ns_from_link0') {
+	vSend($IF0, na_to_link0);
+	%ret = vRecv($IF0, 5, 0, 0, echo_reply_from_link0);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} eq 'ns_from_link0_ll') {
+	vSend($IF0, na_to_link0_ll);
+	%ret = vRecv($IF0, 5, 0, 0, echo_reply_from_link0);
+	if ($ret{status} != 0) {
+		vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+		exit $V6evalTool::exitFail;
+	}
+}
+if ($ret{recvFrame} ne 'echo_reply_from_link0') {
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+	exit $V6evalTool::exitFail;
+}
+
+vLogHTML('OK');
+exit $V6evalTool::exitPass;
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  PingOverRouter - check IPv6 Header Basic Items
+
+=head1 TARGET
+
+  Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./PingOverRouter.seq">PingOverRouter.seq</A> [-tooloption ...] -pkt <A HREF="./PingOverRouter.def">PingOverRouter.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+  1. Check Link0 Global Address Reachability
+  2. Check Link1 Global Address Reachability
+
+=head1 TEST PROCEDURE
+
+  Tester                      Target                      Tester
+              (Link0)                     (Link1)
+    |                           |                           |
+    |-------------------------->|                           |
+    |   Echo Request to Link0   |                           |
+    |                           |                           |
+    |                           |-------------------------->|
+    |                           |   Neighbor Solicitation   |
+    |                           |                           |
+    |                           |<--------------------------|
+    |                           |   Neighbor Advertisement  |
+    |                           |                           |
+    |                           |-------------------------->|
+    |                           |   Echo Request from Link1 |
+    |                           |                           |
+    |                           |                           |
+    |                           |<--------------------------|
+    |                           |   Echo Reply to Link1     |
+    |                           |                           |
+    |<--------------------------|                           |
+    |   Neighbor Solicitation   |                           |
+    |                           |                           |
+    |-------------------------->|                           |
+    |   Neighbor Advertisement  |                           |
+    |                           |                           |
+    |<--------------------------|                           |
+    |   Echo Reply from Link0   |                           |
+    |                           |                           |
+    v                           v                           v
+
+  1. Send Echo Request to Link0
+  2. Wait Echo Request from Link1 or NS from Link1
+  3. If NS received then send NA to Link1, and wait Echo Request form Link1 again
+  4. Receive Echo Request from Link1
+  5. Send Echo Reply to Link1
+  6. Wait Echo Reply from Link0 or NS from Link0
+  7. If NS received then send NA to Link0, and wait Echo Reply form Link0 again
+  8. Receive Echo Reply from Link0
+
+  Echo Request to Link0 Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 16
+            NextHeader         = 58 (ICMP)
+            HopLimit           = 64
+            SourceAddress      = Tester Global Address (Link0)
+            DestinationAddress = Tester Global Address (Link1)
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = {1,2,3,4,5,6,7,8}
+
+  Neighbor Solicitation packet's IP source Address selection may be:
+    - Link Local Address
+    - Global Address
+  This test IS NOT the Neighbor Discovery test, so admit both implementation.
+
+=head1 JUDGEMENT
+
+  PASS: Echo Reply Received from Link0
+
+        IPv6 Header
+            Version             = 6
+            Traffic Class       = 0
+            FlowLabel           = 0
+            PayloadLength       = 16
+            NextHeader          = 58 (ICMP)
+            HopLimit            = 63 (decremented)
+            SourceAddress      = Tester Global Address (Link1)
+            DestinationAddress = Tester Global Address (Link0)
+
+        ICMP Echo Reply
+            Type           = 129 (Echo Reply)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff (same as Echo Request)
+            SequenceNumber = 1 (same as Echo Request)
+            PayloadData    = {1,2,3,4,5,6,7,8} (same as Echo Request)
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC2460
+# 
+# 3.  IPv6 Header Format
+# 
+#    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#    |Version| Traffic Class |           Flow Label                  |
+#    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#    |         Payload Length        |  Next Header  |   Hop Limit   |
+#    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#    |                                                               |
+#    +                                                               +
+#    |                                                               |
+#    +                         Source Address                        +
+#    |                                                               |
+#    +                                                               +
+#    |                                                               |
+#    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#    |                                                               |
+#    +                                                               +
+#    |                                                               |
+#    +                      Destination Address                      +
+#    |                                                               |
+#    +                                                               +
+#    |                                                               |
+#    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# 
+#    Version              4-bit Internet Protocol version number = 6.
+# 
+#    Traffic Class        8-bit traffic class field.  See section 7.
+# 
+#    Flow Label           20-bit flow label.  See section 6.
+# 
+#    Payload Length       16-bit unsigned integer.  Length of the IPv6
+#                         payload, i.e., the rest of the packet following
+#                         this IPv6 header, in octets.  (Note that any
+#                         extension headers [section 4] present are
+#                         considered part of the payload, i.e., included
+#                         in the length count.)
+# 
+#    Next Header          8-bit selector.  Identifies the type of header
+#                         immediately following the IPv6 header.  Uses the
+#                         same values as the IPv4 Protocol field [RFC-1700
+#                         et seq.].
+# 
+#    Hop Limit            8-bit unsigned integer.  Decremented by 1 by
+#                         each node that forwards the packet. The packet
+#                         is discarded if Hop Limit is decremented to
+#                         zero.
+# 
+#    Source Address       128-bit address of the originator of the packet.
+#                         See [ADDRARCH].
+# 
+#    Destination Address  128-bit address of the intended recipient of the
+#                         packet (possibly not the ultimate recipient, if
+#                         a Routing header is present).  See [ADDRARCH]
+#                         and section 4.4.
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 2460 - IPv6 Specification
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

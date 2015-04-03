@@ -1,0 +1,1032 @@
+#!/usr/bin/perl
+#
+# $Name: V6LC_5_0_0 $
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $Id: mcastOne.seq,v 1.12 2010/03/24 08:48:11 akisada Exp $
+#
+######################################################################
+BEGIN {
+	$V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $';
+}
+
+use V6evalTool;
+use CommonPMTU;
+use lib '../';
+use AdvancedFunctionality;
+
+if (!$AdvancedFunctionality::TRANSMITTING_EREQ) {
+	exit($V6evalTool::exitSkip);
+}
+
+$pktdesc{'echo_request_mc1500'}		= 'Recv multicast Echo Request (Packet size is 1500)';
+$pktdesc{'echo_request_mc1400'}		= 'Recv multicast Echo Request (Packet size is 1400)';
+$pktdesc{'PktTooBig'}		= 'Send Packet Too Big message';
+$pktdesc{'PktTooBig_others'}		= 'Send Packet Too Big message';
+
+$endStatus = $V6evalTool::exitPass;
+$IF = 'Link0';
+$NUTdev = $V6evalTool::NutDef{'Link0_device'};
+
+#fake data
+$packet_len = 0;
+$hoplimit = 0;
+$ping_cs = 0;
+$ping_id = 0;
+$ping_sn = 0;
+$frag_m = 0;
+$frag_id = 0;
+$ping_pl = '0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
+
+#decrease value of MTU 
+$MTU_decrea = 50;
+
+vCapture($IF);
+#======================================================================
+if (setup11($IF) != $CommonPMTU::Success) {
+	$ret = cleanup($IF);
+	if ($ret == $CommonPMTU::Success) {
+		exit($V6evalTool::exitFail);
+	} else {
+		exit($V6evalTool::exitFatal);
+	}
+}
+#======================================================================
+#----- test
+
+$max_mtu = 1500;
+#-----------------------------------------NUT send 1st Echo Request 
+#----- create fragment pkt.def
+
+$MTU_value = $max_mtu; #MTU value, fixed
+$PKT_size = 1500; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8; 
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_hether_nut2mc';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'GL_MCAST_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef_req($def_file, $MTU_value, $PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF");
+
+vLogHTML('NUT send 1st Echo Request to Multicast Destination <BR>');
+vClear($IF);
+vRemote('ping6.rmt', "size=1452 addr=FF1E::1:2 if=$NUTdev");
+
+
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, 'echo_request_mc1500',@CommonPMTU::req_fragment_1st_name);
+
+
+if ($ret{'status'} == 0) {
+	$packet_len = 0;
+	if($ret{'recvFrame'} eq 'echo_request_mc1500'){
+		vLogHTML('OK<BR>');
+		
+		$packet_flag ='echo_request';
+
+		$packet_len = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;
+		$hoplimit = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.HopLimit'});
+		$ping_cs = sprintf('0x%04x', $ret{'Frame_Ether.Packet_IPv6.ICMPv6_EchoRequest.Checksum'});
+		$ping_id = sprintf('0x%04x', $ret{'Frame_Ether.Packet_IPv6.ICMPv6_EchoRequest.Identifier'});
+		$ping_sn = sprintf('0x%04x', $ret{'Frame_Ether.Packet_IPv6.ICMPv6_EchoRequest.SequenceNumber'});
+		$ping_pl = $ret{'Frame_Ether.Packet_IPv6.ICMPv6_EchoRequest.Payload.data'};
+	}
+	else{
+		vLogHTML('OK. recive 1st fragment.<BR>');
+		$pkt_name = $ret{'recvFrame'};
+		$pkt_name =~ /^echo_request(\d+)_1st_(\d+)$/;
+		$size_2nd_frag = $1-$2-40;
+		$name_2nd_frag = "echo_request$1"."_2nd_$size_2nd_frag";
+		
+		#get ipv6 packet length
+		$packet_len = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;		
+		$hoplimit = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.HopLimit'});
+		$frag_id = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.Hdr_Fragment.Identification'});
+		$frag_m = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.Hdr_Fragment.MFlag'});
+		$ping_pl = $ret{'Frame_Ether.Packet_IPv6.Payload.data'};
+
+		%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+
+		if ($ret{'status'} == 0) {
+			vLogHTML('OK. recive 2nd fragment.<BR>');
+
+			#get ipv6 packet length
+			$packet_len_2nd = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;	
+			if($packet_len < $packet_len_2nd){
+				$packet_len = $packet_len_2nd;
+				
+				$hoplimit = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.HopLimit'});
+				$frag_id = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.Hdr_Fragment.Identification'});
+				$frag_m = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.Hdr_Fragment.MFlag'});
+				$ping_pl = $ret{'Frame_Ether.Packet_IPv6.Payload.data'};
+			}
+
+		}
+		
+		else {
+			vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+			$endStatus = $V6evalTool::exitFail;
+		}
+	}
+		
+}else {
+	vLogHTML('Cannot receive Echo Request<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+
+unlink($def_file);
+
+
+#create payload def file 
+if($packet_len < 1280){
+	$ping_pl = '0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
+}
+open(FH, "> payload_data.def") or die("cannot create def file");
+print FH "Payload payloadRef {\n";
+print FH "\tdata = {";
+for ($j = 0; $j < length($ping_pl); $j += 2) {
+	print FH '0x', substr($ping_pl, $j, 2);
+	print FH ', ' if ($j < length($ping_pl) - 2);
+	print FH "\n\t\t" if ($j % 16 == 14);
+}
+print FH "};\n";
+print FH "}\n";
+close(FH);
+
+
+#send Packet Too Big message
+if($packet_len > 1280){
+	if($packet_len >= 1450){
+		vCPP("-DPAYLOAD_DATA -DHLIM=$hoplimit -DMPING_CS=$ping_cs -DMPING_ID=$ping_id -DMPING_SEQ=$ping_sn -DFRAG_ID=$frag_id -DFRAG_M=$frag_m -DPTB_MTU=1450");
+		
+		if($packet_flag eq 'echo_request'){
+			vSend($IF, 'PktTooBig');
+		}else{
+			vSend($IF, 'PktTooBig_others');
+		}
+		
+		$max_mtu = 1450;
+	}
+	else{
+		
+
+		vCPP("-DPAYLOAD_DATA -DHLIM=$hoplimit -DMPING_CS=$ping_cs -DMPING_ID=$ping_id -DMPING_SEQ=$ping_sn -DFRAG_ID=$frag_id -DFRAG_M=$frag_m -DPTB_MTU=$packet_len");
+		
+		if($packet_flag eq 'echo_request'){
+			vSend($IF, 'PktTooBig');
+		}else{
+			vSend($IF, 'PktTooBig_others');
+		}
+		
+		$max_mtu = $packet_len;
+	}
+}else{
+	$max_mtu = 1280;
+	vLogHTML('<FONT COLOR="#FF0000">Cannot send Packet Too Big message</FONT><BR>');
+}
+
+#unlink("payload_data.def");
+
+
+
+
+
+
+
+
+
+
+
+#------------------------------------NUT send 2nd Echo Request 
+if($max_mtu > 1280){
+
+
+#----- create fragment pkt.def
+
+$MTU_value = $max_mtu; #MTU value, fixed
+$PKT_size = 1500; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8; 
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_hether_nut2mc';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'GL_MCAST_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef_req($def_file, $MTU_value, $PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF");
+
+vLogHTML('NUT send 2nd Echo Request to Multicast Destination <BR>');
+vClear($IF);
+vRemote('ping6.rmt', "size=1452 addr=FF1E::1:2 if=$NUTdev");
+
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, @CommonPMTU::req_fragment_1st_name);
+
+
+if ($ret{'status'} == 0) {
+	vLogHTML('OK. recive 1st fragment.<BR>');
+	$pkt_name = $ret{'recvFrame'};
+	$pkt_name =~ /^echo_request(\d+)_1st_(\d+)$/;
+	$size_2nd_frag = $1-$2-40;
+	$name_2nd_frag = "echo_request$1"."_2nd_$size_2nd_frag";
+	
+	#get ipv6 packet length
+	$packet_len = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;		
+	$hoplimit = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.HopLimit'});
+	$frag_id = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.Hdr_Fragment.Identification'});
+	$frag_m = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.Hdr_Fragment.MFlag'});
+	$ping_pl = $ret{'Frame_Ether.Packet_IPv6.Payload.data'};
+	
+	%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+	
+	if ($ret{'status'} == 0) {
+		vLogHTML('OK. recive 2nd fragment.<BR>');
+		
+		#get ipv6 packet length
+		$packet_len_2nd = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;	
+		if($packet_len < $packet_len_2nd){
+			$packet_len = $packet_len_2nd;
+			
+			$hoplimit = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.HopLimit'});
+			$frag_id = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.Hdr_Fragment.Identification'});
+			$frag_m = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.Hdr_Fragment.MFlag'});
+			$ping_pl = $ret{'Frame_Ether.Packet_IPv6.Payload.data'};
+		}
+		
+	}
+		
+	else {
+		vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+		$endStatus = $V6evalTool::exitFail;
+	}
+		
+}else {
+	vLogHTML('Cannot receive Echo Request<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+
+unlink($def_file);
+
+
+#create payload def file
+ if($packet_len < 1280){
+	$ping_pl = '0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
+}
+open(FH, "> payload_data.def") or die("cannot create def file");
+print FH "Payload payloadRef {\n";
+print FH "\tdata = {";
+for ($j = 0; $j < length($ping_pl); $j += 2) {
+	print FH '0x', substr($ping_pl, $j, 2);
+	print FH ', ' if ($j < length($ping_pl) - 2);
+	print FH "\n\t\t" if ($j % 16 == 14);
+}
+print FH "};\n";
+print FH "}\n";
+close(FH);
+
+
+#send Packet Too Big message
+if($packet_len > 1280){
+	if($packet_len >= 1400){
+		vCPP("-DPAYLOAD_DATA -DHLIM=$hoplimit -DMPING_CS=$ping_cs -DMPING_ID=$ping_id -DMPING_SEQ=$ping_sn -DFRAG_ID=$frag_id -DFRAG_M=$frag_m -DPTB_MTU=1400");
+		
+		vSend($IF, 'PktTooBig_others');
+		
+		$max_mtu = 1400;
+	}
+	else{
+		$packet_len = $packet_len - $MTU_decrea;
+		vCPP("-DPAYLOAD_DATA -DHLIM=$hoplimit -DMPING_CS=$ping_cs -DMPING_ID=$ping_id -DMPING_SEQ=$ping_sn -DFRAG_ID=$frag_id -DFRAG_M=$frag_m -DPTB_MTU=$packet_len");
+		
+		
+		vSend($IF, 'PktTooBig_others');
+		
+		$max_mtu = $packet_len;
+	}
+}else{
+	$max_mtu = 1280;
+	vLogHTML('<FONT COLOR="#FF0000">Cannot send Packet Too Big message</FONT><BR>');
+}
+
+#unlink("payload_data.def");
+
+}else{
+	vLogHTML('<FONT COLOR="#FF0000">NUT does not send 2nd Echo Request to Multicast Destination </FONT><BR>');
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#------------------------------------------NUT send 3rd echo Requset
+if($max_mtu > 1280){
+
+
+#----- create fragment pkt.def
+
+$MTU_value = $max_mtu; #MTU value, fixed
+$PKT_size = 1500; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8; 
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_hether_nut2mc';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'GL_MCAST_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef_req($def_file, $MTU_value, $PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF");
+
+vLogHTML('NUT send 3rd Echo Request to Multicast Destination <BR>');
+vClear($IF);
+vRemote('ping6.rmt', "size=1452 addr=FF1E::1:2 if=$NUTdev");
+
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, @CommonPMTU::req_fragment_1st_name);
+
+
+if ($ret{'status'} == 0) {
+	vLogHTML('OK. recive 1st fragment.<BR>');
+	$pkt_name = $ret{'recvFrame'};
+	$pkt_name =~ /^echo_request(\d+)_1st_(\d+)$/;
+	$size_2nd_frag = $1-$2-40;
+	$name_2nd_frag = "echo_request$1"."_2nd_$size_2nd_frag";
+	
+	
+	%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+	
+	if ($ret{'status'} == 0) {
+		vLogHTML('OK. recive 2nd fragment.<BR>');
+		
+	}
+		
+	else {
+		vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+		$endStatus = $V6evalTool::exitFail;
+	}
+		
+}else {
+	vLogHTML('Cannot receive Echo Request<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+
+unlink($def_file);
+
+
+}else{
+	vLogHTML('<FONT COLOR="#FF0000">NUT does not send 3rd Echo Request to Multicast Destination </FONT><BR>');
+}
+
+
+
+
+#-----------------------------------------NUT send 4th Echo Request
+#----- create fragment pkt.def
+
+$MTU_value = $max_mtu; #MTU value, fixed
+$PKT_size = 1400; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8; 
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_hether_nut2mc';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'GL_MCAST_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef_req($def_file, $MTU_value, $PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF");
+
+vLogHTML('NUT send 4th Echo Request to Multicast Destination <BR>');
+vClear($IF);
+vRemote('ping6.rmt', "size=1352 addr=FF1E::1:2 if=$NUTdev");
+
+
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, 'echo_request_mc1400',@CommonPMTU::req_fragment_1st_name);
+
+
+if ($ret{'status'} == 0) {
+	$packet_len = 0;
+	if($ret{'recvFrame'} eq 'echo_request_mc1400'){
+		vLogHTML('OK<BR>');
+		
+		$packet_flag ='echo_request';
+
+		$packet_len = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;
+		$hoplimit = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.HopLimit'});
+		$ping_cs = sprintf('0x%04x', $ret{'Frame_Ether.Packet_IPv6.ICMPv6_EchoRequest.Checksum'});
+		$ping_id = sprintf('0x%04x', $ret{'Frame_Ether.Packet_IPv6.ICMPv6_EchoRequest.Identifier'});
+		$ping_sn = sprintf('0x%04x', $ret{'Frame_Ether.Packet_IPv6.ICMPv6_EchoRequest.SequenceNumber'});
+		$ping_pl = $ret{'Frame_Ether.Packet_IPv6.ICMPv6_EchoRequest.Payload.data'};
+	}
+	else{
+		vLogHTML('OK. recive 1st fragment.<BR>');
+		$pkt_name = $ret{'recvFrame'};
+		$pkt_name =~ /^echo_request(\d+)_1st_(\d+)$/;
+		$size_2nd_frag = $1-$2-40;
+		$name_2nd_frag = "echo_request$1"."_2nd_$size_2nd_frag";
+		
+		#get ipv6 packet length
+		$packet_len = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;		
+		$hoplimit = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.HopLimit'});
+		$frag_id = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.Hdr_Fragment.Identification'});
+		$frag_m = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.Hdr_Fragment.MFlag'});
+		$ping_pl = $ret{'Frame_Ether.Packet_IPv6.Payload.data'};
+
+		%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+
+		if ($ret{'status'} == 0) {
+			vLogHTML('OK. recive 2nd fragment.<BR>');
+
+			#get ipv6 packet length
+			$packet_len_2nd = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;	
+			if($packet_len < $packet_len_2nd){
+				$packet_len = $packet_len_2nd;
+				
+				$hoplimit = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.HopLimit'});
+				$frag_id = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.Hdr_Fragment.Identification'});
+				$frag_m = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.Hdr_Fragment.MFlag'});
+				$ping_pl = $ret{'Frame_Ether.Packet_IPv6.Payload.data'};
+			}
+
+		}
+		
+		else {
+			vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+			$endStatus = $V6evalTool::exitFail;
+		}
+	}
+		
+}else {
+	vLogHTML('Cannot receive Echo Request<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+
+unlink($def_file);
+
+
+#create payload def file 
+if($packet_len < 1280){
+	$ping_pl = '0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
+}
+open(FH, "> payload_data.def") or die("cannot create def file");
+print FH "Payload payloadRef {\n";
+print FH "\tdata = {";
+for ($j = 0; $j < length($ping_pl); $j += 2) {
+	print FH '0x', substr($ping_pl, $j, 2);
+	print FH ', ' if ($j < length($ping_pl) - 2);
+	print FH "\n\t\t" if ($j % 16 == 14);
+}
+print FH "};\n";
+print FH "}\n";
+close(FH);
+
+
+#send Packet Too Big message
+if($packet_len > 1280){
+	if($packet_len >= 1300){
+		vCPP("-DPAYLOAD_DATA -DHLIM=$hoplimit -DMPING_CS=$ping_cs -DMPING_ID=$ping_id -DMPING_SEQ=$ping_sn -DFRAG_ID=$frag_id -DFRAG_M=$frag_m -DPTB_MTU=1300");
+		
+		if($packet_flag eq 'echo_request'){
+			vSend($IF, 'PktTooBig');
+		}else{
+			vSend($IF, 'PktTooBig_others');
+		}
+		
+		$max_mtu = 1300;
+	}
+	else{
+		
+		$packet_len = $packet_len - $MTU_decrea;
+
+		vCPP("-DPAYLOAD_DATA -DHLIM=$hoplimit -DMPING_CS=$ping_cs -DMPING_ID=$ping_id -DMPING_SEQ=$ping_sn -DFRAG_ID=$frag_id -DFRAG_M=$frag_m -DPTB_MTU=$packet_len");
+		
+		if($packet_flag eq 'echo_request'){
+			vSend($IF, 'PktTooBig');
+		}else{
+			vSend($IF, 'PktTooBig_others');
+		}
+		
+		$max_mtu = $packet_len;
+	}
+}else{
+	$max_mtu = 1280;
+	vLogHTML('<FONT COLOR="#FF0000">Cannot send Packet Too Big message</FONT><BR>');
+}
+
+#unlink("payload_data.def");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#------------------------------------NUT send 5th Echo Request
+if($max_mtu > 1280){
+
+
+#----- create fragment pkt.def
+
+$MTU_value = $max_mtu; #MTU value, fixed
+$PKT_size = 1400; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8; 
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_hether_nut2mc';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'GL_MCAST_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef_req($def_file, $MTU_value, $PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF");
+
+vLogHTML('NUT send 5th Echo Request to Multicast Destination <BR>');
+vClear($IF);
+vRemote('ping6.rmt', "size=1352 addr=FF1E::1:2 if=$NUTdev");
+
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, @CommonPMTU::req_fragment_1st_name);
+
+
+if ($ret{'status'} == 0) {
+	vLogHTML('OK. recive 1st fragment.<BR>');
+	$pkt_name = $ret{'recvFrame'};
+	$pkt_name =~ /^echo_request(\d+)_1st_(\d+)$/;
+	$size_2nd_frag = $1-$2-40;
+	$name_2nd_frag = "echo_request$1"."_2nd_$size_2nd_frag";
+	
+	#get ipv6 packet length
+	$packet_len = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;		
+	$hoplimit = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.HopLimit'});
+	$frag_id = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.Hdr_Fragment.Identification'});
+	$frag_m = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.Hdr_Fragment.MFlag'});
+	$ping_pl = $ret{'Frame_Ether.Packet_IPv6.Payload.data'};
+	
+	%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+	
+	if ($ret{'status'} == 0) {
+		vLogHTML('OK. recive 2nd fragment.<BR>');
+		
+		#get ipv6 packet length
+		$packet_len_2nd = $ret{"Frame_Ether.Packet_IPv6.Hdr_IPv6.PayloadLength"} + 40;	
+		if($packet_len < $packet_len_2nd){
+			$packet_len = $packet_len_2nd;
+			
+			$hoplimit = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.HopLimit'});
+			$frag_id = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.Hdr_Fragment.Identification'});
+			$frag_m = sprintf('0x%02x', $ret{'Frame_Ether.Packet_IPv6.Hdr_Fragment.MFlag'});
+			$ping_pl = $ret{'Frame_Ether.Packet_IPv6.Payload.data'};
+		}
+		
+	}
+		
+	else {
+		vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+		$endStatus = $V6evalTool::exitFail;
+	}
+		
+}else {
+	vLogHTML('Cannot receive Echo Request<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+
+unlink($def_file);
+
+
+#create payload def file 
+if($packet_len < 1280){
+	$ping_pl = '0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
+}
+open(FH, "> payload_data.def") or die("cannot create def file");
+print FH "Payload payloadRef {\n";
+print FH "\tdata = {";
+for ($j = 0; $j < length($ping_pl); $j += 2) {
+	print FH '0x', substr($ping_pl, $j, 2);
+	print FH ', ' if ($j < length($ping_pl) - 2);
+	print FH "\n\t\t" if ($j % 16 == 14);
+}
+print FH "};\n";
+print FH "}\n";
+close(FH);
+
+}else{
+	vLogHTML('<FONT COLOR="#FF0000">NUT does not send 5th Echo Request to Multicast Destination </FONT><BR>');
+}
+
+
+#send Packet Too Big message
+vCPP("-DPAYLOAD_DATA -DHLIM=$hoplimit -DMPING_CS=$ping_cs -DMPING_ID=$ping_id -DMPING_SEQ=$ping_sn -DFRAG_ID=$frag_id -DFRAG_M=$frag_m -DPTB_MTU=1350");
+		
+vSend($IF, 'PktTooBig_others');
+		
+unlink("payload_data.def");
+
+
+
+
+#------------------------------------------NUT send 6th Echo Request
+
+
+#----- create fragment pkt.def
+
+$MTU_value = $max_mtu; #MTU value, fixed
+$PKT_size = 1400; #this size is IPv6 pakcet size.,1280,1400,1500 etc
+
+$frag_start =  48; #1280 or 48 #should be 48
+
+$data_size_1st = $frag_start - 40 - 8; 
+$data_size_2nd = ($PKT_size - 40) - $data_size_1st;
+
+#define packet format
+$header_ether = '_hether_nut2mc';
+$ip_src = 'NUT_GL0_ADDR';
+$ip_dst = 'GL_MCAST_ADDR';
+
+$def_file = 'pkt_frag.def'; #fragment define file
+
+#write def file
+if(writefragdef_req($def_file, $MTU_value, $PKT_size,$data_size_1st,$data_size_2nd, $header_ether, $ip_src, $ip_dst ) != $CommonPMTU::Success) {
+	exit($V6evalTool::exitFatal);
+}
+vCPP("-DFRAG_DEF");
+
+vLogHTML('NUT send 6th Echo Request to Multicast Destination <BR>');
+vClear($IF);
+vRemote('ping6.rmt', "size=1352 addr=FF1E::1:2 if=$NUTdev");
+
+%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, @CommonPMTU::req_fragment_1st_name);
+
+
+if ($ret{'status'} == 0) {
+	vLogHTML('OK. recive 1st fragment.<BR>');
+	$pkt_name = $ret{'recvFrame'};
+	$pkt_name =~ /^echo_request(\d+)_1st_(\d+)$/;
+	$size_2nd_frag = $1-$2-40;
+	$name_2nd_frag = "echo_request$1"."_2nd_$size_2nd_frag";
+	
+	
+	%ret = nd_vRecv_EN($IF, $CommonPMTU::wait_reply, 0, 0, "$name_2nd_frag");
+	
+	if ($ret{'status'} == 0) {
+		vLogHTML('OK. recive 2nd fragment.<BR>');
+		
+	}
+		
+	else {
+		vLogHTML('<FONT COLOR="#FF0000">NG. can\'t recive 2nd fragment.</FONT><BR>');
+		$endStatus = $V6evalTool::exitFail;
+	}
+		
+}else {
+	vLogHTML('Cannot receive Echo Request<BR>');
+	vLogHTML('<FONT COLOR="#FF0000">NG</FONT><BR>');
+	$endStatus = $V6evalTool::exitFail;
+}
+
+unlink($def_file);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#----- end test
+
+$ret = cleanup($IF);
+vStop($IF);
+if ($ret == $CommonPMTU::Success) {
+	exit($endStatus);
+} else {
+	exit($V6evalTool::exitFatal);
+}
+
+
+######################################################################
+__END__
+
+=head1 NAME
+
+  mcastOne - Multicast Destination - One Router
+
+=head1 TARGET
+
+  Host and Router
+
+=head1 SYNOPSIS
+
+=begin html
+<PRE>
+  <A HREF="./mcastOne.seq">mcastOne.seq</A> [-tooloption ...] -pkt <A HREF="./mcastOne.def">mcastOne.def</A>
+    -tooloption : v6eval tool option
+</PRE>
+
+=end html
+
+=head1 INITIALIZATION
+
+	Common Test Setup 1.1
+
+=head1 TEST PROCEDURE
+
+Verify that a node properly chooses the PMTU for multicast destinations.
+
+   TR1                         NUT
+    |                           |
+    |<--------------------------|
+    |   1.Echo Request          |
+    |   (1500 octets)           |
+    |                           |
+    |-------------------------->|
+    |   2.Packet Too Big        |
+    |   (MTU is 1450)           |
+    |                           |
+    |<--------------------------|
+    | 3.Fragmented Echo Request |
+    |   (1st + 2nd = 1500)      |
+    |                           |
+    |-------------------------->|
+    |   4.Packet Too Big        |
+    |   (MTU is 1400)           |
+    |                           |
+    |<--------------------------|
+    | 5.Fragmented Echo Request |
+    |   (1st + 2nd = 1500)      |
+    |                           |
+    |<--------------------------|
+    |    6.Echo Request         |
+    |    (1400 octets)          |
+    |                           |
+    |-------------------------->|
+    |   7.Packet Too Big        |
+    |   (MTU is 1300)           |
+    |                           |
+    |<--------------------------|
+    | 8.Fragmented Echo Reply   |
+    |   (1st + 2nd = 1400)      |
+    |                           |
+    |-------------------------->|
+    |   9.Packet Too Big        |
+    |   (MTU is 1350)           |
+    |                           |
+    |<--------------------------|
+    | 10.Fragmented Echo Reply  |
+    |   (1st + 2nd = 1400)      |
+    |                           |
+    v                           v
+
+
+  1. Receive Echo Request <<Check 1>>
+  2. Send Packet Too Big message
+  3. Receive fragmented Echo Request <<Check 2>>
+  4. Send Packet Too Big message
+  5. Receive fragmented Echo Request <<Check 3>>
+  6. Receive Echo Request <<Check 4>>
+  7. Send Packet Too Big message
+  8. Receive fragmented Echo Request <<Check 5>>
+  9. Send Packet Too Big message
+ 10. Receive fragmented Echo Request <<Check 6>>
+
+
+  Packet Too Big message is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 1280
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = TR1's Global Address
+            DestinationAddress = NUT's Global Address
+
+        ICMP Echo Request
+            Type           = 2 (Packet Too Big)
+            Code           = 0xff
+            Checksum       = (auto)
+            MTU            = 1280
+            PayloadData    = (1232 octets)
+
+
+=head1 JUDGEMENT
+
+  PASS: <<Check 1>> Echo Request Received or Fragmented Echo Request Received
+        <<Check 2>> Fragmented Echo Request Received.1st and 2nd fragment no larger than 1450 octets.
+        <<Check 3>> Fragmented Echo Request Received.1st and 2nd fragment no larger than 1400 octets.
+        <<Check 4>> Echo Request Received or Fragmented Echo Request Received
+        <<Check 5,6>> Fragmented Echo Request Received.1st and 2nd fragment no larger than 1300 octets.
+
+  Echo Request Data is:
+
+        IPv6 Header
+            Version            = 6
+            Traffic Class      = 0
+            FlowLabel          = 0
+            PayloadLength      = 1460,1360
+            NextHeader         = 58 (ICMPv6)
+            SourceAddress      = NUT's Global Address
+            DestinationAddress = Multicast Address(FF1E::1:2)
+
+        ICMP Echo Request
+            Type           = 128 (Echo Request)
+            Code           = 0
+            Checksum       = (auto)
+            Identifier     = 0xffff
+            SequenceNumber = 1
+            PayloadData    = (1452,1352 octets)
+
+
+=head1 CLEANUP
+
+Common Test Cleanup
+
+=cut
+
+# =head1 REFERENCE
+# 
+# RFC1981
+# 
+# 3. Protocol overview
+# 
+#    This memo describes a technique to dynamically discover the PMTU of a
+#    path.  The basic idea is that a source node initially assumes that
+#    the PMTU of a path is the (known) MTU of the first hop in the path.
+#    If any of the packets sent on that path are too large to be forwarded
+#    by some node along the path, that node will discard them and return
+#    ICMPv6 Packet Too Big messages [ICMPv6].  Upon receipt of such a
+#    message, the source node reduces its assumed PMTU for the path based
+#    on the MTU of the constricting hop as reported in the Packet Too Big
+#    message.
+# 
+#    The Path MTU Discovery process ends when the node's estimate of the
+#    PMTU is less than or equal to the actual PMTU.  Note that several
+#    iterations of the packet-sent/Packet-Too-Big-message-received cycle
+#    may occur before the Path MTU Discovery process ends, as there may be
+#    links with smaller MTUs further along the path.
+# 
+#    Alternatively, the node may elect to end the discovery process by
+#    ceasing to send packets larger than the IPv6 minimum link MTU.
+# 
+#    The PMTU of a path may change over time, due to changes in the
+#    routing topology.  Reductions of the PMTU are detected by Packet Too
+#    Big messages.  To detect increases in a path's PMTU, a node
+#    periodically increases its assumed PMTU.  This will almost always
+#    result in packets being discarded and Packet Too Big messages being
+#    generated, because in most cases the PMTU of the path will not have
+#    changed.  Therefore, attempts to detect increases in a path's PMTU
+#    should be done infrequently.
+# 
+#    Path MTU Discovery supports multicast as well as unicast
+#    destinations.  In the case of a multicast destination, copies of a
+#    packet may traverse many different paths to many different nodes.
+#    Each path may have a different PMTU, and a single multicast packet
+#    may result in multiple Packet Too Big messages, each reporting a
+#    different next-hop MTU.  The minimum PMTU value across the set of
+#    paths in use determines the size of subsequent packets sent to the
+#    multicast destination.
+# 
+#    Note that Path MTU Discovery must be performed even in cases where a
+#    node "thinks" a destination is attached to the same link as itself.
+#    In a situation such as when a neighboring router acts as proxy [ND]
+#    for some destination, the destination can to appear to be directly
+#    connected but is in fact more than one hop away.
+# 
+
+=pod
+
+=head1 REFERENCE
+
+=begin html
+<BLOCKQUOTE>
+<PRE>
+RFC 1981 - Path MTU Discovery for IPv6
+</PRE>
+</BLOCKQUOTE>
+
+=end html
+
+=head1 SEE ALSO
+
+  perldoc V6evalTool
+
+=cut
+

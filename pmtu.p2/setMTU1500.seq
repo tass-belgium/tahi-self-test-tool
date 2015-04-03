@@ -1,0 +1,452 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Yokogawa Electric Corporation.
+# All rights reserved.
+# 
+# Redistribution and use of this software in source and binary
+# forms, with or without modification, are permitted provided that
+# the following conditions and disclaimer are agreed and accepted
+# by the user:
+# 
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with
+#    the distribution.
+# 
+# 3. Neither the names of the copyrighters, the name of the project
+#    which is related to this software (hereinafter referred to as
+#    "project") nor the names of the contributors may be used to
+#    endorse or promote products derived from this software without
+#    specific prior written permission.
+# 
+# 4. No merchantable use may be permitted without prior written
+#    notification to the copyrighters.
+# 
+# 5. The copyrighters, the project and the contributors may prohibit
+#    the use of this software at any time.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHTERS, THE PROJECT AND
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING
+# BUT NOT LIMITED THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.  IN NO EVENT SHALL THE
+# COPYRIGHTERS, THE PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# $TINY: setMTU1500.seq,v 1.4 2002/03/05 02:59:11 masaxmasa Exp $
+########################################################################
+BEGIN { $V6evalTool::TestVersion = '$Name: V6LC_5_0_0 $ '; }
+use V6evalTool;
+use PMTU;
+
+
+$IF=Link0;
+$WAIT_TO_SET_MTU=3;
+
+%pktdesc = (
+RA_1500                    => 'TN ---RA with MTU option (MTU1500)------> NUT',
+EchoRequest_1500           => 'TN ---ICMP Echo Request LLA (1500)------> NUT',
+EchoReply_1500             => 'TN <--ICMP Echo Reply LLA (1500)--------- NUT',
+frag_echo_reply_1500_1st_mtu1400_LLA => 'TN <--ICMP Echo Reply LLA (1/2 MTU1400)-- NUT',
+frag_echo_reply_1500_2nd_mtu1400_LLA => 'TN <--ICMP Echo Reply LLA (2/2 MTU1400)-- NUT',
+frag_echo_reply_1500_1st_mtu1280_LLA => 'TN <--ICMP Echo Reply LLA (1/2 MTU1280)-- NUT',
+frag_echo_reply_1500_2nd_mtu1280_LLA => 'TN <--ICMP Echo Reply LLA (2/2 MTU1280)-- NUT'
+);
+
+##########################################################
+#----- Check Target Type
+
+$type=$V6evalTool::NutDef{Type};
+if($type eq router) {
+    vLogHTML("This test is for the host only<BR>");
+    exit $V6evalTool::exitHostOnly;
+}
+
+if($type ne host) {
+    vLogHTML(ndErrmsg("ERROR: $V6evalTool::NutDef{Type}: ".
+		      "Unknown target type<BR>"));
+    exit $V6evalTool::exitFail;
+}
+
+##########################################################
+
+#
+# Force MTU to 1500
+#
+
+vLogHTML("force Link MTU of NUT to 1500 with MTU option in RA");
+
+flushtables($V6evalTool::NutDef{System});
+
+vClear($IF);
+vCapture($IF);
+
+#sendPacketWithMTU("1400",($PMTU::sendRA));
+#if( $ret != 0) {
+#    vLogHTML("Unable to send RA w/ MTU=1400");
+#    goto error;
+#}
+
+vSend($IF, RA_1500);
+vSleep($WAIT_TO_SET_MTU);
+
+vSend($IF, EchoRequest_1500);
+
+%ret=vRecv($IF,5,0,0, ns,ns_srcGlobal,
+       'EchoReply_1500',
+       'frag_echo_reply_1500_1st_mtu1280_LLA',
+       'frag_echo_reply_1500_2nd_mtu1280_LLA',
+       'frag_echo_reply_1500_1st_mtu1400_LLA',
+       'frag_echo_reply_1500_2nd_mtu1400_LLA'
+	);
+
+if( $ret{recvFrame} eq 'ns' || $ret{recvFrame} eq 'ns_srcGlobal') { 
+    if( $ret{recvFrame} eq 'ns' ) {
+        sendNA();
+    }elsif( $ret{recvFrame} eq 'ns_srcGlobal' ) {
+        PMTU::sendNA_srcGlobal();
+    }
+
+    %ret=vRecv($IF, 5,0,0,
+       'EchoReply_1500',
+       'frag_echo_reply_1500_1st_mtu1280_LLA',
+       'frag_echo_reply_1500_2nd_mtu1280_LLA',
+       'frag_echo_reply_1500_1st_mtu1400_LLA',
+       'frag_echo_reply_1500_2nd_mtu1400_LLA'
+       );
+
+    if( $ret{status} != 0) {
+        vLogHTML("TN can not receive Echo Reply from NUT");
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }elsif( $ret{recvFrame} eq 'EchoReply_1500' ) {
+# Correct Case
+        vLogHTML("TN receives Echo Reply from NUT LLA (1500)");
+        vLogHTML(' OK');
+    }elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1400_LLA' ) {
+        %ret=vRecv($IF, 5,0,0, 'frag_echo_reply_1500_2nd_mtu1400_LLA' );
+        if( $ret{status} != 0) {
+            vLogHTML("TN can not receive Echo Reply LLA (2/2) from NUT");
+            vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        }elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_2nd_mtu1400_LLA' ) {
+            vLogHTML("TN receives Echo Reply from NUT LLA  (2/2)");
+            vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        }
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1280_LLA' ) {
+        %ret=vRecv($IF, 5,0,0, 'frag_echo_reply_1500_2nd_mtu1280_LLA' );
+        if( $ret{status} != 0) {
+            vLogHTML("TN can not receive Echo Reply LLA (2/2) from NUT");
+            vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        }elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_2nd_mtu1280_LLA' ) {
+            vLogHTML("TN receives Echo Reply  LLA (2/2) from NUT");
+            vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+        }
+        vClear($IF);
+        exit $V6evalTool::exitFail;
+    }else{
+    	vLogHTML("TN CAN'T receives Echo Reply from NUT (1500)");
+        exit $V6evalTool::exitFail;
+    }
+}elsif( $ret{recvFrame} eq 'EchoReply_1500' ) {
+# Correct Case
+    vLogHTML("TN receives Echo Reply from NUT LLA  (1500)");
+    vLogHTML(' OK');
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1400_LLA' ) {
+    %ret=vRecv($IF, 5,0,0, 'frag_echo_reply_1500_2nd_mtu1400_LLA' );
+    if( $ret{status} != 0) {
+        vLogHTML("TN can not receive Echo Reply LLA (2/2) from NUT");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    }elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_2nd_mtu1400_LLA' ) {
+        vLogHTML("TN receives Echo Reply from NUT (2/2)");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    }
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_1st_mtu1280_LLA' ) {
+    %ret=vRecv($IF, 5,0,0, 'frag_echo_reply_1500_2nd_mtu1280_LLA' );
+    if( $ret{status} != 0) {
+        vLogHTML("TN can not receive Echo Reply LLA (2/2) from NUT");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    }elsif( $ret{recvFrame} eq 'frag_echo_reply_1500_2nd_mtu1280_LLA' ) {
+        vLogHTML("TN receives Echo Reply from NUT (2/2)");
+        vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    }
+    vClear($IF);
+    exit $V6evalTool::exitFail;
+}else {
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    vLogHTML("TN CAN'T transmit any packets");
+    vLogHTML('<FONT COLOR="#FF0000">NG</FONT>');
+    exit $V6evalTool::exitFail;
+}
+
+# check the sizeof Echo Reply
+vLogHTML("OK: RA w/ MTU=1500");
+
+vLogHTML("OK");
+  
+exit $V6evalTool::exitPass;
+
+########################################################################
+__END__
+
+=head1 NAME
+
+	acceptRAwithMTUOption - Verify changing Path MTU 
+	received RA with MTU option 
+
+=head1 TARGET
+
+	Host
+
+=head1 SYNOPSIS
+
+	acceptRAwithMTUOptin.seq [-tooloption ...] -p acceptRAwithMTUOption.def
+
+=head1 NETWORK CONFIGURATION
+
+	This test is OFF-LINK Network Configuration test.
+	In this test, TN play a Roll of the Router.
+	
+	Physical Network configuration
+	
+	---------------------------------------
+		|		|
+		NUT		TN
+
+
+
+	Logical Network Configuration
+
+				HOST A (globaladdress:A)
+				|
+	----------------------------------
+			|
+			Router
+			|
+	----------------------------------
+		| 
+		NUT (globaladdress:B)
+
+	NUT < --- Router --- > HOST A
+
+	In this configuration, Packets are send and received. 
+
+	for example,
+		In Logical
+			HOST A           -- Echo Reply --> NUT
+		Actually, in physical
+			TN (as Router X) -- Echo Reply --> NUT
+
+=head1 INITIALIZATION
+
+	There are 2 patterns for initialize.	
+
+	-- Test for host --
+
+        The TN send a RA to assign global address prefix.
+
+        TN              NUT
+
+        -------------------
+
+        ===multicast RA===>
+        src=TN's link-local
+        dst=LinkLocal-all-node                                                  
+        M=0, O=0,
+        Lifetime=3600, ReachableTime=60000, RetransTimer=1005
+        Prefix:
+           L=1, A=1,                       
+           Valid Lifetime=3600005, Preferred Lifetime=3600005
+           Prefix=3ffe:501:ffff:100::, PrefixLength=64                      
+   
+          Wait (5 sec.)
+                 Ignoring DAD packets for global address.                 
+
+	-- Test for router --
+
+	TN attempt to execute remote command 'vRemote(route.rmt)'.
+	
+	'route add -inet6 3ffe:501:ffff:109 TN'slink-local-address' 
+
+=head1 TEST PROCEDURE
+
+	"acceptRAwithMTUOption" verify that changing Path MTU
+	 when node receives RA with MTU option.
+
+	This test includes 2 patterns which MTU is 1300 and 1400.
+	sample is MTU = 1300.
+
+        TN                      NUT
+
+        ---------------------------
+
+    1.
+		TN send RA which include MTU option (MTU = 1300).
+
+        === RA with MTU = 1300 ===>
+
+	2.1
+        TN send Echo Request which is fragmented.
+		orignal packet's size is 1299.
+
+         === echo request 1st ===>
+
+         === echo request 2nd ===>
+
+	2.2
+        NUT send Echo Reply 
+    << JUDGEMENT 1 >>
+         <=== echo reply ===
+
+	3.1
+        TN send Echo Request which is fragmented.
+		orignal packet's size is 1300.
+
+         === echo request 1st ===>
+
+         === echo request 2nd ===>
+
+	3.2
+        NUT send Echo Reply 
+    << JUDGEMENT 1 >>
+         <=== echo reply ===
+
+	4.1
+        TN send Echo Request which is fragmented.
+		orignal packet's size is 1301.
+
+         === echo request 1st ===>
+
+         === echo request 2nd ===>
+
+	4.2
+        NUT send Echo Reply which is fragmented. 
+    << JUDGEMENT 1 >>
+         <=== echo reply 1st ===
+
+         <=== echo reply 2nd ===
+
+    and, this parts (1-6) test in MTU 1400
+
+	--------------------------------------------------------
+	verify that NUT ignore invalid MTU.
+	
+	NUT must not increase its estimate of the Path MTU in 
+	response to the contents of a Too Big Message
+
+	1.
+		TN send RA which include MTU option (MTU = 1450).
+
+        === RA with MTU = 1450 ===>
+
+ 	2.1
+        TN send Echo Request which is fragmented.
+		orignal packet's size is 1399.
+
+         === echo request 1st ===>
+
+         === echo request 2nd ===>
+
+	2.2
+        NUT send Echo Reply 
+	<< JUDGEMENT 2 >>
+         <=== echo reply ===
+
+	3.1
+        TN send Echo Request which is fragmented.
+		orignal packet's size is 1400.
+
+         === echo request 1st ===>
+
+         === echo request 2nd ===>
+
+	3.2
+        NUT send Echo Reply 
+	<< JUDGEMENT 2 >>
+         <=== echo reply ===
+
+	4.1
+        TN send Echo Request which is fragmented.
+		orignal packet's size is 1401.
+
+         === echo request 1st ===>
+
+         === echo request 2nd ===>
+
+	4.2
+        NUT send Echo Reply which is fragmented. 
+	<< JUDGEMENT 2 >>
+         <=== echo reply 1st ===
+
+         <=== echo reply 2nd ===
+	
+	--------------------------------------------------------
+	verify that NUT ignore invalid MTU.
+
+	NUT must not reduce its estimate of the Path MTU below 
+	the IPv6 minimum link MTU.
+
+    1.
+		TN send RA which include MTU option (MTU = 1300).
+
+        === RA with MTU = 1300 ===>
+
+	2.1
+        TN send Echo Request which is fragmented.
+		orignal packet's size is 1299.
+
+         === echo request 1st ===>
+
+         === echo request 2nd ===>
+
+	2.2
+        NUT send Echo Reply 
+	<< JUDGEMENT 3 >>
+         <=== echo reply ===
+
+
+=head1 JUDGEMENT
+
+	<< JUDGEMENT 1 -PASS- >>
+		NUT send 3 Echo Reply ( no fragment, no fragment, fragmented)
+
+		"PASS" means that NUT set valid MTU in response to accept 
+		Packet too big message.
+
+		In first test, NUT's Path MTU of this path can be set 1300  
+			
+		In second test, NUT's Path MTU of this path can be set 1400.
+
+	<< JUDGEMENT 2 -PASS- >>
+		NUT send 3 Echo Reply ( no fragment, no fragment, fragmented
+)
+
+		"PASS" means that NUT don't increase Path MTU in response to 
+		accept invalid Packet Too Big Message
+
+	<< JUDGEMENT 3 -PASS- >>
+		NUT send 1 Echo Reply ( no fragment)
+
+		"PASS" means that NUT don't set its Path MTU below IPv6 mini
+mum
+
+
+
+=head1 SEE ALSO
+
+	perldoc V6evalTool
+	perldoc V6evalRemote
+
+=cut

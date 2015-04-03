@@ -1,0 +1,453 @@
+
+         Installing Self-Test Tools for IPv6 Ready Logo Program
+
+                              TAHI Project
+
+                      $Date: 2010/03/24 05:53:41 $
+
+
+
+Terminology
+===========
+
+    Tester Node (TN)
+        A tester node for the conformance tests.
+
+    Node Under Test (NUT)
+        A testee node for the conformance tests.
+
+    Network Under Test
+        The network where the conformance tests are executed.
+
+    Tester Interface
+        The network interface of TN hooked up to the Network Under Test.
+
+    Interface Under Test
+        The network interface of NUT hooked up to the Network Under Test.
+
+
+
+Prerequisites
+=============
+
+    Prerequisites for TN:
+        - The package supports
+            FreeBSD/i386 7.3-RELEASE or higher
+
+        - It is mandatory to install IPv6 Conformance Test Platform "v6eval"
+          that is also developped by TAHI project.
+          For more information,
+          please refer to 00README.v6eval (in v6eval package).
+
+
+
+Installing the package onto TN
+==============================
+
+    1. Before Starting
+
+        Make sure that you completed installing "v6eval" package.
+        Please refer to INSTALL.v6eval (in v6eval package) for more information.
+
+    2. Extracting ct package
+
+        $ tar zxvf Self_Test_X-X-X.tgz
+
+
+
+Configuration
+============
+
+    1. Physical Configurations
+
+    1.1. Network Under Test
+
+        Hook up the Tester Interface of TN to the Network Under Test.
+        Tester Interface of TN can be configured for IPv4 and for IPv6 as well.
+
+        Hook up the Interface Under Test of NUT to the Network Under Test.
+        Interface Under Test of NUT must be configured for IPv6, while it can
+        be configured for IPv4 too.
+
+        Make sure that any other nodes are not hooked up to the network
+        because their packets would disturb the conformance tests.
+
+            Example: (If NUT is a host or a special device)
+
+                TN                      NUT
+                 |the Tester I/F: ed1    |the I/F Under Test: fxp0
+                 |                       |
+                 |                       |
+                -+-----------------------+- Link0
+                  the Network Under Test
+
+            Example: (If NUT is router)
+
+                -+-----------------------+- Link1
+                 |                       |
+                 |                       |
+                 |the Tester I/F: ed2    |the I/F Under Test: fxp1
+                 TN                     NUT
+                 |the Tester I/F: ed1    |the I/F Under Test: fxp0
+                 |                       |
+                 |                       |
+                -+-----------------------+- Link0
+                 the Network Under Test
+
+        more specific Network configurations are described in
+        00README of each directory respectively.
+
+
+    1.2. Physical wiring image
+
+            Example: (If NUT is a host or a special device)
+
+                 TN (tester)                       NUT (host or special device)
+                +------------+ Ether cross cable  +------------+
+                |       [ed1]+--------------------+[fxp0]      |
+                +------------+                    +------------+
+
+            Example: (If NUT is router)
+
+                 TN (tester)                       NUT (router)
+                +------------+ Ether cross cable  +------------+
+                |       [ed2]+--------------------+[fxp1]      |
+                |            | Ether cross cable  |            |
+                |       [ed1]+--------------------+[fxp0]      |
+                +------------+                    +------------+
+
+
+    2. Configuration of NUT
+
+    2.1. Basic Configuration of NUT
+
+    2.1.1. Host (If NUT is a host or a special device)
+
+        - one network interface used in testing, must be 'up' status.
+          and NUT have Link Local Address based on EUI64 (MAC address base).
+
+        - turn on IPv6 supporting.
+
+        - remove any other configurations.
+          like as DNS setting, IPv6 default route, static IPv6 routing, etc...
+
+        more specific configurations may be described in
+        00README of each directory respectively.
+
+
+    2.1.2. Router (If NUT is a router)
+
+        - two network interfaces used in testing, must be 'up' status.
+          and NUT have two Link Local Address based on EUI64 (MAC address base).
+          and NUT have following two Global Address.
+
+            Link0 : 3ffe:501:ffff:100: + EUI64 (MAC address base)
+            Link1 : 3ffe:501:ffff:101: + EUI64 (MAC address base)
+
+        - turn on IPv6 supporting.
+
+        - turn on IPv6 packet forwarding.
+
+        - remove any other configurations.
+          like as DNS setting, IPv6 default route, static IPv6 routing, etc...
+
+        - turn off any kind of routing daemon
+          which packets would disturb the tests.
+
+        more specific configurations may be described in
+        00README of each directory respectively.
+
+
+    2.2. Example (FreeBSD/i386 6.1-RELEASE)
+
+    2.2.1. /etc/resolv.conf
+
+        Remove /etc/resolv.conf to prevent NUT from issuing unnecessary packets
+        that would disturb the tests.
+
+
+    2.2.2. Default route
+
+        It is recommended to remove IPv4 default route,
+        though it is not mandatory.
+
+
+    2.2.3. /etc/rc.conf
+
+        If NUT is a host,
+        you need the following configuration.
+
+            Example: /etc/rc.conf
+            ==========================================================
+            ipv6_enable="YES"
+            ifconfig_fxp0="up"
+            ipv6_network_interfaces="fxp0"
+            ipv6_default_interface="fxp0"
+            ==========================================================
+
+        If NUT is a router, you need more modification to rc.conf.
+
+            Important points:
+
+                - turn off any kind of routing daemon
+                  which packets would disturb the tests.
+
+                - Assign a prefix "3ffe:501:ffff:100/64" and
+                  "3ffe:501:ffff:101/64" to Interfaces Under Test.
+
+            Example: /etc/rc.conf
+            ==========================================================
+            ipv6_enable="YES"
+            ipv6_gateway_enable="YES"
+            ifconfig_fxp0="up"
+            ifconfig_fxp1="up"
+            ipv6_network_interfaces="fxp0 fxp1"
+            ipv6_default_interface="fxp0"
+            ipv6_prefix_fxp0="3ffe:501:ffff:100"
+            ipv6_prefix_fxp1="3ffe:501:ffff:101"
+            ==========================================================
+
+        If NUT is a special device, it's up to implementation.
+
+            If NUT is a special device based on host implementation
+            rc.conf can be the same as host case.
+
+            If NUT is a special device based on router implementation,
+            the configuration will be following.
+
+                Example: /etc/rc.conf
+                ==========================================================
+                ipv6_enable="YES"
+                ipv6_gateway_enable="YES"
+                ifconfig_fxp0="up"
+                ipv6_network_interfaces="fxp0"
+                ipv6_default_interface="fxp0"
+                ipv6_prefix_fxp0="3ffe:501:ffff:100"
+                ipv6_defaultrouter="fe80::200:ff:fe00:100%ed0"
+                ==========================================================
+
+        * Some of Network Interface Card supports Plug and Play feature.
+          In order to avoid enabling unexpected Network Interface Card,
+          it is recommended to trun off devd (device state change daemon),
+          when NUT has multiple interfaces.
+
+            Example: /etc/rc.conf
+            ==========================================================
+            devd_enable="NO"
+            ==========================================================
+
+    2.2.4. multicast routing daemon
+
+        If NUT is a router, you need to install
+        mcast-tools-20050926 (net/mcast-tools)
+          * only IPv6 Ready Logo Test Program Phase-2 IPv6 Core Protocols
+
+            # cd /usr/ports/net/mcast-tools
+            # make
+            # make install
+
+    3. Configuration of TN
+
+        First, Please read INSTALL.v6eval (in v6eval package).
+
+
+    3.1. /etc/resolv.conf
+
+        It is recommended to remove /etc/resolv.conf,
+        though it is not mandatory.
+
+
+    3.2. Default route
+
+        It is recommended to remove IPv4 default route,
+        though it is not mandatory.
+
+
+    3.3. /usr/local/v6eval/etc/tn.def
+
+        Copy sample tn.def to tn.def.
+        Then, adjust Link0 and Link1 entry in the file.
+
+            # cd /usr/local/v6eval/etc
+            # cp tn.def.sample tn.def
+            # vi tn.def
+
+                "Link0" entry MUST have:
+                    - the EXACT name of Tester Interface.
+                    - a BOGUS MAC address.
+                      It is important that the Tool can impersonate other nodes.
+
+                "Link1" entries are required for a router test.
+
+            Example: /usr/local/v6eval/etc/tn.def
+            ==========================================================
+            RemoteDevice    cuad0
+            RemoteDebug     0
+            RemoteIntDebug  0
+            RemoteLog       1
+            RemoteSpeed     0
+            RemoteLogout    0
+            RemoteMethod    serial
+            Link0   ed1     00:00:00:00:01:00
+            ==========================================================
+            If NUT is a router, you need to specify also Link1.
+
+
+    3.4. /usr/local/v6eval/etc/nut.def
+
+        Copy sample nut.def to nut.def.
+        Then, adjust Link0 and Link1 entry in the file.
+
+            # cd /usr/local/v6eval/etc
+            # cp nut.def.sample nut.def
+            # vi nut.def
+
+                "HostName" entry SHOULD be a host name of NUT.
+
+                "Type" entry MUST be:
+                    - "host" if NUT is configured as a host.
+                    - "router" if NUT is configured as a router.
+                    - "special device" if NUT is configured as a special device.
+
+                "Link0" entry MUST have:
+                    - the EXACT name of the Interface Under Test.
+                    - the EXACT MAC address of the Interface Under Test.
+
+                "Link1" entries are required only for a router test.
+
+            Example: (If NUT is a host)
+            ==========================================================
+            System          manual 
+            TargetName      FreeBSD/i386 6.1-RELEASE
+            HostName        target.tahi.org
+            Type            host
+            User            root
+            Password        v6eval
+            Link0   fxp0    00:90:27:14:ce:da
+            ==========================================================
+
+            Example: (If NUT is a router)
+            ==========================================================
+            System          manual 
+            TargetName      FreeBSD/i386 6.1-RELEASE
+            HostName        target.tahi.org
+            Type            router
+            User            root
+            Password        v6eval
+            Link0   fxp0    00:90:27:14:ce:da
+            Link1   fxp1    00:90:27:14:ce:db
+            ==========================================================
+
+            Example: (If NUT is a special device)
+            ==========================================================
+            System          manual 
+            TargetName      FreeBSD/i386 6.1-RELEASE
+            HostName        target.tahi.org
+            Type            special
+            User            root
+            Password        v6eval
+            Link0   fxp0    00:90:27:14:ce:da
+            ==========================================================
+
+
+    3.5. adjust test parameter
+
+        Some of test can adjust it's test parameter.
+        More information may be described in
+        00README of each directory respectively.
+
+
+
+Run the Tests
+=============
+
+        $ cd $SOMEWHERE/Self_Test_X-X-X
+
+    If NUT does not support the advanced functionalities
+        $ vi config.txt
+
+            "TRANSMITTING_EREQ" parameter is:
+                - zero:     NUT can't transmit Echo Requests
+                            or can't set packet size
+                - non-zero: NUT supports.
+
+            "MULTICAST_ROUTING" parameter is:
+                - zero:     NUT does not support Multicast Routing.
+                - non-zero: NUT supports.
+
+            "MTU_CONFIGURATION" parameter is:
+                - zero:     NUT does not support MTU Configuration.
+                - non-zero: NUT supports.
+
+    If NUT is a router, and if NUT does not have multiple interfaces
+        $ vi config.txt
+
+            "HAS_MULTIPLE_INTERFACES" parameter is:
+                - zero:     NUT is one physical interface router
+                - non-zero: NUT is generic router which has multiple interfaces
+
+    You can also modify test specific parameter in
+        - spec.p2/config.pl
+        - nd.p2/config.pl
+        - addr.p2/config.pl
+        - pmtu.p2/config.pl
+        - icmp.p2/config.pl
+
+
+    To run the test
+
+        IPv6 Ready Logo Test Program Phase-1
+        ------------------------------------
+            $ make ipv6ready_p1_host    (If NUT is a host)
+            $ make ipv6ready_p1_router  (If NUT is a router)
+            $ make ipv6ready_p1_special (If NUT is a special device)
+
+
+        IPv6 Ready Logo Test Program Phase-2 IPv6 Core Protocols
+        --------------------------------------------------------
+            $ make ipv6ready_p2_host   (If NUT is a host)
+            $ make ipv6ready_p2_router (If NUT is a router)
+
+
+    When TN need you to operate on NUT, TN will show you the message
+    which describes How to operate NUT.
+    Then you can operate NUT as descrbed by the message.
+    When all tests are completed,
+    you can see the test results at $SOMEWHERE/Self_Test_X-X-X/index.html.
+
+    Note that running the tests clears the previous test results.
+    If you do not want to lose them,
+    you should make a new copy of Self_Test package in a different directory.
+
+
+
+Q&A : Have a problem?
+=====================
+    Q: How am I supposed to do, when TN show me following Error message.
+        can't open bpf or socket
+
+    A: Please check your TN's bpf configuration.
+        ensure bpf devices to have read permission, and see INSTALL.v6eval
+            Example:
+                $ ls -l /dev/bpf*
+
+        ensure network interfaces to have 'up' status,
+        and see INSTALL.v6eval and INSTALL.ct
+            Example: (If Link0 name is ed0, and Link1 name is ed1)
+
+                $ ifconfig ed0 ed1
+
+        unix domain socket may be remaind in /tmp
+
+            Example: (If Link0 name is ed0, and Link1 name is ed1)
+
+                $ cd /tmp
+                $ rm ed0 ed1
+
+    Q: How am I supposed to do, when TN show me following Error message.
+        connect: nosuch filet or directry
+
+    A: Please check your TN's tn.def configuration.
+        specified Link0 correctly?
+        and specified Link1 also correctly? (if NUT is a router)
+                                                        [End of INSTALL]
