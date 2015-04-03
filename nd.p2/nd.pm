@@ -1604,6 +1604,8 @@ ndResolutionWaitQueueSingleSetup($$)
 		return(-1);
 	}
 
+    ndResolutionWaitQueueSetDefine(*OUTPUT);
+
 	for(my $d = 0; $d < $max; $d ++) {
 		my $ereq = sprintf("queue_ereq_%05d", $d);
 		my $erep = sprintf("queue_erep_%05d", $d);
@@ -1648,6 +1650,8 @@ ndResolutionWaitQueueMultipleSetup($$$$)
 			"open: $nd_ns_queue_def: $!</B></FONT><BR>");
 		return(-1);
 	}
+
+    ndResolutionWaitQueueSetDefine(*OUTPUT);
 
 	my $max = ($maxPacketA >= $maxPacketB) ? $maxPacketA : $maxPacketB;
 	for(my $d = 0; $d < $max; $d ++) {
@@ -1700,6 +1704,21 @@ ndResolutionWaitQueueMultipleSetup($$$$)
 
 	return(0);
 }
+
+
+#----------------------------------------------#
+# ndResolutionWaitQueueSetDefine()             #
+#----------------------------------------------#
+sub
+ndResolutionWaitQueueSetDefine(*$$$$$$)
+{
+    local (*OUTPUT) = $_[0];
+
+    print(OUTPUT) "#define USE_ND_NS_QUEUE\n";
+
+    return(0);
+}
+
 
 #----------------------------------------------#
 # ndResolutionWaitQueueSingleWriteEcho()       #
