@@ -62,7 +62,7 @@ if(ndiscNone2Incomplete($Link0, $ereq) < 0) {
 	#NOTREACHED
 }
 
-if(ndSendNaIncomplete2Incomplete($Link0, $ereq, 'nd_ucast_na_rSO') < 0) {
+if(ndSendNaIncomplete2Incomplete($Link0, $ereq, 'nd_ucast_na_rso') < 0) {
 	exitFail();
 	#NOTREACHED
 }
