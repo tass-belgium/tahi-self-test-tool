@@ -251,8 +251,8 @@ v6LC_2_2_1($)
 # 1.
 # 	Reboot the HUT.
 
-	if(vRemote('reboot.rmt', "timeout=$wait_rebootcmd")) {
-		vLogHTML('<FONT COLOR="#FF0000"><B>reboot.rmt: '.
+	if(vRemote('reboot_async.rmt', "timeout=$wait_rebootcmd")) {
+		vLogHTML('<FONT COLOR="#FF0000"><B>reboot_async.rmt: '.
 			'Could\'t reboot</B></FONT><BR>');
 
 		exitFatal($Link);
