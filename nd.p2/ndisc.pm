@@ -1216,6 +1216,15 @@ exitNdiscWorld($)
 		vLogHTML('<FONT COLOR="#FF0000" SIZE="5"><U><B>Common Test Cleanup</B></U></FONT><BR>');
 		cleanupCommon11($Link0);
 	}
+	
+	####
+	print ('DLA:forcing reboot');
+	if(vRemote('reboot.rmt', "timeout=$wait_rebootcmd")) {
+		vLogHTML('<FONT COLOR="#FF0000"><B>reboot.rmt: '.
+				'Could\'t reboot</B></FONT><BR>');
+		exitFatal($Link0);
+	}
+	####
 
 	if($ecode != $V6evalTool::exitPass) {
 		foreach my $Link (@Links) {
