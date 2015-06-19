@@ -1714,7 +1714,7 @@ ndResolutionWaitQueueSetDefine(*$$$$$$)
 {
     local (*OUTPUT) = $_[0];
 
-    print(OUTPUT) "#define USE_ND_NS_QUEUE\n";
+    print(OUTPUT "#define USE_ND_NS_QUEUE\n");
 
     return(0);
 }
